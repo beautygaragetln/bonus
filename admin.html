@@ -257,6 +257,9 @@ function giveReward(c,a,note){ if(a.type==='pct'){ c.disc=Math.max(c.disc||0,a.v
 const cur=()=>S.clients.find(c=>c.id===openId);
 const gcOf=(c,extra,now)=>glamCompute(G(),visitsOf(c).concat(extra||[]),now||Date.now());
 const gname=i=>G().levels[i].name;
+const DEFAULT_SERVICES=['Тату','Макияж + укладка','Макияж','Укладка','Брови','Ресницы','Комбо'];
+const servicesOf=()=>(cfgOf().services&&cfgOf().services.length)?cfgOf().services:DEFAULT_SERVICES;
+const isTattoo=n=>norm(n).includes('тату');
 
 /* ---------- views ---------- */
 function listView(){
@@ -320,7 +323,7 @@ function detailView(c){
     <form id="visitForm" class="grid">
       <label>Сумма услуг, €<input id="vAmt" type="number" min="0" step="0.01" required inputmode="decimal"></label>
       <label>Оплатить бонусами, €<input id="vUse" type="number" min="0" step="0.01" inputmode="decimal" placeholder="авто"></label>
-      <label>Категория<select id="vCat"><option value="">Услуга</option><option value="tattoo">Татуировка</option></select></label>
+      <label>Услуга<select id="vCat">${servicesOf().map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('')}</select></label>
       <label>Комментарий<input id="vNote" autocomplete="off"></label>
       <button class="primary" style="align-self:end">Записать</button>
     </form>
@@ -360,6 +363,9 @@ function settingsView(){
       <label>Подзаголовок<input id="cTag" value="${esc(cfg.tagline)}"></label>
       <label>Контакт для отметок<input id="cContact" value="${esc(cfg.contact)}"></label>
     </div></div>
+  <div class="panel"><h2>Услуги студии</h2>
+    <label>Список для записи визита (каждая услуга с новой строки)<textarea id="cServices">${esc(((cfg.services&&cfg.services.length)?cfg.services:DEFAULT_SERVICES).join('\n'))}</textarea></label>
+    <p class="muted small">Услуга со словом «тату» в названии считается татуировкой, для неё действует скидка на первую татуировку.</p></div>
   <div class="panel"><h2>Как тратить бонусы</h2>
     <div class="grid">
       <label>Режим<select id="cMode"><option value="next" ${cfg.mode==='next'?'selected':''}>Только на ближайший визит</option><option value="free" ${cfg.mode==='free'?'selected':''}>Копить и тратить свободно</option></select></label>
@@ -382,7 +388,7 @@ function settingsView(){
 function collectCfg(){
   const d=draft; if(!d||!$('#cfgForm')) return;
   d.studio=$('#cStudio').value; d.tagline=$('#cTag').value; d.contact=$('#cContact').value;
-  d.mode=$('#cMode').value; d.expireDays=Math.max(0,+$('#cExp').value||0); d.maxPct=Math.min(100,Math.max(1,+$('#cMax').value||100));
+  d.services=$('#cServices').value.split('\n').map(x=>x.trim()).filter(Boolean); d.mode=$('#cMode').value; d.expireDays=Math.max(0,+$('#cExp').value||0); d.maxPct=Math.min(100,Math.max(1,+$('#cMax').value||100));
   d.friend={type:$('#fType').value,val:+$('#fVal').value||0};
   document.querySelectorAll('[data-k="act"]').forEach(el=>{ const a=d.actions[+el.dataset.i]; if(a) a[el.dataset.f]= el.dataset.f==='val'? (+el.value||0) : el.value; });
   document.querySelectorAll('[data-tier]').forEach(el=>{ d.tiers[+el.dataset.tier][el.dataset.f]=+el.value||0; });
@@ -486,7 +492,7 @@ function calcVisit(c,amount,useReq,tattoo,now){
 }
 function previewVisit(){
   const c=cur(), el=$('#preview'); if(!c||!el) return;
-  const raw=$('#vUse').value, v=calcVisit(c,parseFloat($('#vAmt').value),raw===''?null:parseFloat(raw),$('#vCat').value==='tattoo');
+  const raw=$('#vUse').value, v=calcVisit(c,parseFloat($('#vAmt').value),raw===''?null:parseFloat(raw),isTattoo($('#vCat').value));
   if(!v.amount){ el.textContent='Введите сумму, чтобы увидеть расчёт.'; return; }
   el.textContent=[
     v.discAmt?`Скидка ${v.discPct}%: −${eur(v.discAmt)}.`:'',
@@ -501,11 +507,11 @@ function recordVisit(e){
   e.preventDefault();
   const c=cur(); if(!c) return;
   settle(c);
-  const tattoo=$('#vCat').value==='tattoo', raw=$('#vUse').value;
+  const service=$('#vCat').value, tattoo=isTattoo(service), raw=$('#vUse').value;
   const ts=Date.now(), v=calcVisit(c,parseFloat($('#vAmt').value),raw===''?null:parseFloat(raw),tattoo,ts);
   if(!v.amount) return;
   const note=$('#vNote').value.trim();
-  c.history.push({ts,delta:0,note:`${tattoo?'Татуировка':'Визит'} ${eur(v.amount)}${note?' · '+note:''}`,kind:'visit',amount:v.amount,paid:v.paid,tattoo});
+  c.history.push({ts,delta:0,note:`${service||'Визит'} ${eur(v.amount)}${note?' · '+note:''}`,kind:'visit',amount:v.amount,paid:v.paid,tattoo,service});
   if(v.discAmt) c.history.push({ts,delta:0,note:`Применена скидка ${v.discPct}% (−${eur(v.discAmt)})`});
   if(v.use){ c.balance=r2(c.balance-v.use); c.history.push({ts,delta:-v.use,note:'Оплата бонусами'}); }
   if(v.burn>0){ c.balance=r2(c.balance-v.burn); c.history.push({ts,delta:-v.burn,note:'Не использованные бонусы сгорели'}); }
