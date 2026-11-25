@@ -151,6 +151,13 @@ h1,.it{font-style:normal}
 .visit-list div{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--line)}
 .visit-list div:first-child{border-top:0}
 
+.badge{display:inline-block;min-width:18px;padding:0 6px;margin-left:6px;border-radius:99px;background:var(--bad);color:#fff;font-size:11px;font-weight:700;line-height:18px}
+.bk{display:flex;flex-direction:column;gap:8px;padding:12px 0;border-top:1px solid var(--line)}
+.bk:first-child{border-top:0;padding-top:0}
+.bk .top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.pill.dash{background:transparent;border:1px dashed var(--accent)}
+.mono{font-family:ui-monospace,Menlo,monospace;word-break:break-all;font-size:12px}
+.sub{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:6px}
 </style>
 </head>
 <body>
@@ -270,14 +277,15 @@ function perksRows(G,i){
 }
 
 
-let S={cfg:null,clients:[]};
+let S={cfg:null,clients:[],bookings:[],blocks:[],token:''};
+let shownPin=null;
 let tab='clients', view='list', openId=null, search='', toastT, draft=null, gdraft=null;
 const $app=document.getElementById('app'), $=s=>document.querySelector(s), on=(s,ev,fn)=>{const e=$(s); if(e) e.addEventListener(ev,fn);};
 const cfgOf=()=>S.cfg;
 const G=()=>S.cfg.glam;
 const snap=new Map(); let cfgSnap='';
-const toRow=c=>({id:c.id,name:c.name,login:c.login,phone:c.phone||'',birthday:c.birthday||'',balance:c.balance,spent:c.spent,disc:c.disc||0,ref_by:c.refBy||null,ref_paid:!!c.refPaid,last_earn:c.lastEarn||0,created_at:c.createdAt,history:c.history});
-const fromRow=r=>({id:r.id,name:r.name,login:r.login,phone:r.phone||'',birthday:r.birthday||'',balance:+r.balance,spent:+r.spent,disc:+r.disc,refBy:r.ref_by||'',refPaid:!!r.ref_paid,lastEarn:+r.last_earn,createdAt:+r.created_at,history:r.history||[]});
+const toRow=c=>({id:c.id,name:c.name,login:c.login,phone:c.phone||'',birthday:c.birthday||'',balance:c.balance,spent:c.spent,disc:c.disc||0,ref_by:c.refBy||null,ref_paid:!!c.refPaid,last_earn:c.lastEarn||0,created_at:c.createdAt,history:c.history,level_idx:(S.cfg&&S.cfg.glam&&S.cfg.glam.enabled)?gcOf(c).level:0});
+const fromRow=r=>({id:r.id,name:r.name,login:r.login,phone:r.phone||'',birthday:r.birthday||'',balance:+r.balance,spent:+r.spent,disc:+r.disc,refBy:r.ref_by||'',refPaid:!!r.ref_paid,lastEarn:+r.last_earn,createdAt:+r.created_at,history:r.history||[],email:r.email||'',marketing:!!r.marketing});
 let saveQ=Promise.resolve();
 function persist(){ saveQ=saveQ.then(doSave).catch(e=>toast('Не удалось сохранить: '+(e.message||e))); }
 async function doSave(){
@@ -363,6 +371,7 @@ function detailView(c){
     ${c.disc?`<div><span class="pill">Скидка ${c.disc}% на визит</span></div>`:''}
   </div>
   ${glamPanel(c)}
+  ${accessPanel(c)}
   <div class="panel"><h2>Записать визит</h2>
     <form id="visitForm" class="grid">
       <label>Сумма услуг, €<input id="vAmt" type="number" min="0" step="0.01" required inputmode="decimal"></label>
@@ -488,13 +497,13 @@ function collectGlam(){
 function render(){
   const y=scrollY, ae=document.activeElement, fid=ae&&ae.id, pos=ae&&ae.selectionStart;
   const inList=view==='list';
-  $app.innerHTML=`<header><h1>Beauty Garage: админка</h1><button class="ghost" id="logout">Выйти</button>${inList?`<div class="tabs" style="width:100%;order:3"><button data-tab="clients" class="${tab==='clients'?'on':''}">Клиентки</button><button data-tab="settings" class="${tab==='settings'?'on':''}">Условия</button><button data-tab="glam" class="${tab==='glam'?'on':''}">Glam Levels</button><button data-tab="data" class="${tab==='data'?'on':''}">Данные</button></div>`:''}</header>`
-   + (view==='detail'&&cur() ? detailView(cur()) : tab==='settings' ? settingsView() : tab==='glam' ? glamView() : tab==='data' ? dataView() : (view='list',listView()));
+  $app.innerHTML=`<header><h1>Beauty Garage: админка</h1><button class="ghost" id="logout">Выйти</button>${inList?`<div class="tabs" style="width:100%;order:3"><button data-tab="clients" class="${tab==='clients'?'on':''}">Клиентки</button><button data-tab="bookings" class="${tab==='bookings'?'on':''}">Записи${pendingCount()?`<span class="badge">${pendingCount()}</span>`:''}</button><button data-tab="schedule" class="${tab==='schedule'?'on':''}">Расписание</button><button data-tab="settings" class="${tab==='settings'?'on':''}">Условия</button><button data-tab="glam" class="${tab==='glam'?'on':''}">Glam Levels</button><button data-tab="data" class="${tab==='data'?'on':''}">Данные</button></div>`:''}</header>`
+   + (view==='detail'&&cur() ? detailView(cur()) : tab==='bookings' ? bookingsView() : tab==='schedule' ? scheduleView() : tab==='settings' ? settingsView() : tab==='glam' ? glamView() : tab==='data' ? dataView() : (view='list',listView()));
   bind(); scrollTo(0,y);
   if(fid){ const e=document.getElementById(fid); if(e){ e.focus(); try{e.setSelectionRange(pos,pos)}catch(_){} } }
 }
 function bind(){
-  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab; if(tab!=='settings') draft=null; if(tab!=='glam') gdraft=null; render();});
+  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab; if(tab!=='settings') draft=null; if(tab!=='glam') gdraft=null; if(tab==='bookings'||tab==='schedule') view='list'; render();});
   document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{openId=b.dataset.open;view='detail';render();scrollTo(0,0);});
   document.querySelectorAll('[data-delact]').forEach(b=>b.onclick=()=>{collectCfg();draft.actions.splice(+b.dataset.delact,1);render();});
   on('#back','click',()=>{view='list';render();});
@@ -506,6 +515,7 @@ function bind(){
   on('#cfgForm','submit',saveCfg); on('#bakJson','click',backupJson); on('#bakCsv','click',backupCsv); on('#expClient','click',()=>{const c=cur(); if(c) exportClient(c);}); on('#glamForm','submit',saveGlam);
   on('#addAct','click',()=>{collectCfg();draft.actions.push({id:uid(),title:'Новое действие',type:'eur',val:2});render();});
   on('#del','click',e=>{ if(e.target.dataset.sure){ del(); } else { e.target.dataset.sure=1; e.target.textContent='Нажмите ещё раз, чтобы удалить'; e.target.style.color='var(--bad)'; } });
+  bindBook();
   on('#logout','click',async()=>{ await sb.auth.signOut(); location.reload(); });
 }
 
@@ -603,7 +613,7 @@ function saveCfg(e){
   e.preventDefault(); collectCfg();
   const t=draft.tiers; t[0].from=0;
   if(t.some((x,i)=>i&&x.from<=t[i-1].from)){ toast('Пороги уровней должны расти'); return; }
-  S.cfg={...draft,glam:S.cfg.glam}; draft=null; persist(); toast('Условия сохранены'); render();
+  S.cfg={...draft,glam:S.cfg.glam,booking:S.cfg.booking}; draft=null; persist(); toast('Условия сохранены'); render();
 }
 function saveGlam(e){
   e.preventDefault(); collectGlam();
@@ -616,6 +626,163 @@ function saveGlam(e){
 async function del(){ const {error}=await sb.from('clients').delete().eq('id',openId); if(error){ toast('Не удалось удалить'); return; } snap.delete(openId); S.clients=S.clients.filter(c=>c.id!==openId); S.clients.forEach(c=>{ if(c.refBy===openId) c.refBy=''; }); openId=null; view='list'; toast('Удалено'); render(); }
 
 
+/* ---------- записи ---------- */
+const BK_DEF={enabled:false,tz:'Europe/Tallinn',stepMin:60,horizonMonths:3,minNoticeHours:12,capacity:1,weekday:{autoFrom:'16:00',autoTo:'20:00',reqFrom:'06:00',reqTo:'16:00'},weekend:{autoFrom:'09:00',autoTo:'21:00',reqFrom:'',reqTo:''},defaultMinutes:60,durations:{},cancelHours:24,lateFee:10,freeLate:{'3':2,'4':3}};
+function mergeBooking(b){ b=b||{}; return {...BK_DEF,...b,weekday:{...BK_DEF.weekday,...(b.weekday||{})},weekend:{...BK_DEF.weekend,...(b.weekend||{})},durations:{...(b.durations||{})},freeLate:{...BK_DEF.freeLate,...(b.freeLate||{})}}; }
+const BKC=()=>S.cfg.booking;
+const tzn=()=>BKC().tz||'Europe/Tallinn';
+const fmtDT=iso=>new Date(iso).toLocaleString(LOCALE,{timeZone:tzn(),weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+const fmtHM=iso=>new Date(iso).toLocaleTimeString(LOCALE,{timeZone:tzn(),hour:'2-digit',minute:'2-digit'});
+function tzOffsetMin(ms){ const p=new Intl.DateTimeFormat('en-US',{timeZone:tzn(),hourCycle:'h23',year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'numeric',second:'numeric'}).formatToParts(new Date(ms)).reduce((a,x)=>(a[x.type]=+x.value,a),{});
+  return (Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute,p.second)-Math.floor(ms/1000)*1000)/60000; }
+function zonedToUtc(d,t){ const [y,m,dd]=d.split('-').map(Number),[h,mi]=t.split(':').map(Number),g=Date.UTC(y,m-1,dd,h,mi); let ms=g-tzOffsetMin(g)*60000; ms=g-tzOffsetMin(ms)*60000; return ms; }
+const pendingCount=()=>S.bookings.filter(b=>b.status==='pending'&&new Date(b.end_at)>new Date()).length;
+const cname=id=>{const c=S.clients.find(x=>x.id===id); return c?`${c.name} (@${c.login})`:'—';};
+const STL={pending:'Ждёт подтверждения',confirmed:'Подтверждена',declined:'Отклонена',cancelled:'Отменена',cancelled_late:'Отменена поздно',done:'Состоялась',no_show:'Не пришла'};
+async function refreshBookings(){
+  if(!sb||!S.cfg) return;
+  const a=document.activeElement; if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)) return;
+  const {data,error}=await sb.from('bookings').select('*').order('start_at'); if(error) return;
+  const before=pendingCount(); S.bookings=data||[];
+  if(tab==='bookings'&&view==='list') render(); else if(pendingCount()!==before) render();
+}
+function bkCard(b,pend){
+  const fee=+b.fee>0;
+  return `<div class="bk"><div class="top"><b>${esc(fmtDT(b.start_at))}–${esc(fmtHM(b.end_at))}</b><span class="pill ${b.status==='pending'?'dash':''}">${esc(STL[b.status]||b.status)}${b.auto?' · авто':''}</span></div>
+    <div>${esc(cname(b.client_id))} · ${esc(b.service)}</div>${b.note?`<div class="muted small">Комментарий: ${esc(b.note)}</div>`:''}
+    ${fee?`<div class="neg small">Штраф ${eur(+b.fee)} <button class="ghost" data-bkact="clearfee" data-id="${b.id}">Снять штраф</button></div>`:''}
+    ${pend?`<label>Ответ клиентке (необязательно)<input id="dn-${b.id}" autocomplete="off"></label><div class="actions"><button class="primary" data-bkact="confirm" data-id="${b.id}">Подтвердить</button><button data-bkact="decline" data-id="${b.id}">Отклонить</button></div>`
+     :(b.status==='confirmed'?`<div class="actions"><button data-bkact="done" data-id="${b.id}">Состоялась</button><button data-bkact="no_show" data-id="${b.id}">Не пришла</button><button data-bkact="cancel" data-id="${b.id}">Отменить</button></div>`:'')}</div>`;
+}
+function bookingsView(){
+  const now=new Date(), up=S.bookings.filter(b=>new Date(b.end_at)>now);
+  const pend=up.filter(b=>b.status==='pending'), conf=up.filter(b=>b.status==='confirmed');
+  const past=S.bookings.filter(b=>new Date(b.end_at)<=now||['declined','cancelled','cancelled_late'].includes(b.status)).filter(b=>!(up.includes(b)&&['pending','confirmed'].includes(b.status))).slice(-30).reverse();
+  const fees=S.bookings.filter(b=>+b.fee>0);
+  const today=new Date().toISOString().slice(0,10);
+  return `<div class="panel"><h2>Ждут подтверждения ${pend.length?`<span class="badge">${pend.length}</span>`:''}</h2>${pend.length?pend.map(b=>bkCard(b,true)).join(''):'<p class="muted">Новых запросов нет.</p>'}</div>
+  <div class="panel"><h2>Ближайшие записи</h2>${conf.length?conf.map(b=>bkCard(b)).join(''):'<p class="muted">Подтверждённых записей нет.</p>'}</div>
+  <div class="panel"><h2>Записать вручную</h2>
+    <form id="manForm" class="grid">
+      <label>Клиентка<select id="mClient">${byName(S.clients).map(c=>`<option value="${esc(c.id)}">${esc(c.name)} (@${esc(c.login)})</option>`).join('')}</select></label>
+      <label>Услуга<select id="mSvc">${servicesOf().map(x=>`<option>${esc(x)}</option>`).join('')}</select></label>
+      <label>Дата<input id="mDate" type="date" value="${today}" required></label>
+      <label>Время<input id="mTime" type="time" step="900" value="12:00" required></label>
+      <label>Минут<input id="mMin" type="number" min="15" step="15" value="${BKC().defaultMinutes||60}" required></label>
+      <button class="primary" style="align-self:end">Добавить</button></form></div>
+  <div class="panel"><h2>Закрыть время (выходной, отпуск, перерыв)</h2>
+    <form id="blkForm" class="grid">
+      <label>С<input id="bFrom" type="datetime-local" required></label><label>До<input id="bTo" type="datetime-local" required></label>
+      <label>Причина<input id="bWhy" autocomplete="off"></label><button style="align-self:end">Закрыть</button></form>
+    ${S.blocks.filter(b=>new Date(b.end_at)>now).map(b=>`<div class="bk"><div class="top"><span>${esc(fmtDT(b.start_at))} — ${esc(fmtDT(b.end_at))}${b.reason?' · '+esc(b.reason):''}</span><button class="ghost" data-bkact="delblock" data-id="${b.id}">Открыть снова</button></div></div>`).join('')}</div>
+  ${fees.length?`<div class="panel"><h2>Неснятые штрафы</h2>${fees.map(b=>bkCard(b)).join('')}</div>`:''}
+  <div class="panel"><h2>Недавние</h2>${past.length?past.map(b=>`<div class="bk"><div class="top"><span>${esc(fmtDT(b.start_at))} · ${esc(cname(b.client_id))} · ${esc(b.service)}</span><span class="pill">${esc(STL[b.status]||b.status)}</span></div></div>`).join(''):'<p class="muted">Пока пусто.</p>'}</div>`;
+}
+async function bkUpdate(id,patch,msg){
+  const {error}=await sb.from('bookings').update(patch).eq('id',id); if(error){ toast('Не удалось сохранить: '+error.message); return; }
+  const b=S.bookings.find(x=>x.id===id); if(b) Object.assign(b,patch); toast(msg); render();
+}
+async function addManual(e){
+  e.preventDefault();
+  const min=+$('#mMin').value||60, st=zonedToUtc($('#mDate').value,$('#mTime').value);
+  const row={client_id:$('#mClient').value,service:$('#mSvc').value,start_at:new Date(st).toISOString(),end_at:new Date(st+min*60000).toISOString(),status:'confirmed',auto:false,note:''};
+  if(!row.client_id){ toast('Сначала добавьте клиентку'); return; }
+  const {data,error}=await sb.from('bookings').insert(row).select().single(); if(error){ toast('Не удалось добавить: '+error.message); return; }
+  S.bookings.push(data); S.bookings.sort((a,b)=>new Date(a.start_at)-new Date(b.start_at)); toast('Запись добавлена'); render();
+}
+async function addBlock(e){
+  e.preventDefault();
+  const f=$('#bFrom').value,t=$('#bTo').value; if(!f||!t) return;
+  const [fd,ft]=f.split('T'),[td,tt]=t.split('T'), a=zonedToUtc(fd,ft), b=zonedToUtc(td,tt);
+  if(b<=a){ toast('Конец должен быть позже начала'); return; }
+  const {data,error}=await sb.from('blocks').insert({start_at:new Date(a).toISOString(),end_at:new Date(b).toISOString(),reason:$('#bWhy').value.trim()}).select().single();
+  if(error){ toast('Не удалось закрыть время: '+error.message); return; }
+  S.blocks.push(data); toast('Время закрыто'); render();
+}
+function bindBook(){
+  document.querySelectorAll('[data-bkact]').forEach(b=>b.onclick=async()=>{ const a=b.dataset.bkact,id=b.dataset.id;
+    if(a==='confirm'){ const n=document.getElementById('dn-'+id); bkUpdate(id,{status:'confirmed',admin_note:n?n.value.trim():''},'Подтверждено'); }
+    else if(a==='decline'){ const n=document.getElementById('dn-'+id); bkUpdate(id,{status:'declined',admin_note:n?n.value.trim():''},'Отклонено'); }
+    else if(a==='done') bkUpdate(id,{status:'done'},'Отмечено');
+    else if(a==='no_show') bkUpdate(id,{status:'no_show'},'Отмечено');
+    else if(a==='cancel') bkUpdate(id,{status:'cancelled'},'Отменено');
+    else if(a==='clearfee') bkUpdate(id,{fee:0},'Штраф снят');
+    else if(a==='delblock'){ const {error}=await sb.from('blocks').delete().eq('id',id); if(error){ toast('Не удалось'); return; } S.blocks=S.blocks.filter(x=>x.id!==id); render(); } });
+  on('#manForm','submit',addManual); on('#blkForm','submit',addBlock);
+  on('#schedForm','submit',saveSchedule); on('#genToken','click',genToken);
+  on('#copyFeed','click',()=>{ const u=feedUrl(); if(navigator.clipboard) navigator.clipboard.writeText(u).then(()=>toast('Ссылка скопирована')); });
+  on('#pinGen','click',()=>setPin(true)); on('#pinSet','click',()=>setPin(false));
+}
+
+/* ---------- расписание и календарь ---------- */
+const feedUrl=()=>S.token?`${String(window.SUPABASE_URL).replace(/\/$/,'')}/functions/v1/calendar?token=${S.token}`:'';
+async function genToken(){
+  if(S.token&&!confirm('Старая ссылка перестанет работать, а календари мастеров нужно будет подключить заново. Продолжить?')) return;
+  const a=new Uint8Array(24); crypto.getRandomValues(a); const tok=[...a].map(x=>x.toString(16).padStart(2,'0')).join('');
+  const {error}=await sb.from('admin_private').upsert({id:1,feed_token:tok}); if(error){ toast('Не удалось создать ссылку: '+error.message); return; }
+  S.token=tok; toast('Ссылка создана'); render();
+}
+function scheduleView(){
+  const B=BKC(), L=G().levels, wd=B.weekday, we=B.weekend;
+  const win=(k,w,lab)=>`<div class="sub">${lab}</div><div class="grid"><label>Сразу подтверждается с<input type="time" data-w="${k}.autoFrom" value="${esc(w.autoFrom)}"></label><label>до<input type="time" data-w="${k}.autoTo" value="${esc(w.autoTo)}"></label><label>По подтверждению мастера с<input type="time" data-w="${k}.reqFrom" value="${esc(w.reqFrom)}"></label><label>до<input type="time" data-w="${k}.reqTo" value="${esc(w.reqTo)}"></label></div>`;
+  return `<div class="panel"><h2>Онлайн-запись</h2>
+   <form id="schedForm" style="display:flex;flex-direction:column;gap:14px">
+    <label class="check"><input type="checkbox" id="sOn" ${B.enabled?'checked':''}><span>Запись открыта для клиенток</span></label>
+    <div class="grid">
+      <label>Часовой пояс<input id="sTz" value="${esc(B.tz)}"></label>
+      <label>Шаг времени, минут<input id="sStep" type="number" min="15" step="15" value="${B.stepMin}"></label>
+      <label>Открыта вперёд, месяцев (1–12)<input id="sHor" type="number" min="1" max="12" value="${B.horizonMonths}"></label>
+      <label>Минимум часов до записи<input id="sNotice" type="number" min="0" value="${B.minNoticeHours}"></label>
+      <label>Сколько клиенток одновременно<input id="sCap" type="number" min="1" value="${B.capacity}"></label></div>
+    ${win('weekday',wd,'Будни')}${win('weekend',we,'Выходные')}
+    <div class="sub">Длительность услуг, минут</div>
+    <div class="grid"><label>По умолчанию<input type="number" min="15" step="15" id="sDef" value="${B.defaultMinutes}"></label>${servicesOf().map(n=>`<label>${esc(n)}<input type="number" min="15" step="15" data-dur="${esc(n)}" value="${+B.durations[n]||B.defaultMinutes}"></label>`).join('')}</div>
+    <div class="sub">Отмена</div>
+    <div class="grid"><label>Бесплатно за, часов<input id="sCh" type="number" min="0" value="${B.cancelHours}"></label><label>Штраф за позднюю отмену, €<input id="sFee" type="number" min="0" step="0.5" value="${B.lateFee}"></label></div>
+    <div class="sub">Бесплатные поздние отмены в месяц, по уровням</div>
+    <div class="grid">${L.map((l,i)=>`<label>${esc(l.name)}<input type="number" min="0" data-fl="${i}" value="${+B.freeLate[i]||0}"></label>`).join('')}</div>
+    <button class="primary">Сохранить</button></form>
+    <p class="muted small">Уровень клиентки для бесплатных отмен обновляется, когда вы открываете админку.</p></div>
+  <div class="panel"><h2>Календарь для мастеров</h2>
+    <p class="muted">Записи появляются в Google Calendar или iCloud автоматически по секретной ссылке. Неподтверждённые помечены «?».</p>
+    ${S.token?`<div class="mono">${esc(feedUrl())}</div><div class="actions"><button id="copyFeed" class="primary">Скопировать ссылку</button><button id="genToken">Создать новую ссылку</button></div>`:`<button class="primary" id="genToken">Создать ссылку</button>`}
+    <p class="muted small">Google Calendar: «Другие календари» → «Добавить» → «По URL». iPhone/Mac: «Календарь» → «Файл» → «Новая подписка на календарь». Google обновляет такие календари медленно, иногда до суток. Для мгновенного просмотра используйте вкладку «Записи». Ссылку не публикуйте: она открывает имена клиенток. Перед первым подключением разверните функцию calendar (инструкция в файле calendar-function.ts).</p></div>`;
+}
+const tv=(k)=>{const [a,b]=k.split('.'); return document.querySelector(`[data-w="${k}"]`).value;};
+function saveSchedule(e){
+  e.preventDefault();
+  const B=mergeBooking(BKC());
+  B.enabled=$('#sOn').checked; B.tz=$('#sTz').value.trim()||'Europe/Tallinn';
+  try{ new Intl.DateTimeFormat('en',{timeZone:B.tz}); }catch(_){ toast('Неизвестный часовой пояс. Пример: Europe/Tallinn'); return; }
+  B.stepMin=Math.max(15,+$('#sStep').value||60); B.horizonMonths=Math.min(12,Math.max(1,+$('#sHor').value||3));
+  B.minNoticeHours=Math.max(0,+$('#sNotice').value||0); B.capacity=Math.max(1,+$('#sCap').value||1);
+  ['weekday','weekend'].forEach(k=>['autoFrom','autoTo','reqFrom','reqTo'].forEach(f=>{ B[k][f]=tv(k+'.'+f); }));
+  for(const k of ['weekday','weekend']){ const w=B[k]; if((w.autoFrom&&w.autoTo&&w.autoFrom>=w.autoTo)||(w.reqFrom&&w.reqTo&&w.reqFrom>=w.reqTo)){ toast('Время «с» должно быть раньше «до»'); return; } }
+  B.defaultMinutes=Math.max(15,+$('#sDef').value||60); B.durations={};
+  document.querySelectorAll('[data-dur]').forEach(el=>{ B.durations[el.dataset.dur]=Math.max(15,+el.value||B.defaultMinutes); });
+  B.cancelHours=Math.max(0,+$('#sCh').value||0); B.lateFee=Math.max(0,+$('#sFee').value||0); B.freeLate={};
+  document.querySelectorAll('[data-fl]').forEach(el=>{ const n=Math.max(0,Math.floor(+el.value||0)); if(n) B.freeLate[el.dataset.fl]=n; });
+  S.cfg={...S.cfg,booking:B}; persist(); toast(B.enabled?'Сохранено. Запись открыта':'Сохранено. Запись пока закрыта'); render();
+}
+
+/* ---------- доступ клиентки ---------- */
+function accessPanel(c){
+  const up=S.bookings.filter(b=>b.client_id===c.id&&['pending','confirmed'].includes(b.status)&&new Date(b.end_at)>new Date()).length;
+  return `<div class="panel"><h2>Доступ и запись</h2>
+    <p class="muted small">Email: ${esc(c.email||'не указан')}${c.email?(c.marketing?' · согласна на рассылки':' · без рассылок'):''} · будущих записей: ${up}</p>
+    ${shownPin&&shownPin.id===c.id?`<div class="hint">PIN для ${esc(c.name)}: <b class="mono" style="font-size:18px">${esc(shownPin.pin)}</b><br>Передайте клиентке лично. После обновления страницы он больше не отображается.</div>`:''}
+    <div class="grid"><label>Свой PIN (4–8 цифр)<input id="pinVal" inputmode="numeric" maxlength="8" autocomplete="off"></label>
+    <div class="actions" style="align-self:end"><button id="pinSet">Задать PIN</button><button id="pinGen">Выдать случайный</button></div></div>
+    <p class="muted small">PIN нужен клиентке для входа и записи. Новые клиентки задают его сами при регистрации.</p></div>`;
+}
+async function setPin(random){
+  const c=cur(); if(!c) return; const pin=random?String(Math.floor(100000+crypto.getRandomValues(new Uint32Array(1))[0]%900000)):($('#pinVal').value.trim());
+  if(!/^\d{4,8}$/.test(pin)){ toast('PIN: от 4 до 8 цифр'); return; }
+  const {data,error}=await sb.rpc('admin_set_pin',{p_client:c.id,p_pin:pin});
+  if(error||(data&&data.error)){ toast('Не удалось задать PIN'); return; }
+  shownPin={id:c.id,pin}; toast('PIN задан'); render();
+}
+
 /* ---------- данные, резервные копии, GDPR ---------- */
 function saveFile(name,text,type){
   const url=URL.createObjectURL(new Blob([text],{type})), a=document.createElement('a');
@@ -624,17 +791,17 @@ function saveFile(name,text,type){
 const stamp=()=>new Date().toISOString().slice(0,10);
 function markBackup(){ try{ localStorage.setItem('lastBackup',String(Date.now())); }catch(e){} }
 function backupJson(){
-  saveFile(`beauty-garage-backup-${stamp()}.json`,JSON.stringify({exportedAt:new Date().toISOString(),settings:S.cfg,clients:S.clients},null,2),'application/json');
+  saveFile(`beauty-garage-backup-${stamp()}.json`,JSON.stringify({exportedAt:new Date().toISOString(),settings:S.cfg,clients:S.clients,bookings:S.bookings,blocks:S.blocks},null,2),'application/json');
   markBackup(); toast('Резервная копия скачана'); render();
 }
 function backupCsv(){
   const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
-  const rows=[['Имя','Вход','Телефон','День рождения','Баланс','Потрачено','Создана']].concat(S.clients.map(c=>[c.name,c.login,c.phone,c.birthday,c.balance,c.spent,new Date(c.createdAt).toISOString().slice(0,10)]));
+  const rows=[['Имя','Вход','Телефон','Email','Рассылки','День рождения','Баланс','Потрачено','Создана']].concat(S.clients.map(c=>[c.name,c.login,c.phone,c.email,c.marketing?'да':'нет',c.birthday,c.balance,c.spent,new Date(c.createdAt).toISOString().slice(0,10)]));
   saveFile(`beauty-garage-clients-${stamp()}.csv`,'\ufeff'+rows.map(r=>r.map(q).join(',')).join('\n'),'text/csv;charset=utf-8');
   markBackup(); toast('Список клиенток скачан'); render();
 }
 function exportClient(c){
-  saveFile(`client-${norm(c.login).replace(/[^a-z0-9а-я_-]+/gi,'-')||'data'}-${stamp()}.json`,JSON.stringify(c,null,2),'application/json'); toast('Данные клиентки скачаны');
+  saveFile(`client-${norm(c.login).replace(/[^a-z0-9а-я_-]+/gi,'-')||'data'}-${stamp()}.json`,JSON.stringify({...c,bookings:S.bookings.filter(b=>b.client_id===c.id)},null,2),'application/json'); toast('Данные клиентки скачаны');
 }
 function dataView(){
   let last=0; try{ last=+localStorage.getItem('lastBackup')||0; }catch(e){}
@@ -668,11 +835,15 @@ function showLogin(err){
 }
 async function load(){
   showMsg('Загрузка…','');
-  const [s,c]=await Promise.all([sb.from('settings').select('cfg').eq('id',1).single(), sb.from('clients').select('*')]);
+  const [s,c]=await Promise.all([sb.from('settings').select('cfg').eq('id',1).single(), sb.from('clients').select('id,name,login,phone,birthday,balance,spent,disc,ref_by,ref_paid,last_earn,created_at,history,email,marketing')]);
   if(s.error||c.error){ showMsg('Не удалось загрузить данные','Если вы только что обновили файлы, сначала выполните в Supabase скрипт migration-glam.sql. Иначе проверьте config.js.'); return; }
-  S.cfg=s.data.cfg; cfgSnap=JSON.stringify(S.cfg); S.cfg.glam=mergeGlam(S.cfg.glam);
+  const [bk,bl,pr]=await Promise.all([sb.from('bookings').select('*').order('start_at'),sb.from('blocks').select('*').order('start_at'),sb.from('admin_private').select('feed_token').eq('id',1).single()]);
+  if(bk.error||bl.error){ showMsg('Не удалось загрузить записи','Сначала выполните в Supabase скрипт migration-booking.sql (SQL Editor), затем обновите страницу.'); return; }
+  S.bookings=bk.data||[]; S.blocks=bl.data||[]; S.token=(pr.data&&pr.data.feed_token)||'';
+  S.cfg=s.data.cfg; cfgSnap=JSON.stringify(S.cfg); S.cfg.glam=mergeGlam(S.cfg.glam); S.cfg.booking=mergeBooking(S.cfg.booking);
   S.clients=c.data.map(fromRow); S.clients.forEach(x=>snap.set(x.id,JSON.stringify(toRow(x))));
   S.clients.forEach(settle); persist(); render();
+  setInterval(refreshBookings,60000);
 }
 async function boot(){
   if(!sb){ showMsg('Нужна настройка','Откройте файл config.js и вставьте данные из Supabase.'); return; }

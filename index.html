@@ -150,6 +150,31 @@ h1,.it{font-style:normal}
 .visit-list div{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--line)}
 .visit-list div:first-child{border-top:0}
 
+/* v4: аккаунт и запись */
+.cta{flex-direction:row;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.cta button{min-width:150px}
+.acct .rowline{align-items:center}
+.svc-list{display:grid;gap:10px}
+.svc{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;padding:14px 16px;border-radius:14px}
+.svc small{color:var(--muted);font-weight:500}
+.cal-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.cal-head button{width:40px;height:40px;padding:0;border-radius:50%}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal .wd{font-size:11px;font-weight:700;color:var(--muted);text-align:center;letter-spacing:.06em;text-transform:uppercase;padding:4px 0}
+.cal button{padding:0;aspect-ratio:1;border-radius:10px;border:1px solid transparent;background:none;font-weight:600;font-variant-numeric:tabular-nums}
+.cal button.has{background:var(--soft);color:var(--accent)}
+.cal button.sel{background:var(--accent);color:var(--accent-fg)}
+.cal button:disabled{opacity:.28;cursor:default}
+.chips-t{display:flex;flex-wrap:wrap;gap:8px}
+.tchip{padding:9px 14px;border-radius:99px;font-variant-numeric:tabular-nums}
+.tchip.auto{border-color:var(--accent)}
+.tchip.req{border-style:dashed;border-color:var(--accent)}
+.tchip.sel{background:var(--accent);color:var(--accent-fg)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.bk-row{display:flex;flex-direction:column;gap:8px;padding:14px 0;border-top:1px solid var(--line)}
+.bk-row:first-child{border-top:0;padding-top:0}
+.pill.dash{background:transparent;border:1px dashed var(--accent)}
+
 </style>
 </head>
 <body>
@@ -270,9 +295,9 @@ function perksRows(G,i){
 
 
 const app=document.getElementById('app');
-let cfg=null,q='',rec=null,notFound=false,err='',busy=false,sheet=null,lvlup=null,lang='ru';
+let cfg=null,rec=null,err='',busy=false,sheet=null,lvlup=null,lang='ru',cred=null,authTab='login',authErr='',bk=null;
 const PREVIEW=/[?&]preview=glam/.test(location.search);
-try{ q=localStorage.getItem('bonusQuery')||''; }catch(e){}
+try{ cred=JSON.parse(localStorage.getItem('bgCred')||'null'); }catch(e){}
 try{ const nl=navigator.language||'ru'; lang=localStorage.getItem('bgLang')||(/^et/i.test(nl)?'et':/^(ru|uk|be)/i.test(nl)?'ru':'en'); }catch(e){}
 const configured = window.SUPABASE_URL && !String(window.SUPABASE_URL).startsWith('ВСТАВЬТЕ');
 const sb = configured && window.supabase ? window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY) : null;
@@ -394,6 +419,81 @@ T.et={
   iTitle:'Kutsu sõbranna', iText:(nm,r)=>`Palu sõbrannal broneerides nimetada sinu nime või hüüdnime: „${nm}“. Pärast tema esimest makstud külastust saad ${r}.`, iOff:'Praegu sõbranna eest tasu ei ole.',
   tTitle:'Boonuste tähtajad', tNoExp:'Sinu boonused ei aegu kuupäeva järgi.', tExp:d=>`Sinu boonused kehtivad kuni ${d}.`,
 };
+Object.assign(T.ru,{
+ profile:'Профиль', logout:'Выйти', tLogin:'Вход', tRegister:'Регистрация',
+ nickLabel:'Ник в Instagram (точно как в профиле)', nameLabel:'Как к вам обращаться', pinLabel:'PIN-код', pinNew:'Придумайте PIN (4–8 цифр)',
+ emailLabel:'Email (по желанию)', marketing:'Хочу получать новости и предложения на email', consent:'Я согласна на хранение моего ника, имени и записей для работы клуба и записи на услуги',
+ wait:'Подождите…', btnRegister:'Зарегистрироваться', btnLogin:'Войти', nickHint:'Первый раз здесь? Откройте вкладку «Регистрация».',
+ nickHintReg:'Ник нужен, чтобы мы узнавали вас в студии. Подтверждение через Instagram не требуется. PIN защищает ваши записи и баланс.',
+ needLogin:'Сначала войдите или зарегистрируйтесь.',
+ bookTitle:'Записаться', bookSub:m=>`Запись открыта на ${m} ${pl(m,['месяц','месяца','месяцев'])} вперёд.`, bookBtn:'Выбрать время',
+ myBookings:'Мои записи', noBookings:'Ближайших записей нет.', stConfirmed:'Подтверждена', stPending:'Ждёт подтверждения мастера', bResched:'Перенести', bCancel:'Отменить', bCal:'В календарь',
+ lateHint:c=>`Менее чем за 24 часа изменить запись можно только через администратора${c?': '+c:''}.`,
+ recent:'Недавнее', declinedNote:d=>`Запрос на ${d} отклонён.`, feeNote:(d,f)=>`Штраф за позднюю отмену записи на ${d}: ${f}. Учтём при следующем визите.`,
+ wzService:'Выберите услугу', wzDate:'Выберите день', wzPick:'Нажмите на день, чтобы увидеть время.', wzLegendAuto:'подтверждается сразу', wzLegendReq:'по подтверждению мастера', wzNoSlots:'В этом месяце свободного времени нет.', wzNext:'Далее',
+ wzConfirm:'Проверьте запись', wzNote:'Комментарий (необязательно)', wzNotePh:'Например, референс или пожелания', wzSendReq:'Отправить запрос', wzBook:'Записаться', wzMove:'Перенести запись', wzBack:'Назад',
+ wzAutoInfo:'Запись подтвердится сразу.', wzReqInfo:'Это время подтверждает мастер. Мы отправим запрос, а ответ появится в «Моих записях».',
+ wzDoneAuto:'Вы записаны!', wzDoneReq:'Запрос отправлен', wzDoneReqText:'Мастер подтвердит или предложит другое время. Статус виден в «Моих записях».', wzDoneMove:'Запись перенесена',
+ policy:(h,f)=>`Бесплатная отмена и перенос — за ${h} ч и раньше. Отмена позже: штраф ${f}.`, policyFree:n=>`Бесплатных поздних отмен в этом месяце: ${n}.`,
+ cxTitle:'Отменить запись?', cxFree:'Отмена бесплатная.', cxFreePass:n=>`Отмена бесплатная по вашему уровню. После неё останется бесплатных отмен в этом месяце: ${n-1}.`, cxLate:f=>`До записи меньше положенного срока. Штраф за отмену: ${f}.`, cxKeep:'Оставить запись', cxDo:'Отменить запись',
+ cxDone:'Запись отменена.', cxDoneLate:f=>`Запись отменена. Штраф ${f} учтём при следующем визите.`,
+ pfTitle:'Профиль', pfEmail:'Email для новостей', pfMkt:'Присылать новости и предложения', pfBday:'День рождения', pfPin:'Новый PIN (если хотите сменить)', pfSave:'Сохранить', pfSaved:'Сохранено.',
+ pFreeCancel:'Бесплатных поздних отмен в месяц',
+ wdays:'будни', wends:'выходные', bkAuto:x=>`Запись подтверждается сразу: ${x}.`, bkReq:x=>`В будни ${x} время подтверждает мастер.`, bkHorizon:m=>`Записаться можно на ${m} ${pl(m,['месяц','месяца','месяцев'])} вперёд.`,
+ e_empty:'Введите ник и PIN.', e_net:'Не удалось связаться с сервером. Попробуйте ещё раз.', e_consent:'Нужно согласие на хранение данных.', e_other:'Что-то пошло не так. Попробуйте ещё раз.',
+ e_invalid_credentials:'Неверный ник или PIN.', e_locked:'Слишком много попыток. Подождите 15 минут.', e_no_pin:'Для этого ника ещё не задан PIN. Попросите администратора выдать его.', e_ask_admin:'Этот ник уже есть в студии. Попросите администратора выдать вам PIN.', e_taken:'Этот ник уже зарегистрирован. Войдите по PIN.', e_bad_login:'Ник: только латинские буквы, цифры, точка и подчёркивание (как в Instagram).', e_bad_name:'Введите имя.', e_bad_pin:'PIN: от 4 до 8 цифр.', e_bad_email:'Проверьте email.', e_bad_birthday:'Проверьте дату рождения.', e_try_later:'Сейчас много регистраций. Попробуйте позже.',
+ e_disabled:'Онлайн-запись пока не открыта.', e_bad_service:'Такой услуги нет.', e_too_soon:'Слишком близко по времени. Выберите другое.', e_too_far:'Запись пока недоступна так далеко вперёд.', e_not_available:'Это время недоступно.', e_busy:'Это время только что заняли. Выберите другое.', e_overlap:'У вас уже есть запись на это время.', e_limit:'Слишком много активных записей. Отмените ненужные.', e_not_found:'Запись не найдена.', e_bad_status:'Эту запись уже нельзя изменить.', e_too_late:'Слишком поздно менять запись онлайн. Напишите администратору.', e_past:'Эта запись уже прошла.'
+});
+Object.assign(T.en,{
+ profile:'Profile', logout:'Log out', tLogin:'Log in', tRegister:'Sign up',
+ nickLabel:'Instagram nickname (exactly as on your profile)', nameLabel:'What should we call you', pinLabel:'PIN', pinNew:'Choose a PIN (4–8 digits)',
+ emailLabel:'Email (optional)', marketing:'I want to receive news and offers by email', consent:'I agree to the storage of my nickname, name and bookings for the club and appointments',
+ wait:'Please wait…', btnRegister:'Sign up', btnLogin:'Log in', nickHint:'First time here? Open the “Sign up” tab.',
+ nickHintReg:'We use your nickname to recognise you at the studio. No Instagram verification is needed. The PIN protects your bookings and balance.',
+ needLogin:'Please log in or sign up first.',
+ bookTitle:'Book a visit', bookSub:m=>`Booking is open ${m} ${m===1?'month':'months'} ahead.`, bookBtn:'Choose a time',
+ myBookings:'My bookings', noBookings:'No upcoming bookings.', stConfirmed:'Confirmed', stPending:'Waiting for the master', bResched:'Reschedule', bCancel:'Cancel', bCal:'Add to calendar',
+ lateHint:c=>`Too close to the visit to change online. Please contact the admin${c?': '+c:''}.`,
+ recent:'Recent', declinedNote:d=>`Your request for ${d} was declined.`, feeNote:(d,f)=>`Late-cancellation fee for the visit on ${d}: ${f}. We will add it to your next visit.`,
+ wzService:'Choose a service', wzDate:'Choose a day', wzPick:'Tap a day to see available times.', wzLegendAuto:'confirmed instantly', wzLegendReq:'needs the master’s confirmation', wzNoSlots:'No free time this month.', wzNext:'Next',
+ wzConfirm:'Check your booking', wzNote:'Comment (optional)', wzNotePh:'For example, a reference or wishes', wzSendReq:'Send request', wzBook:'Book', wzMove:'Reschedule', wzBack:'Back',
+ wzAutoInfo:'Your booking is confirmed instantly.', wzReqInfo:'The master confirms this time. We will send a request and the answer will appear in “My bookings”.',
+ wzDoneAuto:'You are booked!', wzDoneReq:'Request sent', wzDoneReqText:'The master will confirm or suggest another time. See the status in “My bookings”.', wzDoneMove:'Booking moved',
+ policy:(h,f)=>`Free cancellation and rescheduling up to ${h} h before. Later cancellation: ${f} fee.`, policyFree:n=>`Free late cancellations left this month: ${n}.`,
+ cxTitle:'Cancel this booking?', cxFree:'Cancellation is free.', cxFreePass:n=>`Free cancellation thanks to your level. Free cancellations left this month after this one: ${n-1}.`, cxLate:f=>`Too close to the visit. Cancellation fee: ${f}.`, cxKeep:'Keep booking', cxDo:'Cancel booking',
+ cxDone:'Booking cancelled.', cxDoneLate:f=>`Booking cancelled. We will add the ${f} fee to your next visit.`,
+ pfTitle:'Profile', pfEmail:'Email for news', pfMkt:'Send me news and offers', pfBday:'Birthday', pfPin:'New PIN (to change it)', pfSave:'Save', pfSaved:'Saved.',
+ pFreeCancel:'Free late cancellations per month',
+ wdays:'weekdays', wends:'weekends', bkAuto:x=>`Instantly confirmed: ${x}.`, bkReq:x=>`On weekdays ${x} the master confirms the time.`, bkHorizon:m=>`You can book up to ${m} ${m===1?'month':'months'} ahead.`,
+ e_empty:'Enter your nickname and PIN.', e_net:'Could not reach the server. Please try again.', e_consent:'We need your consent to store your data.', e_other:'Something went wrong. Please try again.',
+ e_invalid_credentials:'Wrong nickname or PIN.', e_locked:'Too many attempts. Please wait 15 minutes.', e_no_pin:'No PIN is set for this nickname yet. Ask the admin to give you one.', e_ask_admin:'This nickname already exists at the studio. Ask the admin to give you a PIN.', e_taken:'This nickname is already registered. Log in with your PIN.', e_bad_login:'Nickname: only Latin letters, digits, dot and underscore (like Instagram).', e_bad_name:'Enter your name.', e_bad_pin:'PIN: 4 to 8 digits.', e_bad_email:'Check your email address.', e_bad_birthday:'Check your birth date.', e_try_later:'Many sign-ups right now. Please try later.',
+ e_disabled:'Online booking is not open yet.', e_bad_service:'No such service.', e_too_soon:'Too soon. Please pick another time.', e_too_far:'Booking is not available that far ahead yet.', e_not_available:'This time is not available.', e_busy:'This time was just taken. Please pick another.', e_overlap:'You already have a booking at this time.', e_limit:'Too many active bookings. Please cancel the ones you do not need.', e_not_found:'Booking not found.', e_bad_status:'This booking can no longer be changed.', e_too_late:'Too late to change online. Please message the admin.', e_past:'This booking is already in the past.'
+});
+Object.assign(T.et,{
+ profile:'Profiil', logout:'Logi välja', tLogin:'Sisene', tRegister:'Registreeru',
+ nickLabel:'Instagrami kasutajanimi (täpselt nagu profiilil)', nameLabel:'Kuidas sind kutsuda', pinLabel:'PIN-kood', pinNew:'Vali PIN (4–8 numbrit)',
+ emailLabel:'E-post (soovi korral)', marketing:'Soovin saada uudiseid ja pakkumisi e-postile', consent:'Nõustun oma kasutajanime, nime ja broneeringute salvestamisega kliubi ja teenustele registreerimise jaoks',
+ wait:'Palun oota…', btnRegister:'Registreeru', btnLogin:'Sisene', nickHint:'Oled siin esimest korda? Ava vahekaart „Registreeru“.',
+ nickHintReg:'Kasutajanime abil tunneme sind stuudios ära. Instagrami kinnitust ei ole vaja. PIN kaitseb sinu broneeringuid ja saldot.',
+ needLogin:'Palun sisene või registreeru esmalt.',
+ bookTitle:'Broneeri aeg', bookSub:m=>`Broneerida saab ${m} kuu${m===1?'':'d'} ette.`, bookBtn:'Vali aeg',
+ myBookings:'Minu broneeringud', noBookings:'Tulevasi broneeringuid ei ole.', stConfirmed:'Kinnitatud', stPending:'Ootab meistri kinnitust', bResched:'Muuda aega', bCancel:'Tühista', bCal:'Lisa kalendrisse',
+ lateHint:c=>`Liiga lähedal külastusele, et veebis muuta. Kirjuta administraatorile${c?': '+c:''}.`,
+ recent:'Hiljutised', declinedNote:d=>`Sinu soov ${d} jaoks lükati tagasi.`, feeNote:(d,f)=>`Hilise tühistamise tasu külastuse eest ${d}: ${f}. Arvestame selle järgmisel külastusel.`,
+ wzService:'Vali teenus', wzDate:'Vali päev', wzPick:'Vajuta päevale, et näha vabu aegu.', wzLegendAuto:'kinnitub kohe', wzLegendReq:'vajab meistri kinnitust', wzNoSlots:'Sel kuul vabu aegu ei ole.', wzNext:'Edasi',
+ wzConfirm:'Kontrolli broneeringut', wzNote:'Kommentaar (soovi korral)', wzNotePh:'Näiteks viide või soovid', wzSendReq:'Saada soov', wzBook:'Broneeri', wzMove:'Muuda aega', wzBack:'Tagasi',
+ wzAutoInfo:'Broneering kinnitub kohe.', wzReqInfo:'Selle aja kinnitab meister. Saadame soovi ja vastus ilmub jaotisse „Minu broneeringud“.',
+ wzDoneAuto:'Oled registreeritud!', wzDoneReq:'Soov saadetud', wzDoneReqText:'Meister kinnitab aja või pakub teise. Staatuse näed jaotises „Minu broneeringud“.', wzDoneMove:'Broneering on ümber tõstetud',
+ policy:(h,f)=>`Tasuta tühistamine ja ümberbroneerimine kuni ${h} h enne. Hilisem tühistamine: tasu ${f}.`, policyFree:n=>`Tasuta hilisi tühistamisi sel kuul alles: ${n}.`,
+ cxTitle:'Tühistada broneering?', cxFree:'Tühistamine on tasuta.', cxFreePass:n=>`Tasuta tühistamine tänu sinu tasemele. Pärast seda jääb sel kuul tasuta tühistamisi: ${n-1}.`, cxLate:f=>`Külastuseni on liiga vähe aega. Tühistamistasu: ${f}.`, cxKeep:'Jäta broneering', cxDo:'Tühista broneering',
+ cxDone:'Broneering tühistatud.', cxDoneLate:f=>`Broneering tühistatud. Arvestame tasu ${f} järgmisel külastusel.`,
+ pfTitle:'Profiil', pfEmail:'E-post uudiste jaoks', pfMkt:'Saada mulle uudiseid ja pakkumisi', pfBday:'Sünnipäev', pfPin:'Uus PIN (kui soovid muuta)', pfSave:'Salvesta', pfSaved:'Salvestatud.',
+ pFreeCancel:'Tasuta hilisi tühistamisi kuus',
+ wdays:'tööpäevad', wends:'nädalavahetus', bkAuto:x=>`Kohe kinnitub: ${x}.`, bkReq:x=>`Tööpäevadel ${x} kinnitab aja meister.`, bkHorizon:m=>`Broneerida saab kuni ${m} kuu${m===1?'':'d'} ette.`,
+ e_empty:'Sisesta kasutajanimi ja PIN.', e_net:'Serveriga ühendus ebaõnnestus. Proovi uuesti.', e_consent:'Andmete salvestamiseks on vaja nõusolekut.', e_other:'Midagi läks valesti. Proovi uuesti.',
+ e_invalid_credentials:'Vale kasutajanimi või PIN.', e_locked:'Liiga palju katseid. Oota 15 minutit.', e_no_pin:'Sellele kasutajanimele pole PIN-i määratud. Palu administraatoril see anda.', e_ask_admin:'See kasutajanimi on stuudios juba olemas. Palu administraatoril anda sulle PIN.', e_taken:'See kasutajanimi on juba registreeritud. Sisene PIN-iga.', e_bad_login:'Kasutajanimi: ainult ladina tähed, numbrid, punkt ja alakriips (nagu Instagramis).', e_bad_name:'Sisesta nimi.', e_bad_pin:'PIN: 4–8 numbrit.', e_bad_email:'Kontrolli e-posti aadressi.', e_bad_birthday:'Kontrolli sünnikuupäeva.', e_try_later:'Praegu on palju registreerimisi. Proovi hiljem.',
+ e_disabled:'Veebibroneerimine ei ole veel avatud.', e_bad_service:'Sellist teenust ei ole.', e_too_soon:'Liiga lähedane aeg. Vali teine.', e_too_far:'Nii kaugele ette ei saa veel broneerida.', e_not_available:'See aeg ei ole saadaval.', e_busy:'See aeg võeti just ära. Vali teine.', e_overlap:'Sul on sellele ajale juba broneering.', e_limit:'Liiga palju aktiivseid broneeringuid. Tühista mittevajalikud.', e_not_found:'Broneeringut ei leitud.', e_bad_status:'Seda broneeringut ei saa enam muuta.', e_too_late:'Liiga hilja, et veebis muuta. Kirjuta administraatorile.', e_past:'See broneering on juba möödas.'
+});
 const t=(k,...a)=>{const v=(T[lang]&&T[lang][k]!==undefined)?T[lang][k]:T.ru[k];return typeof v==='function'?v(...a):v;};
 const ACTION_EN={reel:'Make a Reel about the studio or a service and tag us',review:'Leave a review with a photo',bday:'Visit during your birthday week'};
 const ACTION_ET={reel:'Tee Reel stuudiost või teenusest ja märgi meid',review:'Jäta foto ja arvustus',bday:'Külasta sünnipäevanädalal'};
@@ -409,7 +509,7 @@ const svg=(p)=>`<svg viewBox="0 0 24 24" aria-hidden="true">${p}</svg>`;
 const fromRange=(L,i)=>t('from',eur(L[i].from));
 function perkRows(G,i){
   const l=G.levels[i], pc=v=>v?`${v}%`:'—', e=v=>v>0?eur(v):'—';
-  return [[t('pCashback'),`${l.cashback}%`],[t('pDisc'),pc(l.discount)],[t('pLvBonus'),e(l.levelBonus)],[t('pBday'),e(l.birthday)],[t('pPrio'),l.priority?t('yes'):'—'],[t('pTattoo'),pc(l.firstTattoo)],[t('pGifts'),l.giftsPerYear>0?String(l.giftsPerYear):'—']];
+  return [[t('pCashback'),`${l.cashback}%`],[t('pDisc'),pc(l.discount)],[t('pLvBonus'),e(l.levelBonus)],[t('pBday'),e(l.birthday)],[t('pPrio'),l.priority?t('yes'):'—'],[t('pTattoo'),pc(l.firstTattoo)],[t('pGifts'),l.giftsPerYear>0?String(l.giftsPerYear):'—']].concat(bookingOn()?[[t('pFreeCancel'),String(freeCancels(i)||'—')]]:[]);
 }
 function rulesList(){
   const r=[cfg.mode==='next'?t('rNext'):t('rFree')];
@@ -488,7 +588,7 @@ function giftsPanel(r){
 }
 function sheetHtml(){
   const G=cfg.glam,L=G.levels;
-  const wrap=(inner,center)=>`<div class="sheet-bg" data-close="1"><div class="sheet ${center?'center':''}" role="dialog" aria-modal="true">${inner}</div></div>`;
+  const wrap=shell;
   const closeBtn=`<button class="primary" data-close="1" id="sheetClose">${esc(t('close'))}</button>`;
   if(lvlup!=null){
     const i=lvlup,l=L[i];
@@ -498,6 +598,10 @@ function sheetHtml(){
       <button class="primary" id="sheetClose" data-close="1" data-newperks="${i}" style="width:100%">${esc(t('lvBtn'))}</button>`,true);
   }
   if(!sheet) return '';
+  if(sheet.type==='book') return bookSheet();
+  if(sheet.type==='cancel') return cancelSheet();
+  if(sheet.type==='cxdone') return shell(`<h3>${esc(t('cxTitle').replace('?',''))}</h3><p>${esc(sheet.msg)}</p><button class="primary" data-close="1" id="sheetClose">${esc(t('close'))}</button>`);
+  if(sheet.type==='profile') return profileSheet();
   if(sheet.type==='level'){
     const i=sheet.i,l=L[i],gc=rec?gcOf(rec):null;
     const st=!gc?t('levelWord'):(i<gc.level?t('passed'):i===gc.level?t('curLevel'):t('notYet'));
@@ -512,7 +616,7 @@ function sheetHtml(){
   }
   if(sheet.type==='invite'){
     const rw=cfg.friend&&cfg.friend.val>0?rewardT(cfg.friend):'';
-    return wrap(`<h3>${esc(t('iTitle'))}</h3><p>${esc(rw?t('iText',q.trim(),rw):t('iOff'))}</p>${closeBtn}`);
+    return wrap(`<h3>${esc(t('iTitle'))}</h3><p>${esc(rw?t('iText',(rec.login||''),rw):t('iOff'))}</p>${closeBtn}`);
   }
   if(sheet.type==='terms'){
     const e=(cfg.expireDays>0&&rec.b>0&&rec.l>0)?rec.l+cfg.expireDays*DAY:0;
@@ -524,6 +628,7 @@ function sheetHtml(){
 function render(){
   if(!configured){ app.innerHTML=`<div class="panel"><h2>${esc(t('setup'))}</h2><p class="muted">${esc(t('setupText'))}</p></div>`; return; }
   if(!cfg){ app.innerHTML=`<p class="muted">${esc(err||t('loading'))}</p>`; return; }
+  const sh0=document.querySelector('.sheet'), sTop=sh0?sh0.scrollTop:0, y0=window.scrollY;
   const g=glamOn(), G=cfg.glam;
   const act=cfg.actions.filter(a=>a.val>0).map(a=>`<div><span>${esc(actTitle(a))}</span><b>${rewardT(a)}</b></div>`).join('');
   const fr=cfg.friend&&cfg.friend.val>0?`<div><span>${esc(t('friendRow'))}</span><b>${rewardT(cfg.friend)}</b></div>`:'';
@@ -536,21 +641,18 @@ function render(){
     <div class="langs" role="group" aria-label="Language"><button data-lang="ru" aria-pressed="${lang==='ru'}">RU</button><button data-lang="en" aria-pressed="${lang==='en'}">EN</button><button data-lang="et" aria-pressed="${lang==='et'}">ET</button></div></div>
   <header><div><h1>${esc(cfg.studio)}</h1>${tagline?`<p class="muted">${esc(tagline)}</p>`:''}</div></header>
   ${PREVIEW&&!G.enabled?`<div class="hint warn">${esc(t('draft'))}</div>`:''}
-  <div class="panel"><h2>${esc(t('checkTitle'))}</h2>
-    <form id="f" style="display:flex;flex-direction:column;gap:12px">
-      <label for="q">${esc(t('checkLabel'))}<input id="q" value="${esc(q)}" autocomplete="off" placeholder="${esc(t('checkPh'))}"></label>
-      <button class="primary" ${busy?'disabled':''}>${esc(busy?t('searching'):t('checkBtn'))}</button>
-      ${notFound?`<div class="neg small">${esc(t('notFound'))}</div>`:''}${err?`<div class="neg small">${esc(err)}</div>`:''}
-    </form></div>
+  ${accountBlock()}
+  ${bookingCta()}
+  ${myBookingsPanel()}
   ${rec?(g?heroBlocks(rec):oldBalanceCard(rec)):''}
   ${g?journey(rec):''}
   ${rec&&g?giftsPanel(rec):''}
   <div class="panel"><h2>${esc(t('ways'))}</h2><div class="ways">${fr}${act}</div>
     ${cfg.contact?`<p class="muted small">${esc(t('claim',cfg.contact))}</p>`:''}</div>
   ${g?'':`<div class="panel"><h2>${esc(t('oldTitle'))}</h2><div class="ways">${tiers}</div><p class="muted small">${esc(t('oldNote'))}</p></div>`}
-  <div class="panel"><h2>${esc(t('rules'))}</h2>${rulesList().map(x=>`<p>${esc(x)}</p>`).join('')}${glamRules}</div>
-  ${g?sheetHtml():''}`;
-  document.getElementById('f').addEventListener('submit',e=>{ e.preventDefault(); q=document.getElementById('q').value; lookup(); });
+  <div class="panel"><h2>${esc(t('rules'))}</h2>${rulesList().map(x=>`<p>${esc(x)}</p>`).join('')}${glamRules}${bookingRulesHtml()}</div>
+  ${sheetHtml()}`;
+  bindAuth(); bindBooking();
   document.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{ setLang(b.dataset.lang); render(); });
   document.querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>{ sheet={type:'level',i:+b.dataset.lv}; render(); const c=document.getElementById('sheetClose'); if(c) c.focus(); });
   document.querySelectorAll('[data-sheet]').forEach(b=>b.onclick=()=>{
@@ -558,34 +660,257 @@ function render(){
     sheet= k==='perks'?{type:'level',i:gcOf(rec).level}:{type:k};
     render(); const c=document.getElementById('sheetClose'); if(c) c.focus(); });
   document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',e=>{ if(e.target===b){ const np=b.dataset.newperks; sheet=np!==undefined?{type:'level',i:+np}:null; lvlup=null; render(); } }));
+  const sh1=document.querySelector('.sheet'); if(sh1) sh1.scrollTop=sTop;
+  if(!window.__keepScroll) window.scrollTo(0,y0);
 }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&(sheet||lvlup!=null)){ sheet=null; lvlup=null; render(); } });
 
 function checkLevelUp(){
   if(!rec||!glamOn()) return;
-  const gc=gcOf(rec), k='glamLvl:'+keyOf(q); let prev=null;
+  const gc=gcOf(rec), k='glamLvl:'+keyOf(rec.login); let prev=null;
   try{ prev=localStorage.getItem(k); }catch(e){}
   const ev=gc.log.filter(e=>e.type==='up'||e.type==='restore').pop(), fresh=ev&&Date.now()-ev.ts<14*DAY;
   if((prev!==null&&gc.level>+prev)||(prev===null&&gc.level>0&&fresh)) lvlup=gc.level;
   try{ localStorage.setItem(k,String(gc.level)); }catch(e){}
 }
-async function lookup(){
-  if(!norm(q)) return;
-  busy=true; err=''; notFound=false; render();
+/* ---------- аккаунт и запись ---------- */
+const shell=(inner,center)=>`<div class="sheet-bg" data-close="1"><div class="sheet ${center?'center':''}" role="dialog" aria-modal="true">${inner}</div></div>`;
+const bookingOn=()=>!!(cfg&&cfg.booking&&(cfg.booking.enabled||PREVIEW));
+const BK=()=>cfg.booking||{};
+const freeCancels=i=>+((BK().freeLate||{})[String(i)])||0;
+const SVC={en:{'Тату':'Tattoo','Макияж + укладка':'Makeup + styling','Макияж':'Makeup','Укладка':'Styling','Брови':'Brows','Ресницы':'Lashes','Комбо':'Combo'},
+ et:{'Тату':'Tätoveering','Макияж + укладка':'Meik + soeng','Макияж':'Meik','Укладка':'Soeng','Брови':'Kulmud','Ресницы':'Ripsmed','Комбо':'Kombo'}};
+const svcName=n=>(SVC[lang]&&SVC[lang][n])||n;
+const svcList=()=>(cfg.services&&cfg.services.length)?cfg.services:Object.keys(BK().durations||{});
+const svcMin=n=>+((BK().durations||{})[n])||+BK().defaultMinutes||60;
+const fmtDur=m=>{const h=Math.floor(m/60),r=m%60;return `${h?h+' '+(lang==='ru'?'ч':'h'):''}${r?' '+r+' min':''}`.trim().replace(/ min$/,lang==='ru'?' мин':' min');};
+const dayLabel=(d,o)=>{const [y,m,dd]=d.split('-').map(Number);return new Date(y,m-1,dd).toLocaleDateString(LOCALE,o||{weekday:'short',day:'numeric',month:'long'});};
+const ym=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+const addMonths=(d,n)=>new Date(d.getFullYear(),d.getMonth()+n,1);
+const addMin=(hhmm,m)=>{const [h,mi]=hhmm.split(':').map(Number),x=h*60+mi+m;return String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0');};
+const errMsg=c=>T.ru['e_'+c]!==undefined?t('e_'+c):t('e_other');
+const val=id=>{const e=document.getElementById(id);return e?e.value.trim():'';};
+const saveCred=()=>{try{ if(cred) localStorage.setItem('bgCred',JSON.stringify(cred)); else localStorage.removeItem('bgCred'); }catch(e){}};
+
+function accountBlock(){
+  if(rec) return `<div class="panel acct"><div class="rowline"><div><b>${esc(rec.n)}</b><div class="muted small">@${esc(rec.login)}</div></div>
+    <div class="actions"><button data-act="profile">${esc(t('profile'))}</button><button class="ghost" data-act="logout">${esc(t('logout'))}</button></div></div></div>`;
+  const reg=authTab==='register';
+  return `<div class="panel" id="acct"><div class="tabs"><button data-authtab="login" class="${!reg?'on':''}">${esc(t('tLogin'))}</button><button data-authtab="register" class="${reg?'on':''}">${esc(t('tRegister'))}</button></div>
+    <form id="authForm" style="display:flex;flex-direction:column;gap:12px">
+      <label for="aLogin">${esc(t('nickLabel'))}<input id="aLogin" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="anna_lash" value="${esc((cred&&cred.login)||'')}"></label>
+      ${reg?`<label for="aName">${esc(t('nameLabel'))}<input id="aName" autocomplete="given-name"></label>`:''}
+      <label for="aPin">${esc(reg?t('pinNew'):t('pinLabel'))}<input id="aPin" type="password" inputmode="numeric" autocomplete="${reg?'new-password':'current-password'}" maxlength="8" placeholder="••••"></label>
+      ${reg?`<label for="aEmail">${esc(t('emailLabel'))}<input id="aEmail" type="email" autocomplete="email"></label>
+        <label class="check"><input type="checkbox" id="aMkt"><span>${esc(t('marketing'))}</span></label>
+        <label class="check"><input type="checkbox" id="aConsent"><span>${esc(t('consent'))}</span></label>`:''}
+      <button class="primary" ${busy?'disabled':''}>${esc(busy?t('wait'):(reg?t('btnRegister'):t('btnLogin')))}</button>
+      ${authErr?`<div class="neg small">${esc(authErr)}</div>`:''}
+      <p class="muted small">${esc(reg?t('nickHintReg'):t('nickHint'))}</p></form></div>`;
+}
+function bindAuth(){
+  document.querySelectorAll('[data-authtab]').forEach(b=>b.onclick=()=>{ authTab=b.dataset.authtab; authErr=''; render(); });
+  const f=document.getElementById('authForm');
+  if(f) f.addEventListener('submit',e=>{ e.preventDefault();
+    if(authTab==='register'){
+      if(!document.getElementById('aConsent').checked){ authErr=t('e_consent'); render(); return; }
+      doRegister(val('aLogin'),val('aName'),document.getElementById('aPin').value,val('aEmail'),document.getElementById('aMkt').checked);
+    } else doLogin(val('aLogin'),document.getElementById('aPin').value); });
+  document.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{ const a=b.dataset.act;
+    if(a==='logout') logout();
+    else if(a==='profile'){ sheet={type:'profile',msg:'',err:''}; render(); }
+    else if(a==='book') openBooking();
+    else if(a==='resched') openBooking(b.dataset.id);
+    else if(a==='cancel'){ sheet={type:'cancel',id:b.dataset.id,err:'',busy:false}; render(); }
+    else if(a==='ics') downloadIcs(b.dataset.id); });
+}
+async function rpc(name,args){ const {data,error}=await sb.rpc(name,args); if(error) throw error; return data; }
+async function doLogin(login,pin,silent){
+  if(!norm(login)||!pin){ authErr=t('e_empty'); render(); return; }
+  busy=true; authErr=''; if(!silent) render();
   try{
-    const {data,error}=await sb.rpc('get_balance',{p_login:q});
-    if(error) throw error;
-    rec=data||null; notFound=!data;
-    try{ localStorage.setItem('bonusQuery',q); }catch(e){}
-    checkLevelUp();
-  }catch(e){ err=t('balErr'); }
+    const data=await rpc('client_login',{p_login:login,p_pin:pin});
+    if(data.error){ authErr=silent?'':errMsg(data.error); if(silent){ cred={login:cred?cred.login:login,pin:''}; } }
+    else { rec=data; cred={login:data.login,pin}; saveCred(); authErr=''; checkLevelUp(); }
+  }catch(e){ authErr=silent?'':t('e_net'); }
   busy=false; render();
+}
+async function doRegister(login,name,pin,email,mkt){
+  busy=true; authErr=''; render();
+  try{
+    const data=await rpc('register_client',{p_login:login,p_name:name,p_pin:pin,p_email:email,p_marketing:mkt});
+    if(data.error) authErr=errMsg(data.error);
+    else { rec=data; cred={login:data.login,pin}; saveCred(); }
+  }catch(e){ authErr=t('e_net'); }
+  busy=false; render();
+}
+function logout(){ rec=null; cred=null; saveCred(); sheet=null; bk=null; authErr=''; render(); }
+
+function bookingCta(){
+  if(!bookingOn()) return '';
+  return `<div class="panel cta"><div><h2>${esc(t('bookTitle'))}</h2><p class="muted small">${esc(t('bookSub',+BK().horizonMonths||3))}</p></div><button class="primary" data-act="book">${esc(t('bookBtn'))}</button></div>`;
+}
+function myBookingsPanel(){
+  if(!rec||!bookingOn()) return '';
+  const now=Date.now(), ch=(+BK().cancelHours||24)*3600000, all=rec.bookings||[];
+  const up=all.filter(b=>(b.status==='pending'||b.status==='confirmed')&&b.end>now).sort((a,b)=>a.start-b.start);
+  const recent=all.filter(b=>b.start>now-30*864e5&&((b.status==='declined')||(b.status==='cancelled_late'&&b.fee>0)));
+  const row=b=>{
+    const can=b.start-now>=ch;
+    return `<div class="bk-row"><div class="rowline"><b>${esc(dayLabel(b.ld))}, ${b.lt}–${b.le}</b><span class="pill ${b.status==='pending'?'dash':''}">${esc(b.status==='pending'?t('stPending'):t('stConfirmed'))}</span></div>
+      <div class="muted">${esc(svcName(b.service))}</div>
+      <div class="actions">${can?`<button data-act="resched" data-id="${b.id}">${esc(t('bResched'))}</button>`:''}<button data-act="cancel" data-id="${b.id}">${esc(t('bCancel'))}</button><button class="ghost" data-act="ics" data-id="${b.id}">${esc(t('bCal'))}</button></div>
+      ${can?'':`<p class="muted small">${esc(t('lateHint',cfg.contact||''))}</p>`}</div>`; };
+  const rc=b=>`<p class="small ${b.status==='declined'?'muted':'neg'}">${esc(b.status==='declined'?t('declinedNote',dayLabel(b.ld)):t('feeNote',dayLabel(b.ld),eur(b.fee)))}${b.status==='declined'&&b.admin_note?' '+esc(b.admin_note):''}</p>`;
+  return `<div class="panel"><h2>${esc(t('myBookings'))}</h2>${up.length?up.map(row).join(''):`<p class="muted">${esc(t('noBookings'))}</p>`}
+    ${recent.length?`<div><div class="eyebrow">${esc(t('recent'))}</div>${recent.map(rc).join('')}</div>`:''}</div>`;
+}
+function bookingRulesHtml(){
+  if(!bookingOn()) return '';
+  const B=BK(), wd=B.weekday||{}, we=B.weekend||{}, auto=[];
+  if(wd.autoFrom) auto.push(`${t('wdays')} ${wd.autoFrom}–${wd.autoTo}`);
+  if(we.autoFrom) auto.push(`${t('wends')} ${we.autoFrom}–${we.autoTo}`);
+  const L=[];
+  if(auto.length) L.push(t('bkAuto',auto.join(', ')));
+  if(wd.reqFrom) L.push(t('bkReq',`${wd.reqFrom}–${wd.reqTo}`));
+  L.push(t('bkHorizon',+B.horizonMonths||3), t('policy',+B.cancelHours||24,eur(+B.lateFee||0)));
+  return L.map(x=>`<p>${esc(x)}</p>`).join('');
+}
+
+/* --- мастер записи --- */
+function openBooking(id){
+  if(!rec){ authErr=t('needLogin'); authTab='login'; render(); const a=document.getElementById('acct'); if(a) a.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+  const b0=id?(rec.bookings||[]).find(x=>x.id===id):null;
+  bk={mode:b0?'resched':'new',id:b0?b0.id:null,step:b0?2:1,service:b0?b0.service:null,month:ym(new Date()),slots:{},date:null,time:null,note:'',busy:false,err:'',done:null,loading:false};
+  sheet={type:'book'}; render(); if(b0) loadMonth();
+}
+const slotKey=()=>bk.service+'|'+bk.month;
+async function loadMonth(){
+  if(bk.slots[slotKey()]) return;
+  const [y,m]=bk.month.split('-').map(Number), last=new Date(y,m,0).getDate(), key=slotKey();
+  bk.loading=true; bk.err=''; render();
+  try{
+    const data=await rpc('get_slots',{p_service:bk.service,p_from:`${bk.month}-01`,p_to:`${bk.month}-${String(last).padStart(2,'0')}`});
+    if(data.error) bk.err=errMsg(data.error); else bk.slots[key]=data.slots;
+  }catch(e){ bk.err=t('e_net'); }
+  bk.loading=false; render();
+}
+function shiftMonth(dir){ const [y,m]=bk.month.split('-').map(Number); bk.month=ym(new Date(y,m-1+dir,1)); bk.date=null; bk.time=null; render(); loadMonth(); }
+function slotOf(){ return (bk.slots[slotKey()]||[]).find(x=>x.d===bk.date&&x.t===bk.time); }
+function bookSheet(){
+  if(!bk) return '';
+  const back=`<button class="ghost" data-bk="back" style="align-self:flex-start">← ${esc(t('wzBack'))}</button>`;
+  const closeB=`<button class="ghost" data-close="1">${esc(t('close'))}</button>`;
+  if(bk.step===1) return shell(`<h3>${esc(t('wzService'))}</h3><div class="svc-list">${svcList().map(n=>`<button class="svc" data-svc="${esc(n)}"><b>${esc(svcName(n))}</b><small>${esc(fmtDur(svcMin(n)))}</small></button>`).join('')}</div>${closeB}`);
+  if(bk.step===2){
+    const slots=bk.slots[slotKey()], [y,m]=bk.month.split('-').map(Number), byDay={};
+    (slots||[]).forEach(x=>{ (byDay[x.d]=byDay[x.d]||[]).push(x); });
+    const first=(new Date(y,m-1,1).getDay()+6)%7, days=new Date(y,m,0).getDate();
+    const wdn=[...Array(7)].map((_,i)=>new Date(2024,0,1+i).toLocaleDateString(LOCALE,{weekday:'short'}));
+    const cells=[...Array(first)].map(()=>'<span></span>').concat([...Array(days)].map((_,i)=>{ const d=`${bk.month}-${String(i+1).padStart(2,'0')}`, has=!!byDay[d];
+      return `<button data-day="${d}" class="${has?'has':''} ${bk.date===d?'sel':''}" ${has?'':'disabled'}>${i+1}</button>`; }));
+    const label=new Date(y,m-1,1).toLocaleDateString(LOCALE,{month:'long',year:'numeric'});
+    const minM=ym(new Date()), maxM=ym(addMonths(new Date(),+BK().horizonMonths||3));
+    const times=bk.date&&byDay[bk.date]?byDay[bk.date].map(x=>`<button class="tchip ${x.m==='auto'?'auto':'req'} ${bk.time===x.t?'sel':''}" data-time="${x.t}">${x.t}${x.m==='auto'?'':' ◌'}</button>`).join(''):'';
+    return shell(`${bk.mode==='new'?back:''}<div><div class="eyebrow">${esc(svcName(bk.service))} · ${esc(fmtDur(svcMin(bk.service)))}</div><h3>${esc(t('wzDate'))}</h3></div>
+      <div class="cal-head"><button data-bk="prev" ${bk.month<=minM?'disabled':''} aria-label="‹">‹</button><b>${esc(label)}</b><button data-bk="next" ${bk.month>=maxM?'disabled':''} aria-label="›">›</button></div>
+      <div class="cal">${wdn.map(x=>`<span class="wd">${esc(x)}</span>`).join('')}${cells.join('')}</div>
+      ${bk.loading?`<p class="muted small">${esc(t('wait'))}</p>`:(slots&&!slots.length?`<p class="muted">${esc(t('wzNoSlots'))}</p>`:'')}
+      ${bk.err?`<div class="neg small">${esc(bk.err)}</div>`:''}
+      <div class="legend"><span>● ${esc(t('wzLegendAuto'))}</span><span>◌ ${esc(t('wzLegendReq'))}</span></div>
+      ${bk.date?`<div><div class="eyebrow">${esc(dayLabel(bk.date))}</div><div class="chips-t" style="margin-top:8px">${times}</div></div>`:`<p class="muted small">${esc(t('wzPick'))}</p>`}
+      ${bk.time?`<button class="primary" data-bk="step3">${esc(t('wzNext'))}</button>`:''}${closeB}`);
+  }
+  if(bk.step===3){
+    const sl=slotOf(); if(!sl) { bk.step=2; return bookSheet(); }
+    const mins=svcMin(bk.service), auto=sl.m==='auto';
+    return shell(`${back}<h3>${esc(t('wzConfirm'))}</h3>
+      <div class="perks"><div><span>${esc(svcName(bk.service))}</span><b>${esc(fmtDur(mins))}</b></div><div><span>${esc(dayLabel(bk.date))}</span><b>${bk.time}–${addMin(bk.time,mins)}</b></div></div>
+      <div class="hint">${esc(auto?t('wzAutoInfo'):t('wzReqInfo'))}</div>
+      ${bk.mode==='new'?`<label>${esc(t('wzNote'))}<textarea id="bkNote" maxlength="300" placeholder="${esc(t('wzNotePh'))}">${esc(bk.note)}</textarea></label>`:''}
+      <p class="muted small">${esc(t('policy',+BK().cancelHours||24,eur(+BK().lateFee||0)))}${rec.freeLeft>0?' '+esc(t('policyFree',rec.freeLeft)):''}</p>
+      ${bk.err?`<div class="neg small">${esc(bk.err)}</div>`:''}
+      <button class="primary" data-bk="confirm" ${bk.busy?'disabled':''}>${esc(bk.busy?t('wait'):(bk.mode==='resched'?t('wzMove'):auto?t('wzBook'):t('wzSendReq')))}</button>`);
+  }
+  const b=bk.done, ok=b.status==='confirmed';
+  return shell(`<div class="eyebrow">${esc(svcName(b.service))}</div><h3 class="confetti">${esc(bk.mode==='resched'?t('wzDoneMove'):ok?t('wzDoneAuto'):t('wzDoneReq'))}</h3>
+    <p>${esc(dayLabel(b.ld))}, ${b.lt}–${b.le}</p>${ok?'':`<p class="muted">${esc(t('wzDoneReqText'))}</p>`}
+    <button data-act="ics" data-id="${b.id}">${esc(t('bCal'))}</button><button class="primary" data-close="1" id="sheetClose">${esc(t('close'))}</button>`,true);
+}
+async function confirmBooking(){
+  const sl=slotOf(); if(!sl) return;
+  bk.busy=true; bk.err=''; render();
+  try{
+    const data = bk.mode==='resched'
+      ? await rpc('reschedule_booking',{p_login:cred.login,p_pin:cred.pin,p_id:bk.id,p_start:sl.u})
+      : await rpc('create_booking',{p_login:cred.login,p_pin:cred.pin,p_service:bk.service,p_start:sl.u,p_note:bk.note});
+    if(data.error){ bk.err=errMsg(data.error); if(['busy','not_available','too_soon'].includes(data.error)){ delete bk.slots[slotKey()]; bk.step=2; bk.time=null; bk.busy=false; await loadMonth(); return; } }
+    else { rec=data; bk.done=data.booking; bk.step=4; }
+  }catch(e){ bk.err=t('e_net'); }
+  bk.busy=false; render();
+}
+function bindBooking(){
+  document.querySelectorAll('[data-svc]').forEach(b=>b.onclick=()=>{ bk.service=b.dataset.svc; bk.step=2; bk.date=null; bk.time=null; bk.month=ym(new Date()); bk.err=''; render(); loadMonth(); });
+  document.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{ bk.date=b.dataset.day; bk.time=null; render(); });
+  document.querySelectorAll('[data-time]').forEach(b=>b.onclick=()=>{ bk.time=b.dataset.time; render(); });
+  document.querySelectorAll('[data-bk]').forEach(b=>b.onclick=()=>{ const a=b.dataset.bk;
+    if(a==='prev') shiftMonth(-1); else if(a==='next') shiftMonth(1);
+    else if(a==='step3'){ bk.step=3; bk.err=''; render(); }
+    else if(a==='back'){ bk.step=Math.max(1,bk.step-1); bk.err=''; render(); }
+    else if(a==='confirm'){ const n=document.getElementById('bkNote'); if(n) bk.note=n.value; confirmBooking(); } });
+  document.querySelectorAll('[data-cx]').forEach(b=>b.onclick=()=>{ if(b.dataset.cx==='keep'){ sheet=null; render(); } else doCancel(); });
+  const pf=document.getElementById('pfForm'); if(pf) pf.addEventListener('submit',e=>{ e.preventDefault(); saveProfile(); });
+}
+function cancelSheet(){
+  const b=(rec.bookings||[]).find(x=>x.id===sheet.id); if(!b) return '';
+  const hrs=(b.start-Date.now())/3600000, ch=+BK().cancelHours||24, fee=+BK().lateFee||0; let msg,cls='';
+  if(b.status==='pending'||hrs>=ch) msg=t('cxFree'); else if(rec.freeLeft>0) msg=t('cxFreePass',rec.freeLeft); else { msg=t('cxLate',eur(fee)); cls='warn'; }
+  return shell(`<h3>${esc(t('cxTitle'))}</h3><p>${esc(dayLabel(b.ld))}, ${b.lt}–${b.le} · ${esc(svcName(b.service))}</p><div class="hint ${cls}">${esc(msg)}</div>
+    ${sheet.err?`<div class="neg small">${esc(sheet.err)}</div>`:''}
+    <div class="actions"><button data-cx="keep">${esc(t('cxKeep'))}</button><button class="primary" data-cx="do" ${sheet.busy?'disabled':''}>${esc(t('cxDo'))}</button></div>`);
+}
+async function doCancel(){
+  const id=sheet.id; sheet.busy=true; sheet.err=''; render();
+  try{
+    const data=await rpc('cancel_booking',{p_login:cred.login,p_pin:cred.pin,p_id:id});
+    if(data.error){ sheet.err=errMsg(data.error); sheet.busy=false; render(); return; }
+    const b=(data.bookings||[]).find(x=>x.id===id);
+    rec=data; sheet={type:'cxdone',msg:data.result==='late'?t('cxDoneLate',eur(b?b.fee:0)):t('cxDone')};
+  }catch(e){ sheet.err=t('e_net'); sheet.busy=false; }
+  render();
+}
+function profileSheet(){
+  return shell(`<h3>${esc(t('pfTitle'))}</h3><form id="pfForm" style="display:flex;flex-direction:column;gap:12px">
+    <label>${esc(t('pfEmail'))}<input id="pfEmail" type="email" value="${esc(rec.email||'')}"></label>
+    <label class="check"><input type="checkbox" id="pfMkt" ${rec.marketing?'checked':''}><span>${esc(t('pfMkt'))}</span></label>
+    <label>${esc(t('pfBday'))}<input id="pfBday" type="date" value="${esc(rec.bd||'')}"></label>
+    <label>${esc(t('pfPin'))}<input id="pfPin" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password"></label>
+    ${sheet.err?`<div class="neg small">${esc(sheet.err)}</div>`:''}${sheet.msg?`<div class="pos small">${esc(sheet.msg)}</div>`:''}
+    <button class="primary">${esc(t('pfSave'))}</button></form><button class="ghost" data-close="1">${esc(t('close'))}</button>`);
+}
+async function saveProfile(){
+  const np=document.getElementById('pfPin').value, args={p_login:cred.login,p_pin:cred.pin,p_email:val('pfEmail'),p_marketing:document.getElementById('pfMkt').checked,p_birthday:val('pfBday'),p_new_pin:np};
+  try{
+    const data=await rpc('client_update',args);
+    if(data.error){ sheet.err=errMsg(data.error); sheet.msg=''; }
+    else { rec=data; if(np){ cred.pin=np; saveCred(); } sheet={type:'profile',err:'',msg:t('pfSaved')}; }
+  }catch(e){ sheet.err=t('e_net'); }
+  render();
+}
+function downloadIcs(id){
+  const b=(rec.bookings||[]).find(x=>x.id===id); if(!b) return;
+  const f=ms=>new Date(ms).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+  const x=s=>String(s).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+  const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Beauty Garage//EN','BEGIN:VEVENT',`UID:${b.id}@beautygarage`,`DTSTAMP:${f(Date.now())}`,`DTSTART:${f(b.start)}`,`DTEND:${f(b.end)}`,
+    `SUMMARY:${x(svcName(b.service)+' · '+cfg.studio)}`,`DESCRIPTION:${x(b.status==='pending'?t('stPending'):t('stConfirmed'))}`,`STATUS:${b.status==='pending'?'TENTATIVE':'CONFIRMED'}`,'END:VEVENT','END:VCALENDAR'].join('\r\n');
+  const url=URL.createObjectURL(new Blob([ics],{type:'text/calendar'})), a=document.createElement('a');
+  a.href=url; a.download='beauty-garage.ics'; document.body.append(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
 (async()=>{
   render(); if(!sb) return;
   try{ const {data,error}=await sb.from('settings').select('cfg').eq('id',1).single(); if(error) throw error; cfg=data.cfg; cfg.glam=mergeGlam(cfg.glam); }
   catch(e){ err=t('loadErr'); }
-  render(); if(cfg && q) lookup();
+  render(); if(cfg&&cred&&cred.pin) doLogin(cred.login,cred.pin,true);
 })();
 </script>
 </body>
