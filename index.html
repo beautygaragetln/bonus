@@ -3,39 +3,47 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Бонусы студии</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap">
+<title>Beauty Garage</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,500;6..96,600&family=Manrope:wght@400;500;600;700&display=swap">
 <style>
 :root{
-  --bg:#faf6f8; --surface:#ffffff; --fg:#2b2232; --muted:#7b6f84; --line:#eadfe6;
-  --accent:#7a3b69; --accent-fg:#ffffff; --soft:#f1e3ec; --good:#2f7d5b; --bad:#b4413f;
-  --display:'Fraunces',Georgia,serif; --body:'Manrope',system-ui,sans-serif;
+  --bg:#F3EDE7; --surface:#FBF8F5; --fg:#3E2C29; --muted:#74655F; --line:#E2D6CC;
+  --accent:#713E4B; --accent-fg:#F3EDE7; --pink:#F2B7CC; --soft:#F7E3EA; --taupe:#B7A79F;
+  --good:#3F7D5C; --bad:#A8403F;
+  --display:'Bodoni Moda',Georgia,serif; --body:'Manrope',system-ui,sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root{
-  --bg:#1b1520; --surface:#251d2b; --fg:#f3eaf1; --muted:#a396ad; --line:#3a2f43;
-  --accent:#d68cc0; --accent-fg:#1b1520; --soft:#3a2740; --good:#6fcf9f; --bad:#f08a86; color-scheme:dark}}
+  --bg:#241917; --surface:#3E2C29; --fg:#F3EDE7; --muted:#B7A79F; --line:#57433F;
+  --accent:#F2B7CC; --accent-fg:#3E2C29; --soft:#4B3338;
+  --good:#7FCFA3; --bad:#F08A86; color-scheme:dark}}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 var(--body);padding:20px max(16px,env(safe-area-inset-left,0px)) 48px}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 var(--body);padding:20px max(16px,env(safe-area-inset-left,0px)) 56px}
 .wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-h1{font:600 28px/1.1 var(--display);margin:0;text-wrap:balance}
-h2{font:600 20px/1.2 var(--display);margin:0}
+h1{font:600 30px/1.1 var(--display);margin:0;text-wrap:balance;letter-spacing:.01em}
+h2{font:600 21px/1.2 var(--display);margin:0}
+h3{font:600 19px/1.2 var(--display);margin:0}
 p{margin:0}
 .muted{color:var(--muted)} .small{font-size:13px}
-.tabs{display:flex;gap:4px;background:var(--soft);padding:4px;border-radius:10px;flex-wrap:wrap}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.tabs{display:flex;gap:4px;background:var(--soft);padding:4px;border-radius:12px;flex-wrap:wrap}
 .tabs button{flex:1;border:0;background:none;color:var(--muted)}
 .tabs button.on{background:var(--surface);color:var(--fg)}
 button,input,select,textarea{font:inherit;color:inherit}
-button{cursor:pointer;border:1px solid var(--line);background:var(--surface);padding:9px 14px;border-radius:8px;font-weight:600}
+button{cursor:pointer;border:1px solid var(--line);background:var(--surface);padding:10px 16px;border-radius:10px;font-weight:600}
 button:hover{border-color:var(--accent)}
+button:disabled{opacity:.6;cursor:default}
 button.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
 button.ghost{background:none;border-color:transparent;color:var(--muted)}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+textarea{min-height:92px;resize:vertical}
 label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);font-weight:600;min-width:0}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px}
+label.check{flex-direction:row;align-items:center;gap:8px}
+label.check input{width:auto}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:14px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .stat b{display:block;font:600 24px/1.1 var(--display);font-variant-numeric:tabular-nums}
@@ -43,26 +51,62 @@ label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mute
 .row:first-child{border-top:0}
 .row .nm{flex:1;min-width:0;overflow-wrap:anywhere}
 .row .bal{font:600 17px var(--display);font-variant-numeric:tabular-nums}
-.pill{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--soft);color:var(--accent)}
-.balance{font:600 52px/1 var(--display);font-variant-numeric:tabular-nums}
+.pill{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--soft);color:var(--accent)}
+.pill.solid{background:var(--accent);color:var(--accent-fg)}
+.balance{font:600 54px/1 var(--display);font-variant-numeric:tabular-nums}
 .bar{height:8px;border-radius:99px;background:var(--soft);overflow:hidden}
-.bar i{display:block;height:100%;background:var(--accent)}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
 .hist{display:flex;flex-direction:column}
 .hist div{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line)}
 .hist div:first-child{border-top:0}
 .pos{color:var(--good)} .neg{color:var(--bad)}
 .num{font-variant-numeric:tabular-nums;white-space:nowrap}
 .actions{display:flex;gap:8px;flex-wrap:wrap}
-.hint{background:var(--soft);padding:10px 12px;border-radius:8px;font-size:13px}
+.hint{background:var(--soft);padding:10px 12px;border-radius:10px;font-size:13px}
+.hint.warn{background:var(--accent);color:var(--accent-fg)}
 .ways{display:flex;flex-direction:column}
 .ways div{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
 .ways div:first-child{border-top:0}
 .ways b{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--accent)}
-.toast{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:600;z-index:20;max-width:90vw}
+.toast{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:60;max-width:90vw}
 .edit-row{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:end}
+/* Glam Levels */
+.lv{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;flex:none;border:1px solid rgba(183,167,159,.55);gap:2px}
+.lv svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.lv small{font-size:8px;font-weight:700;letter-spacing:.1em}
+.lv.big{width:84px;height:84px}.lv.big svg{width:34px;height:34px}.lv.big small{font-size:9px}
+.lv.sm{width:40px;height:40px}.lv.sm svg{width:20px;height:20px}.lv.sm small{display:none}
+.lv0{background:#F3EDE7;color:#3E2C29}
+.lv1{background:#F2B7CC;color:#713E4B}
+.lv2{background:#B7A79F;color:#3E2C29}
+.lv3{background:#713E4B;color:#F2B7CC}
+.lv4{background:#3E2C29;color:#F2B7CC}
+.gl-head{display:flex;align-items:center;gap:16px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.ladder{display:flex;flex-direction:column}
+.lrow{display:flex;align-items:center;gap:14px;width:100%;text-align:left;border:0;border-top:1px solid var(--line);border-radius:0;background:none;padding:14px 0;font-weight:500}
+.lrow:first-child{border-top:0}
+.lrow .lt{display:flex;flex-direction:column;flex:1;min-width:0}
+.lrow .lt b{font:600 17px var(--display);letter-spacing:.02em;text-transform:uppercase}
+.lrow .lt span{font-size:13px;color:var(--muted)}
+.lbadge{font-size:12px;font-weight:700;white-space:nowrap;color:var(--muted)}
+.lrow.current{background:var(--soft);border-radius:14px;padding:14px 12px;margin:2px -12px;width:calc(100% + 24px);border-top-color:transparent}
+.lrow.current .lbadge{color:var(--accent)}
+.lrow.passed .lbadge{color:var(--good)}
+.lrow.locked .lv{opacity:.45;filter:grayscale(.4)}
+.lrow.locked .lt{opacity:.7}
+.sheet-bg{position:fixed;inset:0;background:rgba(36,25,23,.6);z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);color:var(--fg);width:100%;max-width:560px;max-height:88vh;overflow:auto;border-radius:22px 22px 0 0;padding:22px 20px calc(24px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
+.sheet.center{text-align:center;align-items:center}
+@media (min-width:600px){.sheet-bg{align-items:center}.sheet{border-radius:22px}}
+.confetti{font:600 34px/1.1 var(--display);color:var(--accent)}
+.perks div{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--line)}
+.perks div:first-child{border-top:0}
+.perks b{text-align:right}
+ul.plain{margin:6px 0 0;padding-left:18px}
 @media (max-width:560px){.edit-row{grid-template-columns:1fr 1fr}.edit-row label:first-child{grid-column:1/-1}}
-@media (max-width:480px){.stats{gap:8px}.stat b{font-size:19px}.balance{font-size:44px}h1{font-size:24px}}
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:480px){.stats{gap:8px}.stat b{font-size:19px}.balance{font-size:46px}h1{font-size:26px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
 </style>
 </head>
@@ -92,16 +136,109 @@ function rulesText(cfg){
   return t;
 }
 
+/* ---------- Glam Levels ---------- */
+const DEFAULT_GLAM = {
+  enabled:false, remindDays:60, warnDays:80, downDays:90, recoverDays:60,
+  levels:[
+    {name:'Baby Glam',from:0,cashback:3,discount:0,birthday:5,levelBonus:0,priority:false,firstTattoo:0,giftsPerYear:0,gifts:[],recoverAmount:0},
+    {name:'Glam Girl',from:80,cashback:4,discount:2,birthday:7,levelBonus:5,priority:false,firstTattoo:10,giftsPerYear:0,gifts:[],recoverAmount:30},
+    {name:'It Girl',from:200,cashback:5,discount:3,birthday:10,levelBonus:10,priority:false,firstTattoo:15,giftsPerYear:0,gifts:[],recoverAmount:60},
+    {name:'Baddie',from:400,cashback:6,discount:5,birthday:15,levelBonus:15,priority:true,firstTattoo:20,giftsPerYear:1,gifts:['Бесплатное оформление бровей','Скидка 50% на макияж','25 € на татуировку','Скидка 50% на ламинирование ресниц или бровей'],recoverAmount:120},
+    {name:'Super Baddie',from:700,cashback:7,discount:7,birthday:20,levelBonus:25,priority:true,firstTattoo:25,giftsPerYear:2,gifts:['Бесплатный макияж','Бесплатное ламинирование бровей','Бесплатное ламинирование ресниц','50 € на татуировку','50 € на курс «Макияж для себя»'],recoverAmount:200}
+  ]
+};
+function mergeGlam(g){
+  const d=JSON.parse(JSON.stringify(DEFAULT_GLAM));
+  if(!g||!Array.isArray(g.levels)||g.levels.length!==5) return d;
+  const out={...d,...g}; out.levels=g.levels.map((l,i)=>({...d.levels[i],...l})); return out;
+}
+/* Визиты клиентки из истории. Старые записи без деталей добираются из суммы трат. */
+function visitsOf(c){
+  const h=c.history||[];
+  const v=h.filter(e=>e.kind==='visit'&&((e.amount||0)>0||(e.paid||0)>0)).map(e=>({ts:e.ts,paid:e.paid||0}));
+  const rem=r2((c.spent||0)-v.reduce((s,x)=>s+x.paid,0));
+  if(rem>0.5) v.push({ts:h.length?Math.min(...h.map(e=>e.ts)):(c.createdAt||Date.now()),paid:rem});
+  return v.sort((a,b)=>a.ts-b.ts);
+}
+/* Уровень считается по «квалификационным тратам» q. Визит увеличивает q.
+   Понижение за неактивность сбрасывает q до порога нового уровня, поэтому прежняя сумма трат
+   сама по себе уровень не возвращает. Потерянный уровень можно вернуть, потратив recoverAmount за recoverDays. */
+function glamCompute(G,visits,now){
+  const L=G.levels, D=G.downDays*DAY, R=G.recoverDays*DAY;
+  const lvOf=q=>{let l=0;L.forEach((x,i)=>{if(q>=x.from)l=i});return l};
+  const gi=L.findIndex(x=>x.giftsPerYear>0);
+  let q=0,last=null,lost=null,total=0,anchor=null;const log=[];
+  const demote=upTo=>{let k=0;
+    while(last!=null && last+(k+1)*D<=upTo){k++;const t=last+k*D,l=lvOf(q);
+      if(l>0){lost={level:(lost&&t-lost.at<=R)?Math.max(lost.level,l):l,at:t,spent:0};q=L[l-1].from;log.push({ts:t,type:'down',from:l,to:l-1});}}
+    return k;};
+  const mark=ts=>{if(anchor==null&&gi>=0&&lvOf(q)>=gi)anchor=ts;};
+  for(const v of visits){
+    demote(v.ts);
+    const before=lvOf(q); let restored=false;
+    if(lost&&v.ts-lost.at>R) lost=null;
+    total+=v.paid; q+=v.paid;
+    if(lost){
+      lost.spent+=v.paid;
+      if(lost.spent>=(L[lost.level].recoverAmount||0)&&lost.level>lvOf(q)){q=Math.max(q,L[lost.level].from);restored=true;log.push({ts:v.ts,type:'restore',from:before,to:lvOf(q)});lost=null;}
+      else if(lost.level<=lvOf(q)) lost=null;
+    }
+    const after=lvOf(q);
+    if(!restored&&after>before) log.push({ts:v.ts,type:'up',from:before,to:after});
+    mark(v.ts); last=v.ts;
+  }
+  const k=demote(now);
+  if(lost&&now-lost.at>R) lost=null;
+  const level=lvOf(q), since=last!=null?Math.floor((now-last)/DAY):null;
+  const daysToDown=(level>0&&last!=null)?Math.max(0,Math.ceil((last+(k+1)*D-now)/DAY)):null;
+  let stage='ok';
+  if(since!=null){ const cyc=since-k*G.downDays; if(level>0&&cyc>=G.warnDays) stage='warn'; else if(cyc>=G.remindDays) stage='remind'; }
+  const next=level<L.length-1?L[level+1]:null;
+  return {level,q,total,last,since,daysToDown,stage,downs:k,log,anchor,
+    toNext:next?r2(Math.max(0,next.from-q)):null,
+    pct:next?Math.max(0,Math.min(100,Math.round((q-L[level].from)/(next.from-L[level].from)*100))):100,
+    lost:lost?{level:lost.level,need:r2(Math.max(0,(L[lost.level].recoverAmount||0)-lost.spent)),until:lost.at+R}:null};
+}
+function glamGifts(G,gc,history,now){
+  const lv=G.levels[gc.level], used=(history||[]).filter(e=>e.kind==='gift').sort((a,b)=>a.ts-b.ts);
+  let avail=0,periodStart=null,nextAt=null;
+  if(gc.anchor!=null){
+    const Y=365*DAY,k=Math.floor((now-gc.anchor)/Y);periodStart=gc.anchor+k*Y;nextAt=periodStart+Y;
+    avail=Math.max(0,(lv.giftsPerYear||0)-used.filter(e=>e.ts>=periodStart).length);
+  }
+  return {avail,choices:lv.giftsPerYear>0?lv.gifts:[],used,nextAt,allow:lv.giftsPerYear||0};
+}
+const ICONS=[
+  '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+  '<path d="M10 4l1.6 4.4L16 10l-4.4 1.6L10 16l-1.6-4.4L4 10l4.4-1.6z"/><path d="M18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8z"/>',
+  '<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8 6.8 19.6l1-5.8L3.5 9.7l5.9-.8z"/>',
+  '<path d="M7 4h10l4 5-9 11L3 9z"/><path d="M3 9h18M10 4L8 9l4 11 4-11-2-5"/>',
+  '<path d="M4 18h16M4 18L3 8l5 4 4-7 4 7 5-4-1 10z"/>'
+];
+const lvIcon=(i,size)=>`<span class="lv lv${i} ${size||''}" aria-hidden="true"><svg viewBox="0 0 24 24">${ICONS[i]}</svg><small>LEVEL 0${i+1}</small></span>`;
+const lvRange=(L,i)=>i<L.length-1?`${eur(L[i].from)}–${eur(L[i+1].from-0.01)}`:`от ${eur(L[i].from)}`;
+function perksRows(G,i){
+  const l=G.levels[i], yn=v=>v?`${v}%`:'—', e=v=>v>0?eur(v):'—';
+  return [
+    ['Кэшбэк',`${l.cashback}%`],['Постоянная скидка',yn(l.discount)],['Бонус при открытии уровня',e(l.levelBonus)],
+    ['Бонус на день рождения',e(l.birthday)],['Приоритетная запись',l.priority?'Да':'—'],['Скидка на первую татуировку',yn(l.firstTattoo)],
+    ['Подарки в год',l.giftsPerYear>0?String(l.giftsPerYear):'—']];
+}
 
 const app=document.getElementById('app');
-let cfg=null, q='', result=null, notFound=false, err='', busy=false;
+let cfg=null,q='',rec=null,notFound=false,err='',busy=false,sheet=null,lvlup=null;
+const PREVIEW=/[?&]preview=glam/.test(location.search);
 try{ q=localStorage.getItem('bonusQuery')||''; }catch(e){}
 const configured = window.SUPABASE_URL && !String(window.SUPABASE_URL).startsWith('ВСТАВЬТЕ');
 const sb = configured && window.supabase ? window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY) : null;
+const glamOn=()=>!!(cfg&&cfg.glam&&(cfg.glam.enabled||PREVIEW));
+const gcOf=r=>glamCompute(cfg.glam,visitsOf({history:r.h||[],spent:r.s,createdAt:r.c}),Date.now());
 
-function card(c){
+function balanceCard(c){
   const e=(cfg.expireDays>0 && c.b>0 && c.l>0) ? c.l+cfg.expireDays*DAY : 0;
   const expired=e && Date.now()>e, bal=expired?0:c.b;
+  const g=glamOn();
+  const gc=g?gcOf(c):null;
   const t=tierFor(cfg,c.s), n=nextTier(cfg,c.s);
   const pct=n?Math.min(100,Math.round((c.s-t.from)/(n.from-t.from)*100)):100;
   const status = expired ? 'Срок действия бонусов истёк.' : bal>0
@@ -110,20 +247,95 @@ function card(c){
   return `<div class="panel">
     <div class="muted small">Привет, ${esc(c.n)}</div>
     <div><div class="balance">${eur(bal)}</div><div class="muted">${esc(status)}</div></div>
-    ${c.d>0&&!expired?`<div><span class="pill">Скидка ${c.d}% на ближайший визит</span></div>`:''}
-    <div><span class="pill">Кэшбэк ${t.pct}%</span></div>
-    <div class="bar"><i style="width:${pct}%"></i></div>
-    <div class="muted small">${n?`Потратьте ещё ${eur(n.from-c.s)}, и кэшбэк вырастет до ${n.pct}%`:'У вас максимальный кэшбэк'}</div></div>`;
+    ${c.d>0&&!expired?`<div class="chips"><span class="pill">Скидка ${c.d}% на ближайший визит</span></div>`:''}
+    ${g?`<div class="chips"><span class="pill">Кэшбэк ${cfg.glam.levels[gc.level].cashback}%</span></div>`
+       :`<div class="chips"><span class="pill">Кэшбэк ${t.pct}%</span></div><div class="bar"><i style="width:${pct}%"></i></div>
+    <div class="muted small">${n?`Потратьте ещё ${eur(n.from-c.s)}, и кэшбэк вырастет до ${n.pct}%`:'У вас максимальный кэшбэк'}</div>`}</div>`;
 }
+
+function glamHero(r){
+  const G=cfg.glam,L=G.levels,gc=gcOf(r),l=L[gc.level],next=L[gc.level+1];
+  const days=gc.daysToDown;
+  let alert='';
+  if(gc.stage==='warn') alert=`<div class="hint warn">Через ${days} дн. уровень ${esc(l.name)} понизится до ${esc(L[gc.level-1].name)}. Запишитесь на оплаченный визит, и счётчик начнётся заново.</div>`;
+  else if(gc.stage==='remind') alert=`<div class="hint">Давно не виделись: прошло ${gc.since} дн. Запишитесь, чтобы сохранить уровень.</div>`;
+  const downInfo = gc.downs>0 && gc.log.some(e=>e.type==='down'&&e.ts>=gc.last)
+    ? `<div class="hint">Уровень понижен из-за паузы в визитах. Любой оплаченный визит, включая татуировку, сбрасывает счётчик неактивности.</div>` : '';
+  const lost = gc.lost ? `<div class="hint">Вернуть уровень ${esc(L[gc.lost.level].name)}: потратьте ещё ${eur(gc.lost.need)} до ${fmtDate(gc.lost.until)}.</div>` : '';
+  return `<div class="panel">
+    <div class="gl-head">${lvIcon(gc.level,'big')}<div><div class="eyebrow">Ваш уровень</div><h2>${esc(l.name)}</h2>
+      <div class="muted small">Суммарные траты: ${eur(r.s)}</div></div></div>
+    <div class="chips"><span class="pill">Кэшбэк ${l.cashback}%</span>${l.discount?`<span class="pill">Скидка ${l.discount}%</span>`:''}${l.priority?'<span class="pill">Приоритетная запись</span>':''}</div>
+    ${next?`<div class="bar" role="progressbar" aria-valuenow="${gc.pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${gc.pct}%"></i></div>
+      <div><b>${eur(gc.toNext)}</b> <span class="muted">осталось потратить до уровня ${esc(next.name)}</span></div>`
+      :'<div class="muted">Вы на самом высоком уровне.</div>'}
+    ${gc.last!=null&&gc.level>0&&days!=null?`<div class="muted small">До возможного понижения: ${days} дн. без оплаченного визита</div>`:''}
+    ${alert}${downInfo}${lost}</div>`;
+}
+
+function glamLadder(r){
+  const G=cfg.glam,L=G.levels,gc=r?gcOf(r):null;
+  return `<div class="panel"><h2>Glam Levels</h2><p class="muted small">Нажмите на уровень, чтобы увидеть все привилегии.</p>
+    <div class="ladder">${L.map((l,i)=>{
+      const st=!gc?'':(i<gc.level?'passed':i===gc.level?'current':'locked');
+      const badge=!gc?'':(i<gc.level?'✓ Пройден':i===gc.level?'Ваш уровень':'Закрыт');
+      return `<button class="lrow ${st}" data-lv="${i}" aria-label="${esc(l.name)}">${lvIcon(i)}<span class="lt"><b>${esc(l.name)}</b><span>Суммарные траты: ${lvRange(L,i)}</span><span>Кэшбэк ${l.cashback}%</span></span><span class="lbadge">${badge}</span></button>`;}).join('')}</div></div>`;
+}
+
+function giftsPanel(r){
+  const G=cfg.glam,L=G.levels,gc=gcOf(r),gf=glamGifts(G,gc,r.h||[],Date.now());
+  const gl=L.findIndex(x=>x.giftsPerYear>0); if(gl<0) return '';
+  let avail;
+  if(gc.level<gl) avail=`<p class="muted">Подарки открываются с уровня ${esc(L[gl].name)}.</p>`;
+  else if(gf.avail>0) avail=`<p><b>Доступно подарков: ${gf.avail}</b> из ${gf.allow}. Выберите один из списка и назовите его администратору:</p><ul class="plain">${gf.choices.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`;
+  else avail=`<p class="muted">Подарки этого года использованы.${gf.nextAt?` Следующие откроются ${fmtDate(gf.nextAt)}.`:''}</p>`;
+  const used=gf.used.length?`<ul class="plain">${gf.used.map(e=>`<li>${esc(e.gift||e.note)} · ${fmtDate(e.ts)}</li>`).join('')}</ul>`:'<p class="muted">Пока нет.</p>';
+  const future=L.map((l,i)=>({l,i})).filter(x=>x.l.giftsPerYear>0&&x.i>gc.level);
+  return `<div class="panel"><h2>Подарки</h2>
+    <div><div class="eyebrow">Доступные</div>${avail}</div>
+    <div><div class="eyebrow">Использованные</div>${used}</div>
+    <div><div class="eyebrow">Будущие</div>${future.length?`<ul class="plain">${future.map(x=>`<li>${esc(x.l.name)}: ${x.l.giftsPerYear} в год</li>`).join('')}</ul>`:'<p class="muted">Все уровни с подарками уже открыты.</p>'}</div></div>`;
+}
+
+function sheetHtml(){
+  const G=cfg.glam,L=G.levels;
+  if(lvlup!=null){
+    const i=lvlup,l=L[i];
+    return `<div class="sheet-bg" data-close="1"><div class="sheet center" role="dialog" aria-modal="true" aria-label="Level Up">
+      <div class="eyebrow">Level Up</div>${lvIcon(i,'big')}<div class="confetti">Поздравляем!</div>
+      <p>Вы открыли уровень <b>${esc(l.name)}</b>.</p>
+      <div class="perks" style="width:100%;text-align:left">${perksRows(G,i).filter(x=>x[1]!=='—').map(x=>`<div><span>${x[0]}</span><b>${esc(x[1])}</b></div>`).join('')}</div>
+      ${l.levelBonus>0?`<p class="muted small">Бонус ${eur(l.levelBonus)} за открытие уровня начисляется на баланс вместе с визитом.</p>`:''}
+      <button class="primary" data-close="1" id="sheetClose">Отлично</button></div></div>`;
+  }
+  if(sheet!=null){
+    const i=sheet,l=L[i],gc=rec?gcOf(rec):null;
+    const st=!gc?'':(i<gc.level?'Пройден':i===gc.level?'Ваш текущий уровень':'Пока закрыт');
+    return `<div class="sheet-bg" data-close="1"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(l.name)}">
+      <div class="gl-head">${lvIcon(i,'big')}<div><div class="eyebrow">${esc(st)||'Уровень'}</div><h3>${esc(l.name)}</h3><div class="muted small">Суммарные траты: ${lvRange(L,i)}</div></div></div>
+      <div class="perks">${perksRows(G,i).map(x=>`<div><span>${x[0]}</span><b>${esc(x[1])}</b></div>`).join('')}</div>
+      ${l.giftsPerYear>0?`<div><div class="eyebrow">Подарок на выбор (${l.giftsPerYear} в год)</div><ul class="plain">${l.gifts.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}
+      ${i>0?`<p class="muted small">Если уровень потерян: потратьте ${eur(l.recoverAmount)} в течение ${G.recoverDays} дн. после понижения, и он вернётся.</p>`:''}
+      <button class="primary" data-close="1" id="sheetClose">Закрыть</button></div></div>`;
+  }
+  return '';
+}
+
 function render(){
   if(!configured){ app.innerHTML='<div class="panel"><h2>Нужна настройка</h2><p class="muted">Откройте файл config.js и вставьте данные из Supabase.</p></div>'; return; }
   if(!cfg){ app.innerHTML=`<p class="muted">${err?esc(err):'Загрузка…'}</p>`; return; }
+  const g=glamOn();
   const act=cfg.actions.filter(a=>a.val>0).map(a=>`<div><span>${esc(a.title)}</span><b>${reward(a)}</b></div>`).join('');
   const fr=cfg.friend&&cfg.friend.val>0?`<div><span>Приведи подругу: когда она придёт на первый визит и назовёт ваше имя</span><b>${reward(cfg.friend)}</b></div>`:'';
   const tiers=cfg.tiers.map((t,i,a)=>`<div><span>${i===a.length-1?`от ${eur(t.from)}`:(i===0?`до ${eur(a[i+1].from)}`:`${eur(t.from)} – ${eur(a[i+1].from)}`)} потрачено</span><b>${t.pct}%</b></div>`).join('');
+  const G=cfg.glam;
+  const glamRules=g?`<p>Каждый оплаченный визит, включая татуировку, учитывается в уровне.</p>
+    <p>Если визитов нет ${G.remindDays} дн., мы напомним о себе, а через ${G.warnDays} дн. предупредим о понижении. После ${G.downDays} дн. без оплаченного визита уровень понижается на один, и так каждые ${G.downDays} дн. вплоть до ${esc(G.levels[0].name)}. История трат при этом сохраняется.</p>
+    <p>Потерянный уровень не возвращается только из-за прежних трат. Чтобы вернуть его, потратьте указанную сумму в течение ${G.recoverDays} дн. после понижения.</p>`:'';
   document.title=cfg.studio;
   app.innerHTML=`
   <header><div><h1>${esc(cfg.studio)}</h1>${cfg.tagline?`<p class="muted">${esc(cfg.tagline)}</p>`:''}</div></header>
+  ${PREVIEW&&!G.enabled?'<div class="hint warn">Черновик Glam Levels: клиентки этого пока не видят.</div>':''}
   <div class="panel"><h2>Узнай свой баланс</h2>
     <form id="f" style="display:flex;flex-direction:column;gap:12px">
       <label for="q">Ваше имя или ник, как вас записала администратор<input id="q" value="${esc(q)}" autocomplete="off" placeholder="например, anna_lash"></label>
@@ -131,14 +343,30 @@ function render(){
       ${notFound?'<div class="neg small">Не нашли такое имя. Проверьте написание или спросите у администратора.</div>':''}
       ${err?`<div class="neg small">${esc(err)}</div>`:''}
     </form></div>
-  ${result?card(result):''}
+  ${rec?balanceCard(rec):''}
+  ${rec&&g?glamHero(rec):''}
+  ${g?glamLadder(rec):''}
+  ${rec&&g?giftsPanel(rec):''}
   <div class="panel"><h2>Как получить бонусы</h2><div class="ways">${fr}${act}</div>
     ${cfg.contact?`<p class="muted small">Чтобы засчитать бонус, отметьте нас или напишите: ${esc(cfg.contact)}</p>`:''}</div>
-  <div class="panel"><h2>Кэшбэк с каждого визита</h2><div class="ways">${tiers}</div>
-    <p class="muted small">Кэшбэк начисляется на ту часть визита, которую вы оплатили деньгами. Чем больше тратите, тем выше процент.</p></div>
-  <div class="panel"><h2>Правила</h2>${rulesText(cfg).map(t=>`<p>${esc(t)}</p>`).join('')}</div>`;
+  ${g?'':`<div class="panel"><h2>Кэшбэк с каждого визита</h2><div class="ways">${tiers}</div>
+    <p class="muted small">Кэшбэк начисляется на ту часть визита, которую вы оплатили деньгами. Чем больше тратите, тем выше процент.</p></div>`}
+  <div class="panel"><h2>Правила</h2>${rulesText(cfg).map(t=>`<p>${esc(t)}</p>`).join('')}${glamRules}</div>
+  ${sheetHtml()}`;
   const inp=document.getElementById('q');
   document.getElementById('f').addEventListener('submit',e=>{ e.preventDefault(); q=inp.value; lookup(); });
+  document.querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>{sheet=+b.dataset.lv;render();const c=document.getElementById('sheetClose');if(c)c.focus();});
+  document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',e=>{ if(e.target===b){ sheet=null;lvlup=null;render(); } }));
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&(sheet!=null||lvlup!=null)){sheet=null;lvlup=null;render();} });
+
+function checkLevelUp(){
+  if(!rec||!glamOn()) return;
+  const gc=gcOf(rec), k='glamLvl:'+keyOf(q); let prev=null;
+  try{ prev=localStorage.getItem(k); }catch(e){}
+  const ev=gc.log.filter(e=>e.type==='up'||e.type==='restore').pop(), fresh=ev&&Date.now()-ev.ts<14*DAY;
+  if((prev!==null&&gc.level>+prev)||(prev===null&&gc.level>0&&fresh)) lvlup=gc.level;
+  try{ localStorage.setItem(k,String(gc.level)); }catch(e){}
 }
 async function lookup(){
   if(!norm(q)) return;
@@ -146,14 +374,15 @@ async function lookup(){
   try{
     const {data,error}=await sb.rpc('get_balance',{p_login:q});
     if(error) throw error;
-    result=data||null; notFound=!data;
+    rec=data||null; notFound=!data;
     try{ localStorage.setItem('bonusQuery',q); }catch(e){}
+    checkLevelUp();
   }catch(e){ err='Не удалось загрузить баланс. Попробуйте ещё раз.'; }
   busy=false; render();
 }
 (async()=>{
   render(); if(!sb) return;
-  try{ const {data,error}=await sb.from('settings').select('cfg').eq('id',1).single(); if(error) throw error; cfg=data.cfg; }
+  try{ const {data,error}=await sb.from('settings').select('cfg').eq('id',1).single(); if(error) throw error; cfg=data.cfg; cfg.glam=mergeGlam(cfg.glam); }
   catch(e){ err='Не удалось загрузить страницу. Обновите её через минуту.'; }
   render(); if(cfg && q) lookup();
 })();
