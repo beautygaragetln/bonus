@@ -184,11 +184,11 @@ function rulesText(cfg){
 const DEFAULT_GLAM = {
   enabled:false, remindDays:60, warnDays:80, downDays:90, recoverDays:60,
   levels:[
-    {name:'Baby Glam',from:0,cashback:3,discount:0,birthday:5,levelBonus:0,priority:false,firstTattoo:0,giftsPerYear:0,gifts:[],giftsEn:[],recoverAmount:0},
-    {name:'Glam Girl',from:80,cashback:4,discount:2,birthday:7,levelBonus:5,priority:false,firstTattoo:10,giftsPerYear:0,gifts:[],giftsEn:[],recoverAmount:30},
-    {name:'It Girl',from:200,cashback:5,discount:3,birthday:10,levelBonus:10,priority:false,firstTattoo:15,giftsPerYear:0,gifts:[],giftsEn:[],recoverAmount:60},
-    {name:'Baddie',from:400,cashback:6,discount:5,birthday:15,levelBonus:15,priority:true,firstTattoo:20,giftsPerYear:1,gifts:['Бесплатное оформление бровей','Скидка 50% на макияж','25 € на татуировку','Скидка 50% на ламинирование ресниц или бровей'],giftsEn:['Free brow shaping','50% off makeup','€25 off a tattoo','50% off lash or brow lamination'],recoverAmount:120},
-    {name:'Super Baddie',from:700,cashback:7,discount:7,birthday:20,levelBonus:25,priority:true,firstTattoo:25,giftsPerYear:2,gifts:['Бесплатный макияж','Бесплатное ламинирование бровей','Бесплатное ламинирование ресниц','50 € на татуировку','50 € на курс «Макияж для себя»'],giftsEn:['Free makeup','Free brow lamination','Free lash lamination','€50 off a tattoo','€50 off the “Makeup for Yourself” course'],recoverAmount:200}
+    {name:'Baby Glam',from:0,cashback:3,discount:0,birthday:5,levelBonus:0,priority:false,firstTattoo:0,giftsPerYear:0,gifts:[],giftsEn:[],giftsEt:[],recoverAmount:0},
+    {name:'Glam Girl',from:80,cashback:4,discount:2,birthday:7,levelBonus:5,priority:false,firstTattoo:10,giftsPerYear:0,gifts:[],giftsEn:[],giftsEt:[],recoverAmount:30},
+    {name:'It Girl',from:200,cashback:5,discount:3,birthday:10,levelBonus:10,priority:false,firstTattoo:15,giftsPerYear:0,gifts:[],giftsEn:[],giftsEt:[],recoverAmount:60},
+    {name:'Baddie',from:400,cashback:6,discount:5,birthday:15,levelBonus:15,priority:true,firstTattoo:20,giftsPerYear:1,gifts:['Бесплатное оформление бровей','Скидка 50% на макияж','25 € на татуировку','Скидка 50% на ламинирование ресниц или бровей'],giftsEn:['Free brow shaping','50% off makeup','€25 off a tattoo','50% off lash or brow lamination'],giftsEt:['Tasuta kulmukujundus','50% allahindlus meigile','25 € allahindlus tätoveeringule','50% allahindlus ripsmete või kulmude laminatsioonile'],recoverAmount:120},
+    {name:'Super Baddie',from:700,cashback:7,discount:7,birthday:20,levelBonus:25,priority:true,firstTattoo:25,giftsPerYear:2,gifts:['Бесплатный макияж','Бесплатное ламинирование бровей','Бесплатное ламинирование ресниц','50 € на татуировку','50 € на курс «Макияж для себя»'],giftsEn:['Free makeup','Free brow lamination','Free lash lamination','€50 off a tattoo','€50 off the “Makeup for Yourself” course'],giftsEt:['Tasuta meik','Tasuta kulmude laminatsioon','Tasuta ripsmete laminatsioon','50 € allahindlus tätoveeringule','50 € allahindlus kursusele „Meik endale“'],recoverAmount:200}
   ]
 };
 function mergeGlam(g){
@@ -400,13 +400,15 @@ function settingsView(){
       <label>Тип<select data-k="act" data-i="${i}" data-f="type"><option value="eur" ${a.type==='eur'?'selected':''}>Бонус, €</option><option value="pct" ${a.type==='pct'?'selected':''}>Скидка, %</option></select></label>
       <label>Размер<input data-k="act" data-i="${i}" data-f="val" type="number" min="0" step="0.5" value="${a.val}"></label>
       <button type="button" class="ghost" data-delact="${i}" aria-label="Удалить">✕</button></div>
-      <label>English (необязательно)<input data-k="act" data-i="${i}" data-f="titleEn" value="${esc(a.titleEn||'')}"></label>`;
+      <label>English (необязательно)<input data-k="act" data-i="${i}" data-f="titleEn" value="${esc(a.titleEn||'')}"></label>
+      <label>Eesti (необязательно)<input data-k="act" data-i="${i}" data-f="titleEt" value="${esc(a.titleEt||'')}"></label>`;
   return `<form id="cfgForm" style="display:flex;flex-direction:column;gap:16px">
   <div class="panel"><h2>Страница для клиенток</h2>
     <div class="grid">
       <label>Название студии<input id="cStudio" value="${esc(cfg.studio)}"></label>
       <label>Подзаголовок<input id="cTag" value="${esc(cfg.tagline)}"></label>
       <label>Подзаголовок (English)<input id="cTagEn" value="${esc(cfg.taglineEn||'')}"></label>
+      <label>Подзаголовок (Eesti)<input id="cTagEt" value="${esc(cfg.taglineEt||'')}"></label>
       <label>Контакт для отметок<input id="cContact" value="${esc(cfg.contact)}"></label>
     </div></div>
   <div class="panel"><h2>Услуги студии</h2>
@@ -433,7 +435,7 @@ function settingsView(){
 }
 function collectCfg(){
   const d=draft; if(!d||!$('#cfgForm')) return;
-  d.studio=$('#cStudio').value; d.tagline=$('#cTag').value; d.taglineEn=$('#cTagEn').value; d.contact=$('#cContact').value;
+  d.studio=$('#cStudio').value; d.tagline=$('#cTag').value; d.taglineEn=$('#cTagEn').value; d.taglineEt=$('#cTagEt').value; d.contact=$('#cContact').value;
   d.services=$('#cServices').value.split('\n').map(x=>x.trim()).filter(Boolean); d.mode=$('#cMode').value; d.expireDays=Math.max(0,+$('#cExp').value||0); d.maxPct=Math.min(100,Math.max(1,+$('#cMax').value||100));
   d.friend={type:$('#fType').value,val:+$('#fVal').value||0};
   document.querySelectorAll('[data-k="act"]').forEach(el=>{ const a=d.actions[+el.dataset.i]; if(a) a[el.dataset.f]= el.dataset.f==='val'? (+el.value||0) : el.value; });
@@ -469,7 +471,8 @@ function glamView(){
       <label class="check" style="align-self:end"><input type="checkbox" data-l="${i}" data-f="priority" ${l.priority?'checked':''}> Приоритетная запись</label>
     </div>
     <label>Подарки на выбор (каждый с новой строки)<textarea data-l="${i}" data-f="gifts">${esc(l.gifts.join('\n'))}</textarea></label>
-    <label>Gifts in English (столько же строк, в том же порядке)<textarea data-l="${i}" data-f="giftsEn">${esc((l.giftsEn||[]).join('\n'))}</textarea></label></div>`).join('')}
+    <label>Gifts in English (столько же строк, в том же порядке)<textarea data-l="${i}" data-f="giftsEn">${esc((l.giftsEn||[]).join('\n'))}</textarea></label>
+    <label>Kingitused eesti keeles (столько же строк, в том же порядке)<textarea data-l="${i}" data-f="giftsEt">${esc((l.giftsEt||[]).join('\n'))}</textarea></label></div>`).join('')}
   <button class="primary" style="align-self:flex-start">Сохранить Glam Levels</button></form>`;
 }
 function collectGlam(){
@@ -477,7 +480,7 @@ function collectGlam(){
   d.enabled=$('#gApprove').checked;
   document.querySelectorAll('[data-g]').forEach(el=>{ d[el.dataset.g]=+el.value||0; });
   document.querySelectorAll('[data-l]').forEach(el=>{ const l=d.levels[+el.dataset.l],f=el.dataset.f;
-    l[f]= f==='name'? (el.value.trim()||l.name) : f==='priority'? el.checked : (f==='gifts'||f==='giftsEn')? el.value.split('\n').map(x=>x.trim()).filter(Boolean) : (+el.value||0); });
+    l[f]= f==='name'? (el.value.trim()||l.name) : f==='priority'? el.checked : (f==='gifts'||f==='giftsEn'||f==='giftsEt')? el.value.split('\n').map(x=>x.trim()).filter(Boolean) : (+el.value||0); });
   d.levels[0].from=0;
 }
 
