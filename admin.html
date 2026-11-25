@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Бонусы студии: админка</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#faf6f8; --surface:#ffffff; --fg:#2b2232; --muted:#7b6f84; --line:#eadfe6;
+  --accent:#7a3b69; --accent-fg:#ffffff; --soft:#f1e3ec; --good:#2f7d5b; --bad:#b4413f;
+  --display:'Fraunces',Georgia,serif; --body:'Manrope',system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#1b1520; --surface:#251d2b; --fg:#f3eaf1; --muted:#a396ad; --line:#3a2f43;
+  --accent:#d68cc0; --accent-fg:#1b1520; --soft:#3a2740; --good:#6fcf9f; --bad:#f08a86; color-scheme:dark}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 var(--body);padding:20px max(16px,env(safe-area-inset-left,0px)) 48px}
+.wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font:600 28px/1.1 var(--display);margin:0;text-wrap:balance}
+h2{font:600 20px/1.2 var(--display);margin:0}
+p{margin:0}
+.muted{color:var(--muted)} .small{font-size:13px}
+.tabs{display:flex;gap:4px;background:var(--soft);padding:4px;border-radius:10px;flex-wrap:wrap}
+.tabs button{flex:1;border:0;background:none;color:var(--muted)}
+.tabs button.on{background:var(--surface);color:var(--fg)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--surface);padding:9px 14px;border-radius:8px;font-weight:600}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+button.ghost{background:none;border-color:transparent;color:var(--muted)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);font-weight:600;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.stat b{display:block;font:600 24px/1.1 var(--display);font-variant-numeric:tabular-nums}
+.row{display:flex;align-items:center;gap:12px;padding:12px 0;border:0;border-top:1px solid var(--line);cursor:pointer;background:none;border-radius:0;width:100%;text-align:left;font-weight:500}
+.row:first-child{border-top:0}
+.row .nm{flex:1;min-width:0;overflow-wrap:anywhere}
+.row .bal{font:600 17px var(--display);font-variant-numeric:tabular-nums}
+.pill{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--soft);color:var(--accent)}
+.balance{font:600 52px/1 var(--display);font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:99px;background:var(--soft);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+.hist{display:flex;flex-direction:column}
+.hist div{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line)}
+.hist div:first-child{border-top:0}
+.pos{color:var(--good)} .neg{color:var(--bad)}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.hint{background:var(--soft);padding:10px 12px;border-radius:8px;font-size:13px}
+.ways{display:flex;flex-direction:column}
+.ways div{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.ways div:first-child{border-top:0}
+.ways b{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--accent)}
+.toast{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:600;z-index:20;max-width:90vw}
+.edit-row{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:end}
+@media (max-width:560px){.edit-row{grid-template-columns:1fr 1fr}.edit-row label:first-child{grid-column:1/-1}}
+@media (max-width:480px){.stats{gap:8px}.stat b{font-size:19px}.balance{font-size:44px}h1{font-size:24px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script>
+const r2 = n => Math.round(n*100)/100;
+const eur = n => r2(n).toLocaleString('ru-RU',{minimumFractionDigits:0,maximumFractionDigits:2})+' €';
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtDate = ts => new Date(ts).toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
+const norm = s => String(s||'').toLowerCase().replace(/ё/g,'е').replace(/^@+/,'').replace(/\s+/g,' ').trim();
+function hash(str,seed){let h1=0xdeadbeef^seed,h2=0x41c6ce57^seed;for(let i=0;i<str.length;i++){const ch=str.charCodeAt(i);h1=Math.imul(h1^ch,2654435761);h2=Math.imul(h2^ch,1597334677);}
+  h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);
+  return (h2>>>0).toString(16).padStart(8,'0')+(h1>>>0).toString(16).padStart(8,'0');}
+const keyOf = s => hash(norm(s),0)+hash(norm(s),7);
+const DAY = 864e5;
+const reward = a => a.type==='pct' ? `скидка ${a.val}%` : `+${r2(a.val)} €`;
+const tierFor = (cfg,spent) => cfg.tiers.reduce((t,x)=>spent>=x.from?x:t, cfg.tiers[0]);
+const nextTier = (cfg,spent) => cfg.tiers.find(x=>x.from>spent);
+function rulesText(cfg){
+  const t=[];
+  t.push(cfg.mode==='next' ? 'Бонусы действуют на ближайший визит. Что не потратили — сгорает.' : 'Бонусы копятся, и тратить их можно в любой момент и в любой сумме.');
+  if(cfg.expireDays>0) t.push(`Срок действия — ${cfg.expireDays} дн. с последнего начисления.`);
+  if(cfg.maxPct<100) t.push(`Бонусами можно оплатить до ${cfg.maxPct}% стоимости визита.`);
+  return t;
+}
+
+
+const LS='studioBonusUnused';
+let S={cfg:null,clients:[]};
+let tab='clients', view='list', openId=null, search='', toastT, draft=null;
+const $app=document.getElementById('app'), $=s=>document.querySelector(s), on=(s,ev,fn)=>{const e=$(s); if(e) e.addEventListener(ev,fn);};
+const cfgOf=()=>S.cfg;
+const snap=new Map(); let cfgSnap='';
+const toRow=c=>({id:c.id,name:c.name,login:c.login,phone:c.phone||'',balance:c.balance,spent:c.spent,disc:c.disc||0,ref_by:c.refBy||null,ref_paid:!!c.refPaid,last_earn:c.lastEarn||0,created_at:c.createdAt,history:c.history});
+const fromRow=r=>({id:r.id,name:r.name,login:r.login,phone:r.phone||'',balance:+r.balance,spent:+r.spent,disc:+r.disc,refBy:r.ref_by||'',refPaid:!!r.ref_paid,lastEarn:+r.last_earn,createdAt:+r.created_at,history:r.history||[]});
+let saveQ=Promise.resolve();
+function persist(){ saveQ=saveQ.then(doSave).catch(e=>toast('Не удалось сохранить: '+(e.message||e))); }
+async function doSave(){
+  const rows=S.clients.filter(c=>snap.get(c.id)!==JSON.stringify(toRow(c)));
+  if(rows.length){
+    const {error}=await sb.from('clients').upsert(rows.map(toRow)); if(error) throw error;
+    rows.forEach(c=>snap.set(c.id,JSON.stringify(toRow(c))));
+  }
+  const cs=JSON.stringify(S.cfg);
+  if(cs!==cfgSnap){ const {error}=await sb.from('settings').upsert({id:1,cfg:S.cfg}); if(error) throw error; cfgSnap=cs; }
+}
+function toast(m){ clearTimeout(toastT); document.querySelectorAll('.toast').forEach(e=>e.remove());
+  const t=document.createElement('div'); t.className='toast'; t.textContent=m; document.body.append(t); toastT=setTimeout(()=>t.remove(),2600); }
+const uid=()=>crypto.randomUUID();
+const byName=a=>a.slice().sort((x,y)=>x.name.localeCompare(y.name,'ru'));
+const expTs=c=>(cfgOf().expireDays>0 && c.balance>0 && c.lastEarn) ? c.lastEarn+cfgOf().expireDays*DAY : 0;
+const effBal=c=>{ const e=expTs(c); return e && Date.now()>e ? 0 : c.balance; };
+function settle(c){ if(c.balance>0 && effBal(c)===0){ c.history.push({ts:Date.now(),delta:-c.balance,note:'Срок бонусов истёк'}); c.balance=0; } }
+function credit(c,amt,note){ c.balance=r2(c.balance+amt); if(amt>0) c.lastEarn=Date.now(); c.history.push({ts:Date.now(),delta:amt,note}); }
+function giveReward(c,a,note){ if(a.type==='pct'){ c.disc=Math.max(c.disc||0,a.val); c.history.push({ts:Date.now(),delta:0,note:`${note}: скидка ${a.val}% на ближайший визит`}); } else credit(c,a.val,note); }
+const cur=()=>S.clients.find(c=>c.id===openId);
+
+/* ---------- views ---------- */
+function listView(){
+  const q=norm(search);
+  const list=byName(S.clients).filter(c=>!q||norm(c.name).includes(q)||norm(c.login).includes(q)||(c.phone||'').includes(q));
+  const total=S.clients.reduce((s,c)=>s+effBal(c),0);
+  return `
+  <div class="stats panel" style="flex-direction:row">
+    <div class="stat"><b>${S.clients.length}</b><span class="muted small">клиентов</span></div>
+    <div class="stat"><b>${eur(total)}</b><span class="muted small">бонусов на счетах</span></div>
+    <div class="stat"><b>${S.clients.filter(c=>c.refBy).length}</b><span class="muted small">по приглашению</span></div>
+  </div>
+  <div class="panel"><h2>Новая клиентка</h2>
+    <form id="addForm" class="grid">
+      <label>Имя<input id="nName" required autocomplete="off"></label>
+      <label>Ник или имя для входа<input id="nLogin" autocomplete="off" placeholder="как имя, если пусто"></label>
+      <label>Телефон (только для вас)<input id="nPhone" inputmode="tel" autocomplete="off"></label>
+      <label>Пришла от<select id="nRef"><option value="">— никто —</option>${byName(S.clients).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></label>
+      <button class="primary" style="align-self:end">Добавить</button>
+    </form></div>
+  <div class="panel">
+    <input id="search" type="search" placeholder="Поиск по имени, нику или телефону" value="${esc(search)}">
+    <div>${list.length?list.map(c=>`<button class="row" data-open="${esc(c.id)}"><span class="nm"><b>${esc(c.name)}</b><br><span class="muted small">вход: ${esc(c.login)} · кэшбэк ${tierFor(cfgOf(),c.spent).pct}%${c.disc?` · скидка ${c.disc}%`:''}</span></span><span class="bal">${eur(effBal(c))}</span></button>`).join(''):`<p class="muted">${S.clients.length?'Никого не найдено.':'Клиенток пока нет. Добавьте первую выше.'}</p>`}</div>
+  </div>`;
+}
+function histHtml(c){
+  const h=(c.history||[]).slice().reverse();
+  if(!h.length) return '<p class="muted">Операций пока нет.</p>';
+  return `<div class="hist">${h.map(e=>`<div><span>${esc(e.note)}<br><span class="muted small">${fmtDate(e.ts)}</span></span><b class="num ${e.delta>0?'pos':e.delta<0?'neg':'muted'}">${e.delta>0?'+':''}${e.delta===0?'—':eur(e.delta)}</b></div>`).join('')}</div>`;
+}
+function detailView(c){
+  const cfg=cfgOf(), t=tierFor(cfg,c.spent), n=nextTier(cfg,c.spent), ref=S.clients.find(x=>x.id===c.refBy), e=expTs(c);
+  const friends=S.clients.filter(x=>x.refBy===c.id).length;
+  const bal=effBal(c);
+  return `
+  <button class="ghost" id="back" style="align-self:flex-start">← Все клиентки</button>
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div><h2>${esc(c.name)}</h2><div class="muted small">${esc(c.phone||'без телефона')}</div>
+        ${ref?`<div class="muted small">Пришла от: ${esc(ref.name)}</div>`:''}${friends?`<div class="muted small">Привела подруг: ${friends}</div>`:''}</div>
+      <div style="text-align:right"><div class="balance">${eur(bal)}</div><div class="muted small">потрачено ${eur(c.spent)}${e&&bal>0?` · до ${fmtDate(e)}`:''}</div></div>
+    </div>
+    <div><span class="pill">Кэшбэк ${t.pct}%</span> ${c.disc?`<span class="pill">Скидка ${c.disc}% на визит</span>`:''} <span class="muted small">${n?`ещё ${eur(n.from-c.spent)} до ${n.pct}%`:'максимальный уровень'}</span></div>
+  </div>
+  <div class="panel"><h2>Записать визит</h2>
+    <form id="visitForm" class="grid">
+      <label>Сумма услуг, €<input id="vAmt" type="number" min="0" step="0.01" required inputmode="decimal"></label>
+      <label>Оплатить бонусами, €<input id="vUse" type="number" min="0" step="0.01" inputmode="decimal" placeholder="авто"></label>
+      <label>Услуга (необязательно)<input id="vNote" autocomplete="off"></label>
+      <button class="primary" style="align-self:end">Записать</button>
+    </form>
+    <div class="hint" id="preview">Введите сумму, чтобы увидеть расчёт.</div></div>
+  <div class="panel"><h2>Начислить за действие</h2>
+    <form id="awardForm" class="grid">
+      <label>Действие<select id="aAct">${cfg.actions.map(a=>`<option value="${esc(a.id)}">${esc(a.title)} (${reward(a)})</option>`).join('')}</select></label>
+      <button style="align-self:end">Начислить</button>
+    </form>
+    <form id="adjForm" class="grid">
+      <label>Вручную, € (минус — списать)<input id="mAmt" type="number" step="0.01" required inputmode="decimal"></label>
+      <label>Причина<input id="mNote" required autocomplete="off"></label>
+      <button style="align-self:end">Применить</button>
+    </form></div>
+  <div class="panel"><h2>Данные клиентки</h2>
+    <form id="editForm" class="grid">
+      <label>Имя<input id="eName" value="${esc(c.name)}" required></label>
+      <label>Ник или имя для входа<input id="eLogin" value="${esc(c.login)}" required></label>
+      <label>Телефон<input id="ePhone" value="${esc(c.phone||'')}"></label>
+      <button style="align-self:end">Сохранить</button>
+    </form></div>
+  <div class="panel"><h2>История</h2>${histHtml(c)}</div>
+  <div class="actions"><button class="ghost" id="del">Удалить клиентку</button></div>`;
+}
+function settingsView(){
+  const cfg=draft||(draft=JSON.parse(JSON.stringify(cfgOf())));
+  const rewardRow=(a,i,key)=>`<div class="edit-row">
+      <label>Название<input data-k="${key}" data-i="${i}" data-f="title" value="${esc(a.title)}"></label>
+      <label>Тип<select data-k="${key}" data-i="${i}" data-f="type"><option value="eur" ${a.type==='eur'?'selected':''}>Бонус, €</option><option value="pct" ${a.type==='pct'?'selected':''}>Скидка, %</option></select></label>
+      <label>Размер<input data-k="${key}" data-i="${i}" data-f="val" type="number" min="0" step="0.5" value="${a.val}"></label>
+      <button type="button" class="ghost" data-delact="${i}" aria-label="Удалить">✕</button></div>`;
+  return `<form id="cfgForm" style="display:flex;flex-direction:column;gap:16px">
+  <div class="panel"><h2>Страница для клиенток</h2>
+    <div class="grid">
+      <label>Название студии<input id="cStudio" value="${esc(cfg.studio)}"></label>
+      <label>Подзаголовок<input id="cTag" value="${esc(cfg.tagline)}"></label>
+      <label>Контакт для отметок<input id="cContact" value="${esc(cfg.contact)}"></label>
+    </div></div>
+  <div class="panel"><h2>Как тратить бонусы</h2>
+    <div class="grid">
+      <label>Режим<select id="cMode"><option value="next" ${cfg.mode==='next'?'selected':''}>Только на ближайший визит</option><option value="free" ${cfg.mode==='free'?'selected':''}>Копить и тратить свободно</option></select></label>
+      <label>Срок действия, дней (0 — без срока)<input id="cExp" type="number" min="0" value="${cfg.expireDays}"></label>
+      <label>Макс. доля чека бонусами, %<input id="cMax" type="number" min="1" max="100" value="${cfg.maxPct}"></label>
+    </div></div>
+  <div class="panel"><h2>За что начисляем</h2>
+    <div class="muted small">Подруга: награда пригласившей после первого оплаченного визита новой клиентки.</div>
+    <div class="edit-row">
+      <label>Приведи подругу<input value="Приведи подругу" disabled></label>
+      <label>Тип<select id="fType"><option value="eur" ${cfg.friend.type==='eur'?'selected':''}>Бонус, €</option><option value="pct" ${cfg.friend.type==='pct'?'selected':''}>Скидка, %</option></select></label>
+      <label>Размер<input id="fVal" type="number" min="0" step="0.5" value="${cfg.friend.val}"></label><span></span></div>
+    ${cfg.actions.map((a,i)=>rewardRow(a,i,'act')).join('')}
+    <button type="button" id="addAct" style="align-self:flex-start">+ Добавить действие</button></div>
+  <div class="panel"><h2>Кэшбэк по уровням</h2>
+    ${cfg.tiers.map((t,i)=>`<div class="grid"><label>Уровень ${i+1}: от, €<input data-tier="${i}" data-f="from" type="number" min="0" value="${t.from}" ${i===0?'readonly':''}></label><label>Кэшбэк, %<input data-tier="${i}" data-f="pct" type="number" min="0" max="100" step="0.5" value="${t.pct}"></label></div>`).join('')}
+  </div>
+  <button class="primary" style="align-self:flex-start">Сохранить условия</button></form>`;
+}
+function collectCfg(){
+  const d=draft; if(!d||!$('#cfgForm')) return;
+  d.studio=$('#cStudio').value; d.tagline=$('#cTag').value; d.contact=$('#cContact').value;
+  d.mode=$('#cMode').value; d.expireDays=Math.max(0,+$('#cExp').value||0); d.maxPct=Math.min(100,Math.max(1,+$('#cMax').value||100));
+  d.friend={type:$('#fType').value,val:+$('#fVal').value||0};
+  document.querySelectorAll('[data-k="act"]').forEach(el=>{ const a=d.actions[+el.dataset.i]; if(a) a[el.dataset.f]= el.dataset.f==='val'? (+el.value||0) : el.value; });
+  document.querySelectorAll('[data-tier]').forEach(el=>{ d.tiers[+el.dataset.tier][el.dataset.f]=+el.value||0; });
+}
+/* ---------- shell ---------- */
+function render(){
+  const y=scrollY, ae=document.activeElement, fid=ae&&ae.id, pos=ae&&ae.selectionStart;
+  const inList = view==='list';
+  $app.innerHTML=`<header><h1>Бонусы: админка</h1><button class="ghost" id="logout">Выйти</button>${inList?`<div class="tabs" style="min-width:220px;width:100%;order:3"><button data-tab="clients" class="${tab==='clients'?'on':''}">Клиентки</button><button data-tab="settings" class="${tab==='settings'?'on':''}">Условия</button></div>`:''}</header>`
+   + (view==='detail'&&cur() ? detailView(cur()) : tab==='settings' ? settingsView() : (view='list',listView()));
+  bind(); scrollTo(0,y);
+  if(fid){ const e=document.getElementById(fid); if(e){ e.focus(); try{e.setSelectionRange(pos,pos)}catch(_){} } }
+}
+function bind(){
+  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab; if(tab!=='settings') draft=null; render();});
+  document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{openId=b.dataset.open;view='detail';render();scrollTo(0,0);});
+  document.querySelectorAll('[data-delact]').forEach(b=>b.onclick=()=>{collectCfg();draft.actions.splice(+b.dataset.delact,1);render();});
+  on('#back','click',()=>{view='list';render();});
+  on('#search','input',e=>{search=e.target.value;render();});
+  on('#addForm','submit',addClient); on('#visitForm','submit',recordVisit);
+  on('#vAmt','input',()=>{ const c=cur(); if(c&&cfgOf().mode==='next'&&!$('#vUse').dataset.touched){ const v=calcVisit(c,parseFloat($('#vAmt').value),null); $('#vUse').placeholder=String(v.use); } previewVisit(); });
+  on('#vUse','input',e=>{e.target.dataset.touched=e.target.value?1:'';previewVisit();});
+  on('#awardForm','submit',award); on('#adjForm','submit',adjust); on('#editForm','submit',editClient);
+  on('#cfgForm','submit',saveCfg);
+  on('#addAct','click',()=>{collectCfg();draft.actions.push({id:uid(),title:'Новое действие',type:'eur',val:2});render();});
+  on('#del','click',e=>{ if(e.target.dataset.sure){ del(); } else { e.target.dataset.sure=1; e.target.textContent='Нажмите ещё раз, чтобы удалить'; e.target.style.color='var(--bad)'; } });
+  on('#logout','click',async()=>{ await sb.auth.signOut(); location.reload(); });
+}
+
+/* ---------- logic ---------- */
+function loginTaken(login,exceptId){ return S.clients.some(c=>c.id!==exceptId && keyOf(c.login)===keyOf(login)); }
+function addClient(e){
+  e.preventDefault();
+  const name=$('#nName').value.trim(); if(!name) return;
+  const login=($('#nLogin').value.trim()||name);
+  if(loginTaken(login)){ toast('Такой ник или имя для входа уже есть. Добавьте отличие.'); return; }
+  const c={id:uid(),name,login,phone:$('#nPhone').value.trim(),balance:0,spent:0,disc:0,refBy:$('#nRef').value||'',refPaid:false,lastEarn:0,createdAt:Date.now(),history:[]};
+  S.clients.push(c); persist(); openId=c.id; view='detail'; toast('Добавлено'); render();
+}
+function calcVisit(c,amount,useReq){
+  const cfg=cfgOf(); const bal=effBal(c);
+  amount=r2(Math.max(0,amount||0));
+  const discPct=c.disc||0, discAmt=r2(amount*discPct/100), net=r2(amount-discAmt);
+  const usable=r2(Math.min(bal,net*cfg.maxPct/100));
+  const use=useReq==null||isNaN(useReq)? usable : r2(Math.min(Math.max(0,useReq),usable));
+  const paid=r2(net-use), pct=tierFor(cfg,c.spent).pct, cb=r2(paid*pct/100);
+  const burn=cfg.mode==='next'? r2(bal-use) : 0;
+  const ref=(c.refBy&&!c.refPaid&&paid>0&&cfg.friend.val>0)? S.clients.find(x=>x.id===c.refBy):null;
+  return {amount,discPct,discAmt,net,usable,use,paid,pct,cb,burn,ref,bal};
+}
+function previewVisit(){
+  const c=cur(), el=$('#preview'); if(!c||!el) return;
+  const raw=$('#vUse').value, v=calcVisit(c,parseFloat($('#vAmt').value),raw===''?null:parseFloat(raw));
+  if(!v.amount){ el.textContent='Введите сумму, чтобы увидеть расчёт.'; return; }
+  el.textContent=[
+    v.discAmt?`Скидка ${v.discPct}%: −${eur(v.discAmt)}.`:'',
+    `К оплате деньгами: ${eur(v.paid)}${v.use?` (бонусами ${eur(v.use)})`:''}.`,
+    `Кэшбэк ${v.pct}%: +${eur(v.cb)}.`,
+    v.burn>0?`Сгорит неиспользованных бонусов: ${eur(v.burn)}.`:'',
+    v.ref?`${v.ref.name} получит награду за подругу.`:''
+  ].filter(Boolean).join(' ');
+}
+function recordVisit(e){
+  e.preventDefault();
+  const c=cur(); if(!c) return;
+  settle(c);
+  const raw=$('#vUse').value, v=calcVisit(c,parseFloat($('#vAmt').value),raw===''?null:parseFloat(raw));
+  if(!v.amount) return;
+  const note=$('#vNote').value.trim(), ts=Date.now();
+  c.history.push({ts,delta:0,note:`Визит ${eur(v.amount)}${note?' · '+note:''}`});
+  if(v.discAmt) c.history.push({ts,delta:0,note:`Применена скидка ${v.discPct}% (−${eur(v.discAmt)})`});
+  if(v.use){ c.balance=r2(c.balance-v.use); c.history.push({ts,delta:-v.use,note:'Оплата бонусами'}); }
+  if(v.burn>0){ c.balance=r2(c.balance-v.burn); c.history.push({ts,delta:-v.burn,note:'Не использованные бонусы сгорели'}); }
+  c.disc=0; c.spent=r2(c.spent+v.paid);
+  if(v.cb>0) credit(c,v.cb,`Кэшбэк ${v.pct}%`);
+  if(v.ref){ settle(v.ref); giveReward(v.ref,cfgOf().friend,`Подруга ${c.name} пришла на первый визит`); c.refPaid=true; }
+  persist(); toast(`Записано. Кэшбэк ${eur(v.cb)}`); render();
+}
+function award(e){
+  e.preventDefault(); const c=cur(); if(!c) return;
+  const a=cfgOf().actions.find(x=>x.id===$('#aAct').value); if(!a) return;
+  settle(c); giveReward(c,a,a.title); persist(); toast('Начислено'); render();
+}
+function adjust(e){
+  e.preventDefault(); const c=cur(), a=r2(parseFloat($('#mAmt').value)); if(!c||!a) return;
+  settle(c);
+  if(c.balance+a<0){ toast('Нельзя списать больше, чем на балансе'); return; }
+  credit(c,a,$('#mNote').value.trim()); persist(); toast('Готово'); render();
+}
+function editClient(e){
+  e.preventDefault(); const c=cur(); const login=$('#eLogin').value.trim();
+  if(loginTaken(login,c.id)){ toast('Такой ник для входа уже есть'); return; }
+  c.name=$('#eName').value.trim(); c.login=login; c.phone=$('#ePhone').value.trim(); persist(); toast('Сохранено'); render();
+}
+function saveCfg(e){
+  e.preventDefault(); collectCfg();
+  const t=draft.tiers; t[0].from=0;
+  if(t.some((x,i)=>i&&x.from<=t[i-1].from)){ toast('Пороги уровней должны расти'); return; }
+  S.cfg=draft; draft=null; persist(); toast('Условия сохранены'); render();
+}
+async function del(){ const {error}=await sb.from('clients').delete().eq('id',openId); if(error){ toast('Не удалось удалить'); return; } snap.delete(openId); S.clients=S.clients.filter(c=>c.id!==openId); S.clients.forEach(c=>{ if(c.refBy===openId) c.refBy=''; }); openId=null; view='list'; persist(); toast('Удалено'); render(); }
+
+const configured = window.SUPABASE_URL && !String(window.SUPABASE_URL).startsWith('ВСТАВЬТЕ');
+const sb = configured && window.supabase ? window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY) : null;
+function showMsg(title,text){ $app.innerHTML=`<header><h1>Бонусы: админка</h1></header><div class="panel"><h2>${esc(title)}</h2><p class="muted">${esc(text)}</p></div>`; }
+function showLogin(err){
+  $app.innerHTML=`<header><h1>Бонусы: админка</h1></header><div class="panel"><h2>Вход</h2>
+    <form id="lf" style="display:flex;flex-direction:column;gap:12px">
+      <label>Email<input id="lEmail" type="email" autocomplete="username" required></label>
+      <label>Пароль<input id="lPass" type="password" autocomplete="current-password" required></label>
+      ${err?`<div class="neg small">${esc(err)}</div>`:''}
+      <button class="primary">Войти</button></form></div>`;
+  $('#lf').addEventListener('submit',async e=>{
+    e.preventDefault();
+    const {error}=await sb.auth.signInWithPassword({email:$('#lEmail').value.trim(),password:$('#lPass').value});
+    if(error) showLogin('Неверный email или пароль.'); else boot();
+  });
+}
+async function load(){
+  showMsg('Загрузка…','');
+  const [s,c]=await Promise.all([sb.from('settings').select('cfg').eq('id',1).single(), sb.from('clients').select('*')]);
+  if(s.error||c.error){ showMsg('Не удалось загрузить данные','Проверьте, что скрипт setup.sql выполнен, а в config.js указаны правильные значения.'); return; }
+  S.cfg=s.data.cfg; cfgSnap=JSON.stringify(S.cfg);
+  S.clients=c.data.map(fromRow); S.clients.forEach(x=>snap.set(x.id,JSON.stringify(toRow(x))));
+  S.clients.forEach(settle); persist(); render();
+}
+async function boot(){
+  if(!sb){ showMsg('Нужна настройка','Откройте файл config.js и вставьте данные из Supabase.'); return; }
+  const {data}=await sb.auth.getSession();
+  if(!data.session) showLogin(); else load();
+}
+boot();
+
+</script>
+</body>
+</html>
