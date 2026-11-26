@@ -330,6 +330,28 @@ const glamOn=()=>!!(cfg&&cfg.glam&&(cfg.glam.enabled||PREVIEW));
 const gcOf=r=>glamCompute(cfg.glam,visitsOf({history:r.h||[],spent:r.s,createdAt:r.c}),Date.now());
 
 const EMAIL_RE=/^[^@\s]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/;
+/* Проверка домена почты: у настоящего домена есть почтовый сервер (MX) или хотя бы адрес сайта (A). Ящик это не подтверждает, но отсекает «оо.кк». */
+const MX_TYPO={'gmial.com':'gmail.com','gmai.com':'gmail.com','gmail.co':'gmail.com','gmail.con':'gmail.com','gamil.com':'gmail.com','gnail.com':'gmail.com','gmaill.com':'gmail.com','gmail.ru':'gmail.com','hotmial.com':'hotmail.com','hotnail.com':'hotmail.com','hotmail.con':'hotmail.com','yaho.com':'yahoo.com','yahooo.com':'yahoo.com','outlok.com':'outlook.com','iclod.com':'icloud.com','icloud.con':'icloud.com','mail.ry':'mail.ru'};
+const mxC={};
+const emDom=e=>String(e).split('@')[1].toLowerCase();
+async function dnsHas(d,type){
+  const r=await fetch('https://dns.google/resolve?name='+encodeURIComponent(d)+'&type='+type,{headers:{accept:'application/dns-json'}});
+  const j=await r.json(); if(j.Status===3) return false; if(j.Status!==0) return null;
+  return (j.Answer||[]).some(a=>a.type===(type==='MX'?15:1));
+}
+async function mxLookup(d){
+  if(d in mxC) return mxC[d];
+  try{ let ok=await dnsHas(d,'MX'); if(ok===false) ok=await dnsHas(d,'A'); mxC[d]=ok; return ok; }catch(e){ mxC[d]=null; return null; } /* нет связи с DNS: не блокируем */
+}
+/* 'empty'|'fmt'|'typo'|'domain'|'checking'|'ok' */
+function emState(em,again){
+  if(!em) return 'empty'; if(!EMAIL_RE.test(em)) return 'fmt';
+  const d=emDom(em); if(MX_TYPO[d]) return 'typo';
+  if(!(d in mxC)){ mxLookup(d).then(()=>{ if(again) again(); }); return 'checking'; }
+  return mxC[d]===false?'domain':'ok';
+}
+const emReady=async em=>{ if(!em||!EMAIL_RE.test(em)) return emState(em); const d=emDom(em); if(!MX_TYPO[d]) await mxLookup(d); return emState(em); };
+const emMsg=(st,em)=>st==='fmt'?t('e_email_fmt'):st==='domain'?t('e_email_domain'):st==='typo'?t('e_email_typo',MX_TYPO[emDom(em)]):'';
 /* ---------- тексты: файл texts.js, правки из админки лежат в cfg.texts ---------- */
 const T=window.GC_TEXTS||{ru:{},en:{},et:{}}, GP=window.GC_PARAMS||{};
 const pl=(n,f)=>{const a=n%10,b=n%100;return a===1&&b!==11?f[0]:(a>=2&&a<=4&&(b<10||b>=20)?f[1]:f[2]);};
@@ -569,8 +591,9 @@ function bindAuth(){
   if(f) f.addEventListener('submit',e=>{ e.preventDefault();
     if(authTab==='register'){
       if(!document.getElementById('aConsent').checked){ authErr=tk('e_consent'); render(); return; }
-      const em0=val('aEmail'); if(em0&&!EMAIL_RE.test(em0)){ authErr=tk('e_email_fmt'); render(); return; }
-      doRegister(val('aLogin'),val('aName'),document.getElementById('aPin').value,val('aEmail'),document.getElementById('aMkt').checked&&EMAIL_RE.test(em0),val('aPhone'));
+      const em0=val('aEmail'), mk0=document.getElementById('aMkt').checked, lg=val('aLogin'), nm=val('aName'), pw=document.getElementById('aPin').value, ph=val('aPhone');
+      emReady(em0).then(st=>{ if(em0&&st!=='ok'){ const m=emMsg(st,em0); if(m){ document.getElementById('aEmailErr').textContent=m; } return; }
+        doRegister(lg,nm,pw,em0,mk0&&!!em0,ph); });
     } else doLogin(val('aLogin'),document.getElementById('aPin').value); });
   if(f&&authTab==='register'){ ['aEmail','aConsent','aMkt'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.addEventListener('input',syncReg); el.addEventListener('change',syncReg); } }); syncReg(); }
   document.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{ const a=b.dataset.act;
@@ -583,17 +606,17 @@ function bindAuth(){
     else if(a==='ics') downloadIcs(b.dataset.id); });
 }
 function syncReg(){
-  const em=val('aEmail'), ok=EMAIL_RE.test(em), mk=document.getElementById('aMkt'), er=document.getElementById('aEmailErr'), btn=document.getElementById('aSubmit'), cs=document.getElementById('aConsent');
+  const em=val('aEmail'), st=emState(em,syncReg), ok=st==='ok', mk=document.getElementById('aMkt'), er=document.getElementById('aEmailErr'), btn=document.getElementById('aSubmit'), cs=document.getElementById('aConsent');
   if(mk){ mk.disabled=!ok; if(!ok) mk.checked=false; }
-  const mh=document.getElementById('aMktHint'); if(mh) mh.textContent=ok?'':t('mktNeedEmail');
-  if(er) er.textContent=(em&&!ok)?t('e_email_fmt'):'';
-  if(btn) btn.disabled=busy||!(cs&&cs.checked)||(!!em&&!ok);
+  const mh=document.getElementById('aMktHint'); if(mh) mh.textContent=ok?'':(st==='checking'?t('mktChecking'):t('mktNeedEmail'));
+  if(er) er.textContent=emMsg(st,em);
+  if(btn) btn.disabled=busy||!(cs&&cs.checked)||(!!em&&!ok&&st!=='checking');
 }
 function syncProfile(){
-  const em=val('pfEmail'), ok=EMAIL_RE.test(em), mk=document.getElementById('pfMkt'), er=document.getElementById('pfEmailErr'), btn=document.getElementById('pfSubmit');
-  if(mk){ mk.disabled=!ok; if(!ok) mk.checked=false; }
-  if(er) er.textContent=(em&&!ok)?t('e_email_fmt'):'';
-  if(btn) btn.disabled=!!em&&!ok;
+  const em=val('pfEmail'), st=emState(em,syncProfile), ok=st==='ok', mk=document.getElementById('pfMkt'), er=document.getElementById('pfEmailErr'), btn=document.getElementById('pfSubmit');
+  if(mk){ mk.disabled=!ok; if(!ok&&st!=='checking') mk.checked=false; }
+  if(er) er.textContent=emMsg(st,em);
+  if(btn) btn.disabled=!!em&&!ok&&st!=='checking';
 }
 async function rpc(name,args){ const {data,error}=await sb.rpc(name,args); if(error) throw error; return data; }
 async function doLogin(login,pin,silent){
@@ -738,7 +761,7 @@ function bindBooking(){
     else if(a==='back'){ bk.step=Math.max(1,bk.step-1); bk.err=''; render(); }
     else if(a==='confirm'){ const n=document.getElementById('bkNote'); if(n) bk.note=n.value; confirmBooking(); } });
   document.querySelectorAll('[data-cx]').forEach(b=>b.onclick=()=>{ if(b.dataset.cx==='keep'){ sheet=null; render(); } else doCancel(); });
-  const pf=document.getElementById('pfForm'); if(pf){ pf.addEventListener('submit',e=>{ e.preventDefault(); if(val('pfEmail')&&!EMAIL_RE.test(val('pfEmail'))) return; saveProfile(); }); const pe=document.getElementById('pfEmail'); pe.addEventListener('input',syncProfile); syncProfile(); }
+  const pf=document.getElementById('pfForm'); if(pf){ pf.addEventListener('submit',e=>{ e.preventDefault(); const em1=val('pfEmail'); emReady(em1).then(st=>{ if(em1&&st!=='ok'){ document.getElementById('pfEmailErr').textContent=emMsg(st,em1); return; } saveProfile(); }); }); const pe=document.getElementById('pfEmail'); pe.addEventListener('input',syncProfile); syncProfile(); }
 }
 function cancelSheet(){
   const b=(rec.bookings||[]).find(x=>x.id===sheet.id); if(!b) return '';
