@@ -197,6 +197,7 @@ h1,.it{font-style:normal}
 <div class="wrap" id="app"><p class="muted">…</p></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
+<script src="texts.js"></script>
 <script>
 const r2 = n => Math.round(n*100)/100;
 let LOCALE='ru-RU';
@@ -320,256 +321,21 @@ const sb = configured && window.supabase ? window.supabase.createClient(window.S
 const glamOn=()=>!!(cfg&&cfg.glam&&(cfg.glam.enabled||PREVIEW));
 const gcOf=r=>glamCompute(cfg.glam,visitsOf({history:r.h||[],spent:r.s,createdAt:r.c}),Date.now());
 
-/* ---------- переводы ---------- */
-const pl=(n,f)=>{const a=n%10,b=n%100;return a===1&&b!==11?f[0]:(a>=2&&a<=4&&(b<10||b>=20)?f[1]:f[2]);};
-const T={
- ru:{
-  loading:'Загрузка…', setup:'Нужна настройка', setupText:'Откройте файл config.js и вставьте данные из Supabase.', loadErr:'Не удалось загрузить страницу. Обновите её через минуту.',
-  draft:'Черновик Glam Levels: клиентки этого пока не видят.',
-  checkTitle:'Узнай свой баланс', checkLabel:'Ваше имя или ник, как вас записала администратор', checkPh:'например, anna_lash', checkBtn:'Показать баланс', searching:'Ищем…',
-  notFound:'Не нашли такое имя. Проверьте написание или спросите у администратора.', balErr:'Не удалось загрузить баланс. Попробуйте ещё раз.',
-  hi:n=>`Привет, ${n}`, spendNext:'Можно потратить на ближайший визит', spendAny:'Можно потратить на любую услугу', until:d=>` · до ${d}`, expired:'Срок действия бонусов истёк.', noBonus:'Бонусов пока нет. Загляните в условия ниже.',
-  discNext:p=>`Скидка ${p}% на ближайший визит`, cashbackP:p=>`Кэшбэк ${p}%`, yourCashback:p=>`Твой кэшбэк — ${p}%`,
-  moreOldTier:(a,p)=>`Потратьте ещё ${a}, и кэшбэк вырастет до ${p}%`, maxOldTier:'У вас максимальный кэшбэк',
-  status:'Your beauty status', level:'Level', balanceLbl:'Beauty Balance',
-  nextLevel:n=>`Следующий уровень: ${n}`, moreToNext:a=>`Ещё ${a} до нового уровня и дополнительных привилегий.`, topLevel:'Ты на самом высоком уровне. Береги корону.',
-  activity:'Активность статуса', daysLeft:n=>`Осталось ${n} дн.`,
-  crown:"Don't lose your crown! ♡", visitSoon:(s,n)=>`Посети ${s} в ближайшие ${n} дн., чтобы сохранить свой уровень и все привилегии.`,
-  remind:n=>`Давно не виделись: прошло ${n} дн. Запишись, чтобы сохранить уровень.`,
-  demoted:'Уровень понижен из-за паузы в визитах. Любой оплаченный визит, включая татуировку, сбрасывает счётчик неактивности.',
-  lost:(nm,a,d)=>`Вернуть уровень ${nm}: потратьте ещё ${a} до ${d}.`,
-  tPerks:'Мои привилегии', tHistory:'История визитов', tInvite:'Пригласи подругу', tTerms:'Сроки бонусов',
-  journey:'Your Glam Journey', tap:'Нажмите на уровень, чтобы увидеть все привилегии.',
-  from:a=>`От ${a}`, cb:p=>`${p}% кэшбэк`, off:p=>`${p}% скидка`, giftYear:n=>n===1?'ежегодный подарок':`${n} ${pl(n,['подарок','подарка','подарков'])} в год`,
-  yours:'Твой уровень', passed:'Пройден', locked:'Закрыт', curLevel:'Твой текущий уровень', notYet:'Пока закрыт', levelWord:'Уровень', close:'Закрыть',
-  pCashback:'Кэшбэк', pDisc:'Постоянная скидка', pLvBonus:'Бонус при открытии уровня', pBday:'Бонус на день рождения', pPrio:'Приоритетная запись', pTattoo:'Скидка на первую татуировку', pGifts:'Подарки в год', yes:'Да',
-  giftChoice:n=>`Подарок на выбор (${n} в год)`, recover:(a,d)=>`Если уровень потерян: потратьте ${a} в течение ${d} дн. после понижения, и он вернётся.`,
-  lvNew:'New level unlocked', welcome:n=>`Welcome to the ${n} era!`, lvText:'Ты открыла новый уровень и новые привилегии.', lvBtn:'Мои новые привилегии',
-  lvBonus:a=>`Бонус ${a} за открытие уровня начисляется на баланс вместе с визитом.`,
-  gifts:'Подарки', gAvail:'Доступные', gUsed:'Использованные', gFuture:'Будущие',
-  gFrom:n=>`Подарки открываются с уровня ${n}.`, gHave:(a,t)=>`Доступно подарков: ${a} из ${t}. Выберите один из списка и назовите его администратору:`,
-  gDone:'Подарки этого года использованы.', gNext:d=>` Следующие откроются ${d}.`, gNone:'Пока нет.', gPerYear:(n,k)=>`${n}: ${k} в год`, gAllOpen:'Все уровни с подарками уже открыты.',
-  ways:'Как получить бонусы', friendRow:'Приведи подругу: когда она придёт на первый визит и назовёт ваше имя', claim:c=>`Чтобы засчитать бонус, отметьте нас или напишите: ${c}`,
-  oldTitle:'Кэшбэк с каждого визита', upTo:a=>`до ${a}`, fromA:a=>`от ${a}`, spentWord:'потрачено', oldNote:'Кэшбэк начисляется на ту часть визита, которую вы оплатили деньгами. Чем больше тратите, тем выше процент.',
-  rules:'Правила', rNext:'Бонусы действуют на ближайший визит. Что не потратили — сгорает.', rFree:'Бонусы копятся, и тратить их можно в любой момент и в любой сумме.',
-  rExp:n=>`Срок действия — ${n} дн. с последнего начисления.`, rMax:p=>`Бонусами можно оплатить до ${p}% стоимости визита.`,
-  gr1:'Каждый оплаченный визит, включая татуировку, учитывается в уровне.',
-  gr2:(r,w,d,base)=>`Если визитов нет ${r} дн., мы напомним о себе, а через ${w} дн. предупредим о понижении. После ${d} дн. без оплаченного визита уровень понижается на один, и так каждые ${d} дн. вплоть до ${base}. История трат при этом сохраняется.`,
-  gr3:d=>`Потерянный уровень не возвращается только из-за прежних трат. Чтобы вернуть его, потратьте указанную сумму в течение ${d} дн. после понижения.`,
-  hTitle:'История визитов', hEmpty:'Визитов пока нет.', visit:'Визит',
-  iTitle:'Пригласи подругу', iText:(nm,r)=>`Пусть подруга назовёт при записи ваше имя или ник: «${nm}». После её первого оплаченного визита вы получите ${r}.`, iOff:'Сейчас награда за подругу не предусмотрена.',
-  tTitle:'Сроки бонусов', tNoExp:'Бонусы не сгорают по сроку.', tExp:d=>`Ваши бонусы действуют до ${d}.`, tExpRule:n=>`Срок действия — ${n} дн. с последнего начисления.`,
- },
- en:{
-  loading:'Loading…', setup:'Setup needed', setupText:'Open config.js and paste the values from Supabase.', loadErr:'Could not load the page. Please refresh in a minute.',
-  draft:'Glam Levels draft: clients cannot see this yet.',
-  checkTitle:'Check your balance', checkLabel:'Your name or nickname, as the admin saved it', checkPh:'e.g. anna_lash', checkBtn:'Show balance', searching:'Searching…',
-  notFound:'We could not find that name. Check the spelling or ask the admin.', balErr:'Could not load your balance. Please try again.',
-  hi:n=>`Hi, ${n}`, spendNext:'Can be used on your next visit', spendAny:'Can be used on any service', until:d=>` · until ${d}`, expired:'Your bonuses have expired.', noBonus:'No bonuses yet. See how to earn them below.',
-  discNext:p=>`${p}% off your next visit`, cashbackP:p=>`${p}% cashback`, yourCashback:p=>`Your cashback — ${p}%`,
-  moreOldTier:(a,p)=>`Spend ${a} more to raise your cashback to ${p}%`, maxOldTier:'You have the highest cashback',
-  status:'Your beauty status', level:'Level', balanceLbl:'Beauty Balance',
-  nextLevel:n=>`Next level: ${n}`, moreToNext:a=>`${a} more to reach the next level and extra perks.`, topLevel:'You are at the top level. Keep your crown.',
-  activity:'Status activity', daysLeft:n=>`${n} ${n===1?'day':'days'} left`,
-  crown:"Don't lose your crown! ♡", visitSoon:(s,n)=>`Visit ${s} within ${n} ${n===1?'day':'days'} to keep your level and all perks.`,
-  remind:n=>`Long time no see: ${n} days have passed. Book a visit to keep your level.`,
-  demoted:'Your level dropped because of a break in visits. Any paid visit, including a tattoo, resets the inactivity counter.',
-  lost:(nm,a,d)=>`Win back ${nm}: spend ${a} more by ${d}.`,
-  tPerks:'My perks', tHistory:'Visit history', tInvite:'Invite a friend', tTerms:'Bonus terms',
-  journey:'Your Glam Journey', tap:'Tap a level to see all its perks.',
-  from:a=>`From ${a}`, cb:p=>`${p}% cashback`, off:p=>`${p}% off`, giftYear:n=>n===1?'yearly gift':`${n} gifts a year`,
-  yours:'Your level', passed:'Completed', locked:'Locked', curLevel:'Your current level', notYet:'Not unlocked yet', levelWord:'Level', close:'Close',
-  pCashback:'Cashback', pDisc:'Permanent discount', pLvBonus:'Level-up bonus', pBday:'Birthday bonus', pPrio:'Priority booking', pTattoo:'First tattoo discount', pGifts:'Gifts per year', yes:'Yes',
-  giftChoice:n=>`Choose a gift (${n} per year)`, recover:(a,d)=>`If you lose this level: spend ${a} within ${d} days after the drop to win it back.`,
-  lvNew:'New level unlocked', welcome:n=>`Welcome to the ${n} era!`, lvText:'You unlocked a new level and new perks.', lvBtn:'My new perks',
-  lvBonus:a=>`The ${a} level-up bonus is added to your balance together with your visit.`,
-  gifts:'Gifts', gAvail:'Available', gUsed:'Used', gFuture:'Upcoming',
-  gFrom:n=>`Gifts unlock at ${n}.`, gHave:(a,t)=>`Gifts available: ${a} of ${t}. Pick one from the list and tell the admin:`,
-  gDone:"This year's gifts have been used.", gNext:d=>` The next ones unlock on ${d}.`, gNone:'None yet.', gPerYear:(n,k)=>`${n}: ${k} per year`, gAllOpen:'All gift levels are already unlocked.',
-  ways:'How to earn bonuses', friendRow:'Bring a friend: when she comes for her first visit and gives your name', claim:c=>`To claim a bonus, tag us or message: ${c}`,
-  oldTitle:'Cashback on every visit', upTo:a=>`up to ${a}`, fromA:a=>`from ${a}`, spentWord:'spent', oldNote:'Cashback is added on the part of the visit you paid in cash. The more you spend, the higher the rate.',
-  rules:'Rules', rNext:'Bonuses can be used on your next visit. Anything unused expires.', rFree:'Bonuses accumulate and can be used at any time, in any amount.',
-  rExp:n=>`Bonuses are valid for ${n} days after the last credit.`, rMax:p=>`Bonuses can cover up to ${p}% of the visit price.`,
-  gr1:'Every paid visit, including a tattoo, counts towards your level.',
-  gr2:(r,w,d,base)=>`If there is no visit for ${r} days, we will remind you, and at ${w} days we will warn you about a drop. After ${d} days without a paid visit your level drops by one, and again every ${d} days down to ${base}. Your spending history is kept.`,
-  gr3:d=>`A lost level does not come back just because of past spending. To win it back, spend the stated amount within ${d} days after the drop.`,
-  hTitle:'Visit history', hEmpty:'No visits yet.', visit:'Visit',
-  iTitle:'Invite a friend', iText:(nm,r)=>`Ask your friend to give your name or nickname when booking: “${nm}”. After her first paid visit you will get ${r}.`, iOff:'There is no friend reward at the moment.',
-  tTitle:'Bonus terms', tNoExp:'Your bonuses do not expire by date.', tExp:d=>`Your bonuses are valid until ${d}.`, tExpRule:n=>`Bonuses are valid for ${n} days after the last credit.`,
- }
-};
-T.et={
-  loading:'Laadimine…', setup:'Vajalik seadistus', setupText:'Ava fail config.js ja kleebi sinna Supabase’i andmed.', loadErr:'Lehe laadimine ebaõnnestus. Värskenda lehte minuti pärast.',
-  draft:'Glam Levels mustand: kliendid seda veel ei näe.',
-  checkTitle:'Vaata oma saldot', checkLabel:'Sinu nimi või hüüdnimi, nagu administraator su salvestas', checkPh:'nt anna_lash', checkBtn:'Näita saldot', searching:'Otsime…',
-  notFound:'Sellist nime ei leitud. Kontrolli kirjapilti või küsi administraatorilt.', balErr:'Saldo laadimine ebaõnnestus. Proovi uuesti.',
-  hi:n=>`Tere, ${n}`, spendNext:'Kasutatav järgmisel külastusel', spendAny:'Kasutatav mis tahes teenusel', until:d=>` · kuni ${d}`, expired:'Sinu boonuste kehtivus on lõppenud.', noBonus:'Boonuseid veel pole. Vaata allpool, kuidas neid teenida.',
-  discNext:p=>`${p}% allahindlus järgmisel külastusel`, cashbackP:p=>`${p}% cashback`, yourCashback:p=>`Sinu cashback — ${p}%`,
-  moreOldTier:(a,p)=>`Kulutades veel ${a}, tõuseb sinu cashback ${p}%-ni`, maxOldTier:'Sul on kõrgeim cashback',
-  status:'Your beauty status', level:'Level', balanceLbl:'Beauty Balance',
-  nextLevel:n=>`Järgmine tase: ${n}`, moreToNext:a=>`Veel ${a} järgmise tasemeni ja lisasoodustusteni.`, topLevel:'Oled kõrgeimal tasemel. Hoia oma krooni.',
-  activity:'Staatuse aktiivsus', daysLeft:n=>n===1?'Jäänud 1 päev':`Jäänud ${n} päeva`,
-  crown:"Don't lose your crown! ♡", visitSoon:(s,n)=>`Külasta ${s} lähima ${n} päeva jooksul, et säilitada oma tase ja kõik soodustused.`,
-  remind:n=>`Pole ammu näinud: möödunud on ${n} päeva. Broneeri aeg, et oma tase säilitada.`,
-  demoted:'Sinu tase langes külastuste pausi tõttu. Iga makstud külastus, sh tätoveering, nullib passiivsuse loenduri.',
-  lost:(nm,a,d)=>`Võida tagasi ${nm}: kuluta veel ${a} kuni ${d}.`,
-  tPerks:'Minu soodustused', tHistory:'Külastuste ajalugu', tInvite:'Kutsu sõbranna', tTerms:'Boonuste tähtajad',
-  journey:'Your Glam Journey', tap:'Vajuta tasemele, et näha kõiki soodustusi.',
-  from:a=>`Alates ${a}`, cb:p=>`${p}% cashback`, off:p=>`${p}% allahindlus`, giftYear:n=>n===1?'iga-aastane kingitus':`${n} kingitust aastas`,
-  yours:'Sinu tase', passed:'Läbitud', locked:'Suletud', curLevel:'Sinu praegune tase', notYet:'Veel suletud', levelWord:'Tase', close:'Sulge',
-  pCashback:'Cashback', pDisc:'Püsiv allahindlus', pLvBonus:'Taseme avamise boonus', pBday:'Sünnipäevaboonus', pPrio:'Eelisbroneerimine', pTattoo:'Allahindlus esimesele tätoveeringule', pGifts:'Kingitusi aastas', yes:'Jah',
-  giftChoice:n=>`Vali kingitus (${n} aastas)`, recover:(a,d)=>`Kui tase läheb kaotsi: kuluta ${a} ${d} päeva jooksul pärast langemist ja saad selle tagasi.`,
-  lvNew:'New level unlocked', welcome:n=>`Welcome to the ${n} era!`, lvText:'Avasid uue taseme ja uued soodustused.', lvBtn:'Minu uued soodustused',
-  lvBonus:a=>`Taseme avamise boonus ${a} lisatakse saldole koos külastusega.`,
-  gifts:'Kingitused', gAvail:'Saadaval', gUsed:'Kasutatud', gFuture:'Tulevased',
-  gFrom:n=>`Kingitused avanevad tasemest ${n}.`, gHave:(a,t)=>`Kingitusi saadaval: ${a} / ${t}. Vali nimekirjast üks ja ütle see administraatorile:`,
-  gDone:'Selle aasta kingitused on kasutatud.', gNext:d=>` Järgmised avanevad ${d}.`, gNone:'Veel pole.', gPerYear:(n,k)=>`${n}: ${k} aastas`, gAllOpen:'Kõik kingitustega tasemed on juba avatud.',
-  ways:'Kuidas boonuseid teenida', friendRow:'Too sõbranna: kui ta tuleb esimesele külastusele ja nimetab sinu nime', claim:c=>`Boonuse arvestamiseks märgi meid või kirjuta: ${c}`,
-  oldTitle:'Cashback igalt külastuselt', upTo:a=>`kuni ${a}`, fromA:a=>`alates ${a}`, spentWord:'kulutatud', oldNote:'Cashback lisatakse külastuse sellele osale, mille maksid rahaga. Mida rohkem kulutad, seda kõrgem on protsent.',
-  rules:'Reeglid', rNext:'Boonuseid saab kasutada järgmisel külastusel. Kasutamata boonused aeguvad.', rFree:'Boonused koguvad ja neid saab kasutada igal ajal ja igas summas.',
-  rExp:n=>`Kehtivus — ${n} päeva viimasest lisamisest.`, rMax:p=>`Boonustega saab tasuda kuni ${p}% külastuse hinnast.`,
-  gr1:'Iga makstud külastus, sh tätoveering, arvestatakse taseme hulka.',
-  gr2:(r,w,d,base)=>`Kui külastusi pole ${r} päeva, tuletame endast meelde, ${w}. päeval hoiatame taseme languse eest. Pärast ${d} päeva ilma makstud külastuseta langeb tase ühe võrra ja nii iga ${d} päeva järel kuni tasemeni ${base}. Kulutuste ajalugu säilib.`,
-  gr3:d=>`Kaotatud tase ei taastu ainult varasemate kulutuste põhjal. Selle tagasi saamiseks kuluta määratud summa ${d} päeva jooksul pärast langemist.`,
-  hTitle:'Külastuste ajalugu', hEmpty:'Külastusi veel pole.', visit:'Külastus',
-  iTitle:'Kutsu sõbranna', iText:(nm,r)=>`Palu sõbrannal broneerides nimetada sinu nime või hüüdnime: „${nm}“. Pärast tema esimest makstud külastust saad ${r}.`, iOff:'Praegu sõbranna eest tasu ei ole.',
-  tTitle:'Boonuste tähtajad', tNoExp:'Sinu boonused ei aegu kuupäeva järgi.', tExp:d=>`Sinu boonused kehtivad kuni ${d}.`,
-};
-Object.assign(T.ru,{
- profile:'Профиль', logout:'Выйти', tLogin:'Вход', tRegister:'Регистрация',
- nickLabel:'Ник в Instagram (точно как в профиле)', nameLabel:'Как к вам обращаться', pinLabel:'PIN-код', pinNew:'Придумайте PIN (4–8 цифр)',
- emailLabel:'Email (по желанию)', marketing:'Хочу получать новости и предложения на email', consent:'Я согласна на хранение моего ника, имени и записей для работы клуба и записи на услуги',
- wait:'Подождите…', btnRegister:'Зарегистрироваться', btnLogin:'Войти', nickHint:'Первый раз здесь? Откройте вкладку «Регистрация».',
- nickHintReg:'Ник нужен, чтобы мы узнавали вас в студии. Подтверждение через Instagram не требуется. PIN защищает ваши записи и баланс.',
- needLogin:'Сначала войдите или зарегистрируйтесь.',
- bookTitle:'Записаться', bookSub:m=>`Запись открыта на ${m} ${pl(m,['месяц','месяца','месяцев'])} вперёд.`, bookBtn:'Выбрать время',
- myBookings:'Мои записи', noBookings:'Ближайших записей нет.', stConfirmed:'Подтверждена', stPending:'Ждёт подтверждения мастера', bResched:'Перенести', bCancel:'Отменить', bCal:'В календарь',
- lateHint:c=>`Менее чем за 24 часа изменить запись можно только через администратора${c?': '+c:''}.`,
- recent:'Недавнее', declinedNote:d=>`Запрос на ${d} отклонён.`, feeNote:(d,f)=>`Штраф за позднюю отмену записи на ${d}: ${f}. Учтём при следующем визите.`,
- wzService:'Выберите услугу', wzDate:'Выберите день', wzPick:'Нажмите на день, чтобы увидеть время.', wzLegendAuto:'подтверждается сразу', wzLegendReq:'по подтверждению мастера', wzNoSlots:'В этом месяце свободного времени нет.', wzNext:'Далее',
- wzConfirm:'Проверьте запись', wzNote:'Комментарий (необязательно)', wzNotePh:'Например, референс или пожелания', wzSendReq:'Отправить запрос', wzBook:'Записаться', wzMove:'Перенести запись', wzBack:'Назад',
- wzAutoInfo:'Запись подтвердится сразу.', wzReqInfo:'Это время подтверждает мастер. Мы отправим запрос, а ответ появится в «Моих записях».',
- wzDoneAuto:'Вы записаны!', wzDoneReq:'Запрос отправлен', wzDoneReqText:'Мастер подтвердит или предложит другое время. Статус виден в «Моих записях».', wzDoneMove:'Запись перенесена',
- policy:(h,f)=>`Бесплатная отмена и перенос — за ${h} ч и раньше. Отмена позже: штраф ${f}.`, policyFree:n=>`Бесплатных поздних отмен в этом месяце: ${n}.`,
- cxTitle:'Отменить запись?', cxFree:'Отмена бесплатная.', cxFreePass:n=>`Отмена бесплатная по вашему уровню. После неё останется бесплатных отмен в этом месяце: ${n-1}.`, cxLate:f=>`До записи меньше положенного срока. Штраф за отмену: ${f}.`, cxKeep:'Оставить запись', cxDo:'Отменить запись',
- cxDone:'Запись отменена.', cxDoneLate:f=>`Запись отменена. Штраф ${f} учтём при следующем визите.`,
- pfTitle:'Профиль', pfEmail:'Email для новостей', pfMkt:'Присылать новости и предложения', pfBday:'День рождения', pfPin:'Новый PIN (если хотите сменить)', pfSave:'Сохранить', pfSaved:'Сохранено.',
- pFreeCancel:'Бесплатных поздних отмен в месяц',
- wdays:'будни', wends:'выходные', bkAuto:x=>`Запись подтверждается сразу: ${x}.`, bkReq:x=>`В будни ${x} время подтверждает мастер.`, bkHorizon:m=>`Записаться можно на ${m} ${pl(m,['месяц','месяца','месяцев'])} вперёд.`,
- e_empty:'Введите ник и PIN.', e_net:'Не удалось связаться с сервером. Попробуйте ещё раз.', e_consent:'Нужно согласие на хранение данных.', e_other:'Что-то пошло не так. Попробуйте ещё раз.',
- e_invalid_credentials:'Неверный ник или PIN.', e_locked:'Слишком много попыток. Подождите 15 минут.', e_no_pin:'Для этого ника ещё не задан PIN. Попросите администратора выдать его.', e_ask_admin:'Этот ник уже есть в студии. Попросите администратора выдать вам PIN.', e_taken:'Этот ник уже зарегистрирован. Войдите по PIN.', e_bad_login:'Ник: только латинские буквы, цифры, точка и подчёркивание (как в Instagram).', e_bad_name:'Введите имя.', e_bad_pin:'PIN: от 4 до 8 цифр.', e_bad_email:'Проверьте email.', e_bad_birthday:'Проверьте дату рождения.', e_try_later:'Сейчас много регистраций. Попробуйте позже.',
- e_disabled:'Онлайн-запись пока не открыта.', e_bad_service:'Такой услуги нет.', e_too_soon:'Слишком близко по времени. Выберите другое.', e_too_far:'Запись пока недоступна так далеко вперёд.', e_not_available:'Это время недоступно.', e_busy:'Это время только что заняли. Выберите другое.', e_overlap:'У вас уже есть запись на это время.', e_limit:'Слишком много активных записей. Отмените ненужные.', e_not_found:'Запись не найдена.', e_bad_status:'Эту запись уже нельзя изменить.', e_too_late:'Слишком поздно менять запись онлайн. Напишите администратору.', e_past:'Эта запись уже прошла.'
-});
-Object.assign(T.en,{
- profile:'Profile', logout:'Log out', tLogin:'Log in', tRegister:'Sign up',
- nickLabel:'Instagram nickname (exactly as on your profile)', nameLabel:'What should we call you', pinLabel:'PIN', pinNew:'Choose a PIN (4–8 digits)',
- emailLabel:'Email (optional)', marketing:'I want to receive news and offers by email', consent:'I agree to the storage of my nickname, name and bookings for the club and appointments',
- wait:'Please wait…', btnRegister:'Sign up', btnLogin:'Log in', nickHint:'First time here? Open the “Sign up” tab.',
- nickHintReg:'We use your nickname to recognise you at the studio. No Instagram verification is needed. The PIN protects your bookings and balance.',
- needLogin:'Please log in or sign up first.',
- bookTitle:'Book a visit', bookSub:m=>`Booking is open ${m} ${m===1?'month':'months'} ahead.`, bookBtn:'Choose a time',
- myBookings:'My bookings', noBookings:'No upcoming bookings.', stConfirmed:'Confirmed', stPending:'Waiting for the master', bResched:'Reschedule', bCancel:'Cancel', bCal:'Add to calendar',
- lateHint:c=>`Too close to the visit to change online. Please contact the admin${c?': '+c:''}.`,
- recent:'Recent', declinedNote:d=>`Your request for ${d} was declined.`, feeNote:(d,f)=>`Late-cancellation fee for the visit on ${d}: ${f}. We will add it to your next visit.`,
- wzService:'Choose a service', wzDate:'Choose a day', wzPick:'Tap a day to see available times.', wzLegendAuto:'confirmed instantly', wzLegendReq:'needs the master’s confirmation', wzNoSlots:'No free time this month.', wzNext:'Next',
- wzConfirm:'Check your booking', wzNote:'Comment (optional)', wzNotePh:'For example, a reference or wishes', wzSendReq:'Send request', wzBook:'Book', wzMove:'Reschedule', wzBack:'Back',
- wzAutoInfo:'Your booking is confirmed instantly.', wzReqInfo:'The master confirms this time. We will send a request and the answer will appear in “My bookings”.',
- wzDoneAuto:'You are booked!', wzDoneReq:'Request sent', wzDoneReqText:'The master will confirm or suggest another time. See the status in “My bookings”.', wzDoneMove:'Booking moved',
- policy:(h,f)=>`Free cancellation and rescheduling up to ${h} h before. Later cancellation: ${f} fee.`, policyFree:n=>`Free late cancellations left this month: ${n}.`,
- cxTitle:'Cancel this booking?', cxFree:'Cancellation is free.', cxFreePass:n=>`Free cancellation thanks to your level. Free cancellations left this month after this one: ${n-1}.`, cxLate:f=>`Too close to the visit. Cancellation fee: ${f}.`, cxKeep:'Keep booking', cxDo:'Cancel booking',
- cxDone:'Booking cancelled.', cxDoneLate:f=>`Booking cancelled. We will add the ${f} fee to your next visit.`,
- pfTitle:'Profile', pfEmail:'Email for news', pfMkt:'Send me news and offers', pfBday:'Birthday', pfPin:'New PIN (to change it)', pfSave:'Save', pfSaved:'Saved.',
- pFreeCancel:'Free late cancellations per month',
- wdays:'weekdays', wends:'weekends', bkAuto:x=>`Instantly confirmed: ${x}.`, bkReq:x=>`On weekdays ${x} the master confirms the time.`, bkHorizon:m=>`You can book up to ${m} ${m===1?'month':'months'} ahead.`,
- e_empty:'Enter your nickname and PIN.', e_net:'Could not reach the server. Please try again.', e_consent:'We need your consent to store your data.', e_other:'Something went wrong. Please try again.',
- e_invalid_credentials:'Wrong nickname or PIN.', e_locked:'Too many attempts. Please wait 15 minutes.', e_no_pin:'No PIN is set for this nickname yet. Ask the admin to give you one.', e_ask_admin:'This nickname already exists at the studio. Ask the admin to give you a PIN.', e_taken:'This nickname is already registered. Log in with your PIN.', e_bad_login:'Nickname: only Latin letters, digits, dot and underscore (like Instagram).', e_bad_name:'Enter your name.', e_bad_pin:'PIN: 4 to 8 digits.', e_bad_email:'Check your email address.', e_bad_birthday:'Check your birth date.', e_try_later:'Many sign-ups right now. Please try later.',
- e_disabled:'Online booking is not open yet.', e_bad_service:'No such service.', e_too_soon:'Too soon. Please pick another time.', e_too_far:'Booking is not available that far ahead yet.', e_not_available:'This time is not available.', e_busy:'This time was just taken. Please pick another.', e_overlap:'You already have a booking at this time.', e_limit:'Too many active bookings. Please cancel the ones you do not need.', e_not_found:'Booking not found.', e_bad_status:'This booking can no longer be changed.', e_too_late:'Too late to change online. Please message the admin.', e_past:'This booking is already in the past.'
-});
-Object.assign(T.et,{
- profile:'Profiil', logout:'Logi välja', tLogin:'Sisene', tRegister:'Registreeru',
- nickLabel:'Instagrami kasutajanimi (täpselt nagu profiilil)', nameLabel:'Kuidas sind kutsuda', pinLabel:'PIN-kood', pinNew:'Vali PIN (4–8 numbrit)',
- emailLabel:'E-post (soovi korral)', marketing:'Soovin saada uudiseid ja pakkumisi e-postile', consent:'Nõustun oma kasutajanime, nime ja broneeringute salvestamisega kliubi ja teenustele registreerimise jaoks',
- wait:'Palun oota…', btnRegister:'Registreeru', btnLogin:'Sisene', nickHint:'Oled siin esimest korda? Ava vahekaart „Registreeru“.',
- nickHintReg:'Kasutajanime abil tunneme sind stuudios ära. Instagrami kinnitust ei ole vaja. PIN kaitseb sinu broneeringuid ja saldot.',
- needLogin:'Palun sisene või registreeru esmalt.',
- bookTitle:'Broneeri aeg', bookSub:m=>`Broneerida saab ${m} kuu${m===1?'':'d'} ette.`, bookBtn:'Vali aeg',
- myBookings:'Minu broneeringud', noBookings:'Tulevasi broneeringuid ei ole.', stConfirmed:'Kinnitatud', stPending:'Ootab meistri kinnitust', bResched:'Muuda aega', bCancel:'Tühista', bCal:'Lisa kalendrisse',
- lateHint:c=>`Liiga lähedal külastusele, et veebis muuta. Kirjuta administraatorile${c?': '+c:''}.`,
- recent:'Hiljutised', declinedNote:d=>`Sinu soov ${d} jaoks lükati tagasi.`, feeNote:(d,f)=>`Hilise tühistamise tasu külastuse eest ${d}: ${f}. Arvestame selle järgmisel külastusel.`,
- wzService:'Vali teenus', wzDate:'Vali päev', wzPick:'Vajuta päevale, et näha vabu aegu.', wzLegendAuto:'kinnitub kohe', wzLegendReq:'vajab meistri kinnitust', wzNoSlots:'Sel kuul vabu aegu ei ole.', wzNext:'Edasi',
- wzConfirm:'Kontrolli broneeringut', wzNote:'Kommentaar (soovi korral)', wzNotePh:'Näiteks viide või soovid', wzSendReq:'Saada soov', wzBook:'Broneeri', wzMove:'Muuda aega', wzBack:'Tagasi',
- wzAutoInfo:'Broneering kinnitub kohe.', wzReqInfo:'Selle aja kinnitab meister. Saadame soovi ja vastus ilmub jaotisse „Minu broneeringud“.',
- wzDoneAuto:'Oled registreeritud!', wzDoneReq:'Soov saadetud', wzDoneReqText:'Meister kinnitab aja või pakub teise. Staatuse näed jaotises „Minu broneeringud“.', wzDoneMove:'Broneering on ümber tõstetud',
- policy:(h,f)=>`Tasuta tühistamine ja ümberbroneerimine kuni ${h} h enne. Hilisem tühistamine: tasu ${f}.`, policyFree:n=>`Tasuta hilisi tühistamisi sel kuul alles: ${n}.`,
- cxTitle:'Tühistada broneering?', cxFree:'Tühistamine on tasuta.', cxFreePass:n=>`Tasuta tühistamine tänu sinu tasemele. Pärast seda jääb sel kuul tasuta tühistamisi: ${n-1}.`, cxLate:f=>`Külastuseni on liiga vähe aega. Tühistamistasu: ${f}.`, cxKeep:'Jäta broneering', cxDo:'Tühista broneering',
- cxDone:'Broneering tühistatud.', cxDoneLate:f=>`Broneering tühistatud. Arvestame tasu ${f} järgmisel külastusel.`,
- pfTitle:'Profiil', pfEmail:'E-post uudiste jaoks', pfMkt:'Saada mulle uudiseid ja pakkumisi', pfBday:'Sünnipäev', pfPin:'Uus PIN (kui soovid muuta)', pfSave:'Salvesta', pfSaved:'Salvestatud.',
- pFreeCancel:'Tasuta hilisi tühistamisi kuus',
- wdays:'tööpäevad', wends:'nädalavahetus', bkAuto:x=>`Kohe kinnitub: ${x}.`, bkReq:x=>`Tööpäevadel ${x} kinnitab aja meister.`, bkHorizon:m=>`Broneerida saab kuni ${m} kuu${m===1?'':'d'} ette.`,
- e_empty:'Sisesta kasutajanimi ja PIN.', e_net:'Serveriga ühendus ebaõnnestus. Proovi uuesti.', e_consent:'Andmete salvestamiseks on vaja nõusolekut.', e_other:'Midagi läks valesti. Proovi uuesti.',
- e_invalid_credentials:'Vale kasutajanimi või PIN.', e_locked:'Liiga palju katseid. Oota 15 minutit.', e_no_pin:'Sellele kasutajanimele pole PIN-i määratud. Palu administraatoril see anda.', e_ask_admin:'See kasutajanimi on stuudios juba olemas. Palu administraatoril anda sulle PIN.', e_taken:'See kasutajanimi on juba registreeritud. Sisene PIN-iga.', e_bad_login:'Kasutajanimi: ainult ladina tähed, numbrid, punkt ja alakriips (nagu Instagramis).', e_bad_name:'Sisesta nimi.', e_bad_pin:'PIN: 4–8 numbrit.', e_bad_email:'Kontrolli e-posti aadressi.', e_bad_birthday:'Kontrolli sünnikuupäeva.', e_try_later:'Praegu on palju registreerimisi. Proovi hiljem.',
- e_disabled:'Veebibroneerimine ei ole veel avatud.', e_bad_service:'Sellist teenust ei ole.', e_too_soon:'Liiga lähedane aeg. Vali teine.', e_too_far:'Nii kaugele ette ei saa veel broneerida.', e_not_available:'See aeg ei ole saadaval.', e_busy:'See aeg võeti just ära. Vali teine.', e_overlap:'Sul on sellele ajale juba broneering.', e_limit:'Liiga palju aktiivseid broneeringuid. Tühista mittevajalikud.', e_not_found:'Broneeringut ei leitud.', e_bad_status:'Seda broneeringut ei saa enam muuta.', e_too_late:'Liiga hilja, et veebis muuta. Kirjuta administraatorile.', e_past:'See broneering on juba möödas.'
-});
-Object.assign(T.ru,{
- insTitle:'Установите Glam Club', insSub:'Иконка на телефоне, быстрый вход и уведомления.', insBtn:'Как установить', insHide:'Скрыть',
- insIosT:'Установка на iPhone и iPad', insIos:['Откройте эту страницу в Safari. Если она открылась внутри Instagram, нажмите «⋯» и выберите «Открыть в браузере».','Нажмите кнопку «Поделиться» (квадрат со стрелкой) внизу экрана.','Выберите «На экран «Домой»» и нажмите «Добавить».','Откройте Glam Club с иконки на экране. Уведомления включаются уже внутри приложения.'], insIosNote:'Нужна iOS 16.4 или новее.',
- insAndT:'Установка на Android', insAnd:['Откройте страницу в Chrome.','Нажмите «⋮» вверху справа.','Выберите «Установить приложение» или «Добавить на главный экран».','Откройте Glam Club с иконки. Если уведомления задерживаются, отключите экономию батареи для Glam Club в настройках телефона.'], insNative:'Установить сейчас', insDone:'Приложение уже установлено.',
- pnTitle:'Уведомления', pnWhat:'Напоминания о записи, бонусы, уровни и подарки. Отключить можно в любой момент.',
- pnNeedInstall:'На iPhone уведомления работают после установки Glam Club на экран «Домой».', pnUnsupported:'Этот браузер не поддерживает уведомления.', pnSoon:'Уведомления скоро будут доступны.',
- pnDenied:'Уведомления запрещены в настройках браузера или телефона. Разрешите их и обновите страницу.', pnOn:'Включить уведомления', pnOff:'Отключить на этом устройстве', pnEnabled:'Уведомления включены на этом устройстве.', pnFail:'Не удалось включить уведомления. Попробуйте ещё раз.',
- pnBooking:'Напоминания о записи', pnBonus:'Бонусы (срок действия)', pnLevel:'Уровни и подарки', pnBirthday:'День рождения', pnPromo:'Новости и специальные предложения (Midweek Glam)', pnSaved:'Настройки сохранены.'
-});
-Object.assign(T.en,{
- insTitle:'Install Glam Club', insSub:'Home screen icon, quick access and notifications.', insBtn:'How to install', insHide:'Hide',
- insIosT:'Install on iPhone and iPad', insIos:['Open this page in Safari. If it opened inside Instagram, tap “⋯” and choose “Open in browser”.','Tap the Share button (square with an arrow) at the bottom.','Choose “Add to Home Screen” and tap “Add”.','Open Glam Club from the icon. Notifications are enabled inside the app.'], insIosNote:'Requires iOS 16.4 or newer.',
- insAndT:'Install on Android', insAnd:['Open the page in Chrome.','Tap “⋮” at the top right.','Choose “Install app” or “Add to Home screen”.','Open Glam Club from the icon. If notifications are delayed, turn off battery saving for Glam Club in your phone settings.'], insNative:'Install now', insDone:'The app is already installed.',
- pnTitle:'Notifications', pnWhat:'Booking reminders, bonuses, levels and gifts. You can turn them off at any time.',
- pnNeedInstall:'On iPhone, notifications work after you add Glam Club to the Home Screen.', pnUnsupported:'This browser does not support notifications.', pnSoon:'Notifications will be available soon.',
- pnDenied:'Notifications are blocked in your browser or phone settings. Allow them and reload the page.', pnOn:'Turn on notifications', pnOff:'Turn off on this device', pnEnabled:'Notifications are on for this device.', pnFail:'Could not turn on notifications. Please try again.',
- pnBooking:'Booking reminders', pnBonus:'Bonuses (expiry)', pnLevel:'Levels and gifts', pnBirthday:'Birthday', pnPromo:'News and special offers (Midweek Glam)', pnSaved:'Settings saved.'
-});
-Object.assign(T.et,{
- insTitle:'Paigalda Glam Club', insSub:'Ikoon telefonis, kiire ligipääs ja teavitused.', insBtn:'Kuidas paigaldada', insHide:'Peida',
- insIosT:'Paigaldamine iPhone’i ja iPadi', insIos:['Ava see leht Safaris. Kui leht avanes Instagramis, vajuta „⋯“ ja vali „Ava brauseris“.','Vajuta all nuppu „Jaga“ (nool ruudus).','Vali „Lisa avakuvale“ ja vajuta „Lisa“.','Ava Glam Club ikoonilt. Teavitused lülitatakse sisse rakenduses.'], insIosNote:'Vajalik iOS 16.4 või uuem.',
- insAndT:'Paigaldamine Androidi', insAnd:['Ava leht Chrome’is.','Vajuta paremal üleval „⋮“.','Vali „Installi rakendus“ või „Lisa avakuvale“.','Ava Glam Club ikoonilt. Kui teavitused hilinevad, lülita telefoni seadetes Glam Clubi akusäästurežiim välja.'], insNative:'Paigalda kohe', insDone:'Rakendus on juba paigaldatud.',
- pnTitle:'Teavitused', pnWhat:'Broneeringu meeldetuletused, boonused, tasemed ja kingitused. Saad need igal ajal välja lülitada.',
- pnNeedInstall:'iPhone’is töötavad teavitused pärast Glam Clubi lisamist avakuvale.', pnUnsupported:'See brauser ei toeta teavitusi.', pnSoon:'Teavitused tulevad varsti.',
- pnDenied:'Teavitused on brauseri või telefoni seadetes keelatud. Luba need ja laadi leht uuesti.', pnOn:'Lülita teavitused sisse', pnOff:'Lülita sellel seadmel välja', pnEnabled:'Teavitused on sellel seadmel sees.', pnFail:'Teavituste sisselülitamine ebaõnnestus. Proovi uuesti.',
- pnBooking:'Broneeringu meeldetuletused', pnBonus:'Boonused (aegumine)', pnLevel:'Tasemed ja kingitused', pnBirthday:'Sünnipäev', pnPromo:'Uudised ja eripakkumised (Midweek Glam)', pnSaved:'Seaded salvestatud.'
-});
-Object.assign(T.ru,{
- nTitle:'Обновления по записям', nOk:'Понятно', nAnother:'Выбрать другое время', nComment:'Комментарий мастера:',
- nDeclined:d=>`Мастер не смог принять запрос на ${d}.`, nCancelled:d=>`Запись на ${d} отменена мастером.`, nConfirmed:d=>`Запись на ${d} подтверждена.`
-});
-Object.assign(T.en,{
- nTitle:'Booking updates', nOk:'Got it', nAnother:'Choose another time', nComment:'Note from the master:',
- nDeclined:d=>`The master could not accept your request for ${d}.`, nCancelled:d=>`Your booking for ${d} was cancelled by the master.`, nConfirmed:d=>`Your booking for ${d} is confirmed.`
-});
-Object.assign(T.et,{
- nTitle:'Broneeringute uuendused', nOk:'Selge', nAnother:'Vali teine aeg', nComment:'Meistri kommentaar:',
- nDeclined:d=>`Meister ei saanud sinu soovi ${d} jaoks vastu võtta.`, nCancelled:d=>`Meister tühistas sinu broneeringu ${d} jaoks.`, nConfirmed:d=>`Sinu broneering ${d} jaoks on kinnitatud.`
-});
-Object.assign(T.ru,{
- e_email_fmt:'Введите email полностью, например name@mail.com', insLink:'Установить приложение на телефон', pnRecheck:'Проверить снова',
- pnDenied:'Уведомления заблокированы. iPhone: Настройки → Уведомления → Glam Club. Android и Chrome: значок замка рядом с адресом → Разрешения → Уведомления. Затем нажмите «Проверить снова».',
- pnDismissed:'Запрос закрыт. Нажмите кнопку ещё раз, когда будете готовы разрешить уведомления.'
-});
-Object.assign(T.en,{
- e_email_fmt:'Enter the full email address, e.g. name@mail.com', insLink:'Install the app on your phone', pnRecheck:'Check again',
- pnDenied:'Notifications are blocked. iPhone: Settings → Notifications → Glam Club. Android and Chrome: lock icon next to the address → Permissions → Notifications. Then tap “Check again”.',
- pnDismissed:'The request was closed. Tap the button again when you are ready to allow notifications.'
-});
-Object.assign(T.et,{
- e_email_fmt:'Sisesta e-posti aadress täielikult, nt name@mail.com', insLink:'Paigalda rakendus telefoni', pnRecheck:'Kontrolli uuesti',
- pnDenied:'Teavitused on blokeeritud. iPhone: Seaded → Teavitused → Glam Club. Android ja Chrome: lukuikoon aadressi kõrval → Load → Teavitused. Seejärel vajuta „Kontrolli uuesti“.',
- pnDismissed:'Päring suleti. Vajuta nuppu uuesti, kui oled valmis teavitused lubama.'
-});
 const EMAIL_RE=/^[^@\s]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/;
-const t=(k,...a)=>{const v=(T[lang]&&T[lang][k]!==undefined)?T[lang][k]:T.ru[k];return typeof v==='function'?v(...a):v;};
+/* ---------- тексты: файл texts.js, правки из админки лежат в cfg.texts ---------- */
+const T=window.GC_TEXTS||{ru:{},en:{},et:{}}, GP=window.GC_PARAMS||{};
+const pl=(n,f)=>{const a=n%10,b=n%100;return a===1&&b!==11?f[0]:(a>=2&&a<=4&&(b<10||b>=20)?f[1]:f[2]);};
+function applyTexts(o){
+  if(!o) return;
+  ['ru','en','et'].forEach(l=>{ const m=o[l]; if(!m) return; Object.keys(m).forEach(k=>{ const v=m[k]; if(typeof v!=='string'||!(k in T.ru)) return;
+    T[l][k]=Array.isArray(T.ru[k])?v.split('\n').map(x=>x.trim()).filter(Boolean):v; }); });
+}
+const t=(k,...a)=>{ let v=(T[lang]&&T[lang][k]!==undefined)?T[lang][k]:T.ru[k]; if(typeof v==='string'&&GP[k]&&GP[k].length) v=v.replace(/\{(\w+)\}/g,(m0,n)=>{ const i=GP[k].indexOf(n); return (i>=0&&a[i]!==undefined)?a[i]:m0; }); return v; };
+const plw=(k,n)=>{ const f=String(t(k)).split('|'); if(f.length>=3) return pl(n,f); return n===1?f[0]:(f[1]||f[0]); };
 const ACTION_EN={reel:'Make a Reel about the studio or a service and tag us',review:'Leave a review with a photo',bday:'Visit during your birthday week'};
 const ACTION_ET={reel:'Tee Reel stuudiost või teenusest ja märgi meid',review:'Jäta foto ja arvustus',bday:'Külasta sünnipäevanädalal'};
 const actTitle=a=>lang==='en'?(a.titleEn||ACTION_EN[a.id]||a.title):lang==='et'?(a.titleEt||ACTION_ET[a.id]||a.title):a.title;
-const rewardT=a=>a.type==='pct'?(lang==='en'?`${a.val}% off`:lang==='et'?`${a.val}% allahindlus`:`скидка ${a.val}%`):`+${r2(a.val)} €`;
+const rewardT=a=>a.type==='pct'?t('rewardPct',a.val):`+${r2(a.val)} €`;
 const giftsOf=l=>{const x=lang==='en'?l.giftsEn:lang==='et'?l.giftsEt:null;return x&&x.length===l.gifts.length?x:l.gifts;};
 const setLang=l=>{lang=l;LOCALE=l==='ru'?'ru-RU':l==='et'?'et-EE':'en-GB';document.documentElement.lang=l;try{localStorage.setItem('bgLang',l);}catch(e){}};
 setLang(lang);
@@ -620,10 +386,10 @@ function heroBlocks(r){
   let act='';
   if(gc.last!=null&&gc.level>0&&days!=null){
     const ap=Math.max(0,Math.min(100,Math.round(days/G.downDays*100)));
-    act=`<div class="block"><div class="rowline"><b>${esc(t('activity'))}</b><span class="muted">${esc(t('daysLeft',days))}</span></div><div class="bar"><i style="width:${ap}%"></i></div></div>`;
+    act=`<div class="block"><div class="rowline"><b>${esc(t('activity'))}</b><span class="muted">${esc(t('daysLeft',days,plw('fmDay',days)))}</span></div><div class="bar"><i style="width:${ap}%"></i></div></div>`;
   }
   let call='';
-  if(gc.stage==='warn') call=`<div class="callout"><b>${esc(t('crown'))}</b><span>${esc(t('visitSoon',cfg.studio,days))}</span></div>`;
+  if(gc.stage==='warn') call=`<div class="callout"><b>${esc(t('crown'))}</b><span>${esc(t('visitSoon',cfg.studio,days,plw('fmDay',days)))}</span></div>`;
   else if(gc.stage==='remind') call=`<div class="callout"><b>${esc(t('crown'))}</b><span>${esc(t('remind',gc.since))}</span></div>`;
   if(gc.downs>0&&gc.log.some(x=>x.type==='down'&&x.ts>=gc.last)) call+=`<div class="callout"><span>${esc(t('demoted'))}</span></div>`;
   if(gc.lost) call+=`<div class="callout"><span>${esc(t('lost',L[gc.lost.level].name,eur(gc.lost.need),fmtDate(gc.lost.until)))}</span></div>`;
@@ -640,7 +406,7 @@ function journey(r){
     <div class="ladder cards">${L.map((l,i)=>{
       const st=!gc?'':(i<gc.level?'passed':i===gc.level?'current':'locked');
       const badge=!gc?'':(i<gc.level?`${svg(I.check)}`:i===gc.level?`<span class="you">${esc(t('yours'))}</span>`:svg(I.lock));
-      const sub=[t('cb',l.cashback)];if(l.discount>0)sub.push(t('off',l.discount));if(l.giftsPerYear>0)sub.push(t('giftYear',l.giftsPerYear));
+      const sub=[t('cb',l.cashback)];if(l.discount>0)sub.push(t('off',l.discount));if(l.giftsPerYear>0)sub.push(t('giftYear',l.giftsPerYear,plw('fmGift',l.giftsPerYear)));
       return `<button class="lrow ${st}" data-lv="${i}" aria-label="${esc(l.name)}">${lvIcon(i)}<span class="lt"><b>${esc(l.name.toUpperCase())}</b><span>${esc(fromRange(L,i))}</span><span>${esc(sub.join(' · '))}</span></span><span class="lbadge">${badge}</span></button>`;}).join('')}</div></div>`;
 }
 function giftsPanel(r){
@@ -753,12 +519,11 @@ const shell=(inner,center)=>`<div class="sheet-bg" data-close="1"><div class="sh
 const bookingOn=()=>!!(cfg&&cfg.booking&&(cfg.booking.enabled||PREVIEW));
 const BK=()=>cfg.booking||{};
 const freeCancels=i=>+((BK().freeLate||{})[String(i)])||0;
-const SVC={en:{'Тату':'Tattoo','Макияж + укладка':'Makeup + styling','Макияж':'Makeup','Укладка':'Styling','Брови':'Brows','Ресницы':'Lashes','Комбо':'Combo'},
- et:{'Тату':'Tätoveering','Макияж + укладка':'Meik + soeng','Макияж':'Meik','Укладка':'Soeng','Брови':'Kulmud','Ресницы':'Ripsmed','Комбо':'Kombo'}};
-const svcName=n=>(SVC[lang]&&SVC[lang][n])||n;
+const SVC=window.GC_SVC||{en:{},et:{}};
+const svcName=n=>((cfg&&cfg.svcNames&&cfg.svcNames[lang]&&cfg.svcNames[lang][n])||(SVC[lang]&&SVC[lang][n])||n);
 const svcList=()=>(cfg.services&&cfg.services.length)?cfg.services:Object.keys(BK().durations||{});
 const svcMin=n=>+((BK().durations||{})[n])||+BK().defaultMinutes||60;
-const fmtDur=m=>{const h=Math.floor(m/60),r=m%60;return `${h?h+' '+(lang==='ru'?'ч':'h'):''}${r?' '+r+' min':''}`.trim().replace(/ min$/,lang==='ru'?' мин':' min');};
+const fmtDur=m=>{const h=Math.floor(m/60),r=m%60;return [h?h+' '+t('unitH'):'',r?r+' '+t('unitMin'):''].filter(Boolean).join(' ');};
 const dayLabel=(d,o)=>{const [y,m,dd]=d.split('-').map(Number);return new Date(y,m-1,dd).toLocaleDateString(LOCALE,o||{weekday:'short',day:'numeric',month:'long'});};
 const ym=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
 const addMonths=(d,n)=>new Date(d.getFullYear(),d.getMonth()+n,1);
@@ -838,7 +603,7 @@ function logout(){ pushDropDevice(); pushSt={sub:false,prefs:null,devices:0,msg:
 
 function bookingCta(){
   if(!bookingOn()) return '';
-  return `<div class="panel cta"><div><h2>${esc(t('bookTitle'))}</h2><p class="muted small">${esc(t('bookSub',+BK().horizonMonths||3))}</p></div><button class="primary" data-act="book">${esc(t('bookBtn'))}</button></div>`;
+  return `<div class="panel cta"><div><h2>${esc(t('bookTitle'))}</h2><p class="muted small">${esc(t('bookSub',+BK().horizonMonths||3,plw('fmMonth',+BK().horizonMonths||3)))}</p></div><button class="primary" data-act="book">${esc(t('bookBtn'))}</button></div>`;
 }
 function myBookingsPanel(){
   if(!rec||!bookingOn()) return '';
@@ -850,7 +615,7 @@ function myBookingsPanel(){
     return `<div class="bk-row"><div class="rowline"><b>${esc(dayLabel(b.ld))}, ${b.lt}–${b.le}</b><span class="pill ${b.status==='pending'?'dash':''}">${esc(b.status==='pending'?t('stPending'):t('stConfirmed'))}</span></div>
       <div class="muted">${esc(svcName(b.service))}</div>
       <div class="actions">${can?`<button data-act="resched" data-id="${b.id}">${esc(t('bResched'))}</button>`:''}<button data-act="cancel" data-id="${b.id}">${esc(t('bCancel'))}</button><button class="ghost" data-act="ics" data-id="${b.id}">${esc(t('bCal'))}</button></div>
-      ${can?'':`<p class="muted small">${esc(t('lateHint',cfg.contact||''))}</p>`}</div>`; };
+      ${can?'':`<p class="muted small">${esc(t('lateHint',cfg.contact?': '+cfg.contact:''))}</p>`}</div>`; };
   const rc=b=>`<p class="small ${b.status==='declined'?'muted':'neg'}">${esc(b.status==='declined'?t('declinedNote',dayLabel(b.ld)):t('feeNote',dayLabel(b.ld),eur(b.fee)))}${b.status==='declined'&&b.admin_note?' '+esc(b.admin_note):''}</p>`;
   return `<div class="panel"><h2>${esc(t('myBookings'))}${notices().length?'<span class="dot" aria-hidden="true"></span>':''}</h2>${up.length?up.map(row).join(''):`<p class="muted">${esc(t('noBookings'))}</p>`}
     ${recent.length?`<div><div class="eyebrow">${esc(t('recent'))}</div>${recent.map(rc).join('')}</div>`:''}</div>`;
@@ -863,7 +628,7 @@ function bookingRulesHtml(){
   const L=[];
   if(auto.length) L.push(t('bkAuto',auto.join(', ')));
   if(wd.reqFrom) L.push(t('bkReq',`${wd.reqFrom}–${wd.reqTo}`));
-  L.push(t('bkHorizon',+B.horizonMonths||3), t('policy',+B.cancelHours||24,eur(+B.lateFee||0)));
+  L.push(t('bkHorizon',+B.horizonMonths||3,plw('fmMonth',+B.horizonMonths||3)), t('policy',+B.cancelHours||24,eur(+B.lateFee||0)));
   return L.map(x=>`<p>${esc(x)}</p>`).join('');
 }
 
@@ -954,7 +719,7 @@ function bindBooking(){
 function cancelSheet(){
   const b=(rec.bookings||[]).find(x=>x.id===sheet.id); if(!b) return '';
   const hrs=(b.start-Date.now())/3600000, ch=+BK().cancelHours||24, fee=+BK().lateFee||0; let msg,cls='';
-  if(b.status==='pending'||hrs>=ch) msg=t('cxFree'); else if(rec.freeLeft>0) msg=t('cxFreePass',rec.freeLeft); else { msg=t('cxLate',eur(fee)); cls='warn'; }
+  if(b.status==='pending'||hrs>=ch) msg=t('cxFree'); else if(rec.freeLeft>0) msg=t('cxFreePass',rec.freeLeft,rec.freeLeft-1); else { msg=t('cxLate',eur(fee)); cls='warn'; }
   return shell(`<h3>${esc(t('cxTitle'))}</h3><p>${esc(dayLabel(b.ld))}, ${b.lt}–${b.le} · ${esc(svcName(b.service))}</p><div class="hint ${cls}">${esc(msg)}</div>
     ${sheet.err?`<div class="neg small">${esc(sheet.err)}</div>`:''}
     <div class="actions"><button data-cx="keep">${esc(t('cxKeep'))}</button><button class="primary" data-cx="do" ${sheet.busy?'disabled':''}>${esc(t('cxDo'))}</button></div>`);
@@ -1147,8 +912,9 @@ function bindPush(){
   document.querySelectorAll('[data-pref]').forEach(el=>el.onchange=savePrefs);
 }
 (async()=>{
+  if(!window.GC_TEXTS){ document.getElementById('app').innerHTML='<div class="panel"><h2>Glam Club</h2><p>Не найден файл texts.js. Загрузите его в репозиторий рядом с index.html.</p></div>'; return; }
   render(); if(!sb) return;
-  try{ const {data,error}=await sb.from('settings').select('cfg').eq('id',1).single(); if(error) throw error; cfg=data.cfg; cfg.glam=mergeGlam(cfg.glam); }
+  try{ const {data,error}=await sb.from('settings').select('cfg').eq('id',1).single(); if(error) throw error; cfg=data.cfg; cfg.glam=mergeGlam(cfg.glam); applyTexts(cfg.texts); }
   catch(e){ err=t('loadErr'); }
   try{ const pc=await rpc('push_config',{}); pushCfg=pc; }catch(e){}
   if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('sw.js'); }catch(e){} }
