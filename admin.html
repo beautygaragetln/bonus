@@ -788,7 +788,7 @@ async function refreshPush(){
 function pushPayload(){
   const v=id=>($('#'+id)?$('#'+id).value.trim():''), a=$('#pAud').value;
   const aud=a==='all'?{type:'all'}:a==='one'?{type:'client',client_id:$('#pOne').value}:{type:'level',level:+a.slice(3)};
-  return {audience:aud,category:$('#pCat').value,title:{ru:v('pTitle'),en:v('pTitleEn'),et:v('pTitleEt')},text:{ru:v('pText'),en:v('pTextEn'),et:v('pTextEt')}};
+  return {action:'send',audience:aud,category:$('#pCat').value,title:{ru:v('pTitle'),en:v('pTitleEn'),et:v('pTitleEt')},text:{ru:v('pText'),en:v('pTextEn'),et:v('pTextEt')}};
 }
 function collectPush(){
   const P=mergePush(S.cfg.push), c=id=>$('#'+id).checked, v=id=>$('#'+id).value;
