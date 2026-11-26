@@ -108,6 +108,38 @@ label.check input{width:auto}
 .lrow.passed .lbadge{color:var(--good)}
 .lrow.locked .lv{opacity:.45;filter:grayscale(.4)}
 .lrow.locked .lt{opacity:.7}
+.hello{font:italic 600 28px/1.15 var(--display);margin:4px 0 0}
+.acct-slim{display:flex;justify-content:space-between;align-items:center;gap:8px}
+button.link{background:none;border:0;padding:2px 4px;color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer;font-size:inherit}
+.rw-hero{position:relative;background:#713E4B;color:#F3EDE7;border-radius:20px;padding:20px 22px 22px;display:flex;flex-direction:column;gap:8px}
+.rw-hero .hc-top{font-size:11px;letter-spacing:.16em;text-transform:uppercase;opacity:.85}
+.rw-hero .rw-more{position:absolute;top:14px;right:14px;background:none;border:0;color:#F2B7CC;font-size:12px;padding:4px 6px;cursor:pointer}
+.rw-big{font:600 46px/1 var(--display);font-variant-numeric:tabular-nums}
+.rw-sub{font-size:13px;opacity:.85}.rw-hero hr{border:0;border-top:1px solid rgba(243,237,231,.25);margin:6px 0}
+.rw-hero .rowline{font-size:14px}.rw-hero .bar{background:rgba(243,237,231,.22)}.rw-hero .bar i{background:#F2B7CC}
+.rw-left{font-size:12px;opacity:.8}
+.cpn-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.cpn-tile{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--fg);cursor:pointer;text-align:center;min-width:0}
+.cpn-tile svg{width:22px;height:22px;fill:none;stroke:var(--accent);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.cpn-tile b{font-size:18px}.cpn-tile small{font-size:11px;color:var(--muted)}
+.cpn-tile.locked{background:#E7DAD1;border-color:#E7DAD1;cursor:default;color:var(--muted)}
+.cpn-tile.on{background:var(--pink);border-color:var(--pink);color:#3E2C29}.cpn-tile.on small{color:#3E2C29}
+.cpn-note{display:flex;justify-content:space-between;gap:10px;align-items:center}.cpn-help{margin:-4px 0 0}
+.lvl-card{gap:10px}.lvl-top{display:flex;align-items:center;gap:12px;cursor:pointer}
+.lvl-ic{width:42px;height:42px;border-radius:50%;background:var(--pink);display:grid;place-items:center;flex:none}
+.lvl-ic svg{width:22px;height:22px;fill:none;stroke:#713E4B;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.lvl-tx{display:flex;flex-direction:column;flex:1}.lvl-tx small{color:var(--muted);font-size:12px}.lvl-tx b{font-size:16px;letter-spacing:.03em}
+.chev{font-size:22px;color:var(--muted)}.lvl-tasks{display:flex;flex-direction:column;gap:6px}
+.ms-card{gap:12px;cursor:pointer}.ms-card h2{margin:0;font-size:20px}
+.ms-dots{display:flex;gap:10px;flex-wrap:wrap}
+.ms-dot{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center}
+.ms-dot svg{width:15px;height:15px;fill:none;stroke:#713E4B;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ms-dot.done{background:var(--pink);border-color:var(--pink)}.ms-dot.gift{background:#E7DAD1;border-color:#E7DAD1}
+.miss-card{display:flex;align-items:center;gap:12px;background:var(--pink);border:0;border-radius:16px;padding:16px 18px;color:#3E2C29;text-align:left;cursor:pointer}
+.miss-card svg{width:24px;height:24px;flex:none;fill:none;stroke:#3E2C29;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.miss-card span{display:flex;flex-direction:column;gap:2px}.miss-card small{font-size:12px;opacity:.85}
+.cta-bar{display:flex;justify-content:center;align-items:center;gap:10px;width:100%;background:#3E2C29;color:#F3EDE7;border:0;border-radius:14px;padding:16px;font-size:15px;font-weight:600;cursor:pointer}
+.cta-bar svg{width:18px;height:18px;fill:none;stroke:#F3EDE7;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .rw-card .rowline{gap:8px;align-items:center}.rw-card .rowline h2{white-space:nowrap}.rw-card .rowline button{font-size:13px;padding:8px 12px;white-space:nowrap}
 .rw-bal{display:flex;align-items:baseline;gap:10px}
 .cpn-row{display:flex;gap:8px;flex-wrap:wrap}.cpn-row button{flex:1;min-width:88px}
@@ -397,22 +429,6 @@ function rulesList(){
 
 /* ---------- блоки ---------- */
 const TKN=id=>t('tk_'+id);
-/* Beauty Rewards: копилка, купон, ближайшее сгорание */
-function rewardsCard(r){
-  const w=r.rw; if(!w) return '';
-  const act=w.coupon, lots=w.lots||[], soon=lots[0];
-  const left=r2(w.step-w.prog);
-  const coupons=(w.coupons||[]).filter(a=>a<=w.maxVisit);
-  const btns=!act?`<div class="eyebrow">${esc(t('rwCouponMake'))}</div><div class="cpn-row">${coupons.map(a=>`<button data-cpn="${a}" ${(w.bal>=a)?'':'disabled'}>${esc(t('rwCouponBtn',eur(a)))}</button>`).join('')}</div>
-      <p class="muted small">${esc(w.bal>=Math.min(...coupons)?t('rwOnlyOne',eur(w.maxVisit)):t('rwNoEnough',eur(Math.min(...coupons))))}</p>`:'';
-  return `<div class="panel rw-card"><div class="rowline"><h2>${esc(t('rwTitle'))}</h2><button class="ghost" data-sheet="rw">${esc(t('rwMore'))}</button></div>
-    <div class="rw-bal"><div class="balance">${eur(w.bal)}</div><div class="muted">${esc(t('rwBal'))}</div></div>
-    <div><div class="rowline"><span class="small">${esc(t('rwNext',eur(w.reward),eur(left)))}</span><span class="muted num small">${r2(w.prog)} / ${r2(w.step)} €</span></div>
-      <div class="bar" role="progressbar" aria-valuenow="${Math.round(w.prog/w.step*100)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${Math.min(100,Math.round(w.prog/w.step*100))}%"></i></div></div>
-    ${soon?`<p class="muted small">${esc(t('rwSoon',eur(soon.a),fmtDate(soon.exp)))}</p>`:`<p class="muted small">${esc(t('rwEmpty',eur(w.reward),eur(w.step)))}</p>`}
-    ${act?`<div class="hint cpn-active"><b>${esc(t('rwCouponActive',eur(act.a),fmtDate(act.exp)))}</b><br><span class="small">${esc(t('rwCouponHint'))}</span><div class="actions"><button class="ghost" data-cpncancel="1">${esc(t('rwCouponCancel'))}</button></div></div>`:''}
-    ${rwErr?`<div class="neg small">${esc(rwErr)}</div>`:''}${btns}</div>`;
-}
 async function rwCoupon(a){
   if(busy||!cred) return; busy=true; rwErr='';
   try{ const d=await rpc('rw_activate_coupon',{p_login:cred.login,p_pin:cred.pin,p_amount:a}); if(d.error) rwErr=errMsg(d.error); else rec=d; }catch(e){ rwErr=tk('e_net'); }
@@ -423,49 +439,62 @@ async function rwCancelCoupon(){
   try{ const d=await rpc('rw_cancel_coupon',{p_login:cred.login,p_pin:cred.pin}); if(d.error) rwErr=errMsg(d.error); else rec=d; }catch(e){ rwErr=tk('e_net'); }
   busy=false; render();
 }
-/* Ближайшее достижение: берём то, что ближе всего к завершению */
-function nextAchievement(r){
-  const w=r.rw, c=[]; if(!w) return '';
-  const left=r2(w.step-w.prog); c.push({f:w.prog/w.step,txt:t('naStep',eur(left),eur(w.reward))});
-  const nm=(w.ms||[]).find(m=>!m.done); if(nm) c.push({f:(w.cnt||0)/nm.n,txt:t('naMs',nm.n-(w.cnt||0),msWhat(nm))});
-  if(glamOn()){ const G=cfg.glam,L=G.levels,gc=gcOf(r),next=L[gc.level+1];
-    if(next){ const ts=taskState(G,r.tk), key=gc.level+1===3?'baddie':gc.level+1===4?'super':null;
-      if(gc.toNext>0) c.push({f:gc.pct/100,txt:t('naLevel',eur(gc.toNext),next.name)});
-      else if(key&&!ts[key].ok) c.push({f:ts[key].n/ts[key].total,txt:t('naTasks',next.name,ts[key].n,ts[key].total)}); } }
-  c.sort((a,b)=>b.f-a.f); const x=c[0]; if(!x) return '';
-  return `<div class="panel"><div class="eyebrow">${esc(t('naTitle'))}</div><p><b>${esc(x.txt)}</b></p></div>`;
-}
-function heroBlocks(r){
-  const G=cfg.glam,L=G.levels,gc=gcOf(r),l=L[gc.level],next=L[gc.level+1], ts=taskState(G,r.tk);
-  const days=gc.daysToDown;
-  const hero=`<div class="hero-card">
-    <div class="hc-top"><span>${esc(t('status'))}</span>${svg(ICONS[1])}</div>
-    <div class="muted small" style="color:rgba(243,237,231,.8)">${esc(t('hi',r.n))}</div>
-    <div class="hc-level">${esc(l.name)}</div><div class="hc-sub">${esc(t('level'))} 0${gc.level+1}</div></div>`;
-  const key=gc.level+1===3?'baddie':gc.level+1===4?'super':null, tsk=key?ts[key]:null;
-  const prog=next?`<div class="block"><div class="rowline"><b>${esc(t('nextLevel',next.name.toUpperCase()))}</b><span class="muted num">${r2(gc.q)} / ${r2(next.from)} €</span></div>
-    <div class="bar" role="progressbar" aria-valuenow="${gc.pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${gc.pct}%"></i></div>
-    <div class="muted small">${esc(gc.toNext>0?t('moreToNext',eur(gc.toNext)):(tsk&&!tsk.ok?t('lvTasksNeed',next.name,tsk.n,tsk.need):''))}</div>
-    ${tsk?`<div class="rowline" style="margin-top:6px"><span class="small">${esc(t('lvTasks',tsk.n,tsk.total))}</span><button class="ghost" data-sheet="tasks">${esc(t('tkOpen'))}</button></div>
-      <div class="bar"><i style="width:${Math.min(100,Math.round(tsk.n/tsk.need*100))}%"></i></div>`:''}</div>`
-    :`<div class="block"><b>${esc(t('topLevel'))}</b></div>`;
-  let act='';
-  if(gc.last!=null&&gc.level>0&&days!=null){
-    const ap=Math.max(0,Math.min(100,Math.round(days/G.downDays*100)));
-    act=`<div class="block"><div class="rowline"><b>${esc(t('activity'))}</b><span class="muted">${esc(t('daysLeft',days,plw('fmDay',days)))}</span></div><div class="bar"><i style="width:${ap}%"></i></div></div>`;
+const IC_CHECK='<path d="M6 12.5l4 4 8-9"/>', IC_LOCK='<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>';
+/* Главная: приветствие, копилка Rewards, купоны, уровень, Milestones, задания */
+function homeBlocks(r){
+  const w=r.rw, g=glamOn(); let h=`<h1 class="hello">${esc(t('hi',r.n))} ♡</h1>`;
+  if(w){
+    const act=w.coupon, soon=(w.lots||[])[0], left=r2(w.step-w.prog), pc=Math.min(100,Math.round(w.prog/w.step*100));
+    h+=`<div class="rw-hero"><button class="rw-more" data-sheet="rw">${esc(t('rwMore'))} ›</button>
+      <div class="hc-top"><span>${esc(t('rwTitle'))}</span></div>
+      <div class="rw-big">${eur(w.bal)}</div><div class="rw-sub">${esc(t('rwHeroSub'))}</div><hr>
+      <div class="rowline"><span>${esc(t('rwNextShort',eur(w.reward)))}</span><span class="num">${r2(w.prog)} / ${r2(w.step)} €</span></div>
+      <div class="bar" role="progressbar" aria-valuenow="${pc}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pc}%"></i></div>
+      <div class="rw-left">${esc(t('rwLeft',eur(left)))}</div>
+      ${soon?`<div class="rw-left">${esc(t('rwSoon',eur(soon.a),fmtDate(soon.exp)))}</div>`:''}</div>`;
+    const cps=(w.coupons||[]).filter(a=>a<=w.maxVisit);
+    h+=`<div class="cpn-grid">${cps.map(a=>{
+      const on=act&&act.a===a, can=!act&&w.bal>=a;
+      if(on) return `<div class="cpn-tile on">${svg(I.gift)}<b>${eur(a)}</b><small>${esc(t('cpnOn',fmtDate(act.exp)))}</small></div>`;
+      if(can) return `<button class="cpn-tile" data-cpn="${a}">${svg(I.gift)}<b>${eur(a)}</b><small>${esc(t('cpnActivate'))}</small></button>`;
+      return `<div class="cpn-tile locked" aria-disabled="true">${svg(IC_LOCK)}<b>${eur(a)}</b><small>${esc(t('cpnLocked'))}</small></div>`; }).join('')}</div>
+    ${act?`<div class="cpn-note"><span class="small">${esc(t('rwCouponHint'))}</span><button class="link" data-cpncancel="1">${esc(t('rwCouponCancel'))}</button></div>`:`<p class="muted small cpn-help">${esc(t('rwOnlyOne',eur(w.maxVisit)))}</p>`}
+    ${rwErr?`<div class="neg small">${esc(rwErr)}</div>`:''}`;
   }
-  let call='';
-  if(gc.stage==='warn') call=`<div class="callout"><b>${esc(t('crown'))}</b><span>${esc(t('visitSoon',cfg.studio,days,plw('fmDay',days)))}</span></div>`;
-  else if(gc.stage==='remind') call=`<div class="callout"><b>${esc(t('crown'))}</b><span>${esc(t('remind',gc.since))}</span></div>`;
-  if(gc.downs>0&&gc.log.some(x=>x.type==='down'&&x.ts>=gc.last)) call+=`<div class="callout"><span>${esc(t('demoted'))}</span></div>`;
-  if(gc.lost) call+=`<div class="callout"><span>${esc(t('lost',L[gc.lost.level].name,eur(gc.lost.need),fmtDate(gc.lost.until)))}</span></div>`;
-  const tiles=`<div class="tiles">
+  if(g){
+    const G=cfg.glam,L=G.levels,gc=gcOf(r),l=L[gc.level],next=L[gc.level+1], ts=taskState(G,r.tk), days=gc.daysToDown;
+    const key=gc.level+1===3?'baddie':gc.level+1===4?'super':null, tsk=key?ts[key]:null;
+    let extra='';
+    if(tsk) extra+=`<div class="lvl-tasks"><div class="rowline"><span class="small">${esc(t('lvTasks',tsk.n,tsk.total))}</span><button class="link" data-sheet="tasks">${esc(t('tkOpen'))} ›</button></div><div class="bar"><i style="width:${Math.min(100,Math.round(tsk.n/tsk.need*100))}%"></i></div></div>`;
+    if(gc.last!=null&&gc.level>0&&days!=null){ const ap=Math.max(0,Math.min(100,Math.round(days/G.downDays*100)));
+      extra+=`<div class="lvl-tasks"><div class="rowline"><span class="small">${esc(t('activity'))}</span><span class="muted small">${esc(t('daysLeft',days,plw('fmDay',days)))}</span></div><div class="bar"><i style="width:${ap}%"></i></div></div>`; }
+    if(gc.stage==='warn') extra+=`<div class="callout"><b>${esc(t('crown'))}</b><span>${esc(t('visitSoon',cfg.studio,days,plw('fmDay',days)))}</span></div>`;
+    else if(gc.stage==='remind') extra+=`<div class="callout"><b>${esc(t('crown'))}</b><span>${esc(t('remind',gc.since))}</span></div>`;
+    if(gc.downs>0&&gc.log.some(x=>x.type==='down'&&x.ts>=gc.last)) extra+=`<div class="callout"><span>${esc(t('demoted'))}</span></div>`;
+    if(gc.lost) extra+=`<div class="callout"><span>${esc(t('lost',L[gc.lost.level].name,eur(gc.lost.need),fmtDate(gc.lost.until)))}</span></div>`;
+    h+=`<div class="panel lvl-card"><div class="lvl-top" data-sheet="perks" role="button" tabindex="0"><span class="lvl-ic">${svg(ICONS[Math.min(gc.level,ICONS.length-1)])}</span><span class="lvl-tx"><small>${esc(t('lvYour'))}</small><b>${esc(l.name.toUpperCase())}</b></span><span class="chev">›</span></div>
+      ${next?`<div class="bar" role="progressbar" aria-valuenow="${gc.pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${gc.pct}%"></i></div>
+      <div class="small">${esc(t('lvNextLine',r2(gc.q),r2(next.from),next.name.toUpperCase()))}${gc.toNext<=0&&tsk&&!tsk.ok?'<br><span class="muted">'+esc(t('lvTasksNeed',next.name,tsk.n,tsk.need))+'</span>':''}</div>`:`<div class="small"><b>${esc(t('topLevel'))}</b></div>`}
+      ${extra}<button class="link" data-sheet="perks">${esc(t('lvAllPerks'))}</button></div>`;
+  }
+  if(w){
+    const nm=(w.ms||[]).find(m=>!m.done), cnt=w.cnt||0;
+    if(nm){ const N=nm.n, dots=[...Array(N)].map((_,i)=>i===N-1?`<span class="ms-dot gift">${svg(I.gift)}</span>`:`<span class="ms-dot ${i<cnt?'done':''}">${i<cnt?svg(IC_CHECK):''}</span>`).join('');
+      h+=`<div class="panel ms-card" data-sheet="rw" role="button" tabindex="0"><h2 class="it">${esc(t('msTitle'))}</h2><div class="ms-dots">${dots}</div><div class="small"><b>${esc(t('msLeft',N-cnt,plw('msVisit',N-cnt),msWhat(nm)))}</b></div></div>`; }
+    else if((w.ms||[]).length) h+=`<div class="panel ms-card" data-sheet="rw" role="button" tabindex="0"><h2 class="it">${esc(t('msTitle'))}</h2><div class="small"><b>${esc(t('msAllDone'))}</b></div></div>`;
+  }
+  h+=`<button class="miss-card" data-sheet="miss">${svg(I.gift)}<span><b>${esc(t('missTitle'))}</b><small>${esc(t('missSub'))}</small></span></button>`;
+  return h;
+}
+function bookCtaBar(){
+  if(!bookingOn()) return '';
+  return `<button class="cta-bar" data-act="book">${svg(I.cal)}<span>${esc(t('bookCta'))}</span></button>`;
+}
+const infoTiles=()=>`<div class="tiles">
     <button class="tile" data-sheet="perks">${svg(I.gift)}<span>${esc(t('tPerks'))}</span></button>
     <button class="tile" data-sheet="history">${svg(I.clock)}<span>${esc(t('tHistory'))}</span></button>
     <button class="tile" data-sheet="invite">${svg(I.users)}<span>${esc(t('tInvite'))}</span></button>
     <button class="tile" data-sheet="terms">${svg(I.cal)}<span>${esc(t('tTerms'))}</span></button></div>`;
-  return hero+prog+act+call+tiles;
-}
 function journey(r){
   const G=cfg.glam,L=G.levels,gc=r?gcOf(r):null;
   return `<div class="ladder-wrap"><h2 class="journey-title">${esc(t('journey'))}</h2><p class="muted small" style="text-align:center">${esc(t('tap'))}</p>
@@ -522,6 +551,14 @@ function sheetHtml(){
         <div class="visit-list">${(w.ms||[]).map(m=>`<div><span>${esc(t('rwMsItem',m.n,msWhat(m)))}</span><b class="num ${m.done?'pos':'muted'}">${m.done?esc(t('rwDone')):`${w.cnt||0} / ${m.n}`}</b></div>`).join('')}</div></div>
       <div><div class="eyebrow">${esc(t('rwHist'))}</div>${hist.length?`<div class="visit-list">${hist.map(e=>`<div><span>${esc(t('rwK_'+e.k)||e.k)}${lang==='ru'&&e.note&&(e.k==='special'||e.k==='milestone')?': '+esc(e.note):''}<br><span class="muted small">${fmtDate(e.ts)}</span></span><b class="num ${e.a>0?'pos':e.a<0?'neg':'muted'}">${e.a>0?'+':''}${e.a===0?'—':eur(e.a)}</b></div>`).join('')}</div>`:`<p class="muted">${esc(t('rwHistEmpty'))}</p>`}</div>${closeBtn}`);
   }
+  if(sheet.type==='miss'){
+    const ways=[]; if(cfg.friend&&cfg.friend.val>0) ways.push([t('friendRow'),rewardT(cfg.friend)]);
+    cfg.actions.filter(a=>a.val>0).forEach(a=>ways.push([actTitle(a),rewardT(a)]));
+    let ch=''; if(glamOn()&&rec){ const ts=taskState(G,rec.tk), gc=gcOf(rec), k=gc.level>=3?'super':'baddie', x=ts[k], L2=G.levels[k==='baddie'?3:4];
+      ch=`<div><div class="eyebrow">${esc(t('tkTitle',L2.name))}</div><p class="muted small">${esc(t('tkNeed',x.need,x.total))}</p><div class="visit-list">${x.items.map(it=>`<div><span>${esc(TKN(it.id))}${it.req?` <span class="muted small">· ${esc(t('tkReq'))}</span>`:''}</span><b class="num ${it.ok?'pos':'muted'}">${it.val} / ${it.target}</b></div>`).join('')}</div><p class="muted small">${esc(t('tkAuto'))}</p></div>`; }
+    return wrap(`<h3>${esc(t('missTitle'))}</h3><div><div class="eyebrow">${esc(t('missWays'))}</div>${ways.length?`<div class="visit-list">${ways.map(x=>`<div><span>${esc(x[0])}</span><b class="num">${esc(x[1])}</b></div>`).join('')}</div>`:`<p class="muted">${esc(t('missNone'))}</p>`}
+      ${cfg.contact?`<p class="muted small">${esc(t('claim',cfg.contact))}</p>`:''}</div>${ch}${closeBtn}`);
+  }
   if(sheet.type==='tasks'){
     const ts=taskState(G,rec.tk), gc=gcOf(rec), key=gc.level+1>=4?'super':'baddie', k=gc.level>=3?'super':'baddie', L2=G.levels[k==='baddie'?3:4];
     const x=ts[k];
@@ -554,20 +591,19 @@ function render(){
   const tagline=lang==='en'?(cfg.taglineEn||''):lang==='et'?(cfg.taglineEt||''):(cfg.tagline||'');
   document.title=cfg.studio;
   app.innerHTML=`
-  <div class="topbar"><span class="eyebrow">${esc(cfg.studio)} CLUB</span>
+  <div class="topbar"><span class="eyebrow">${esc(cfg.studio)} APP</span>
     <div class="langs" role="group" aria-label="Language"><button data-lang="ru" aria-pressed="${lang==='ru'}">RU</button><button data-lang="en" aria-pressed="${lang==='en'}">EN</button><button data-lang="et" aria-pressed="${lang==='et'}">ET</button></div></div>
-  <header><div><h1>${esc(cfg.studio)}</h1>${tagline?`<p class="muted">${esc(tagline)}</p>`:''}</div></header>
+  ${rec?'':`<header><div><h1>${esc(cfg.studio)}</h1>${tagline?`<p class="muted">${esc(tagline)}</p>`:''}</div></header>`}
   ${PREVIEW&&!G.enabled?`<div class="hint warn">${esc(t('draft'))}</div>`:''}
   ${accountBlock()}
   ${noticePanel()}
-  ${bookingCta()}
-  ${myBookingsPanel()}
-  ${rec?rewardsCard(rec):''}
-  ${rec&&g?heroBlocks(rec):''}
-  ${rec?nextAchievement(rec):''}
+  ${rec?homeBlocks(rec):''}
+  ${rec?myBookingsPanel():''}
+  ${bookCtaBar()}
   ${installPanel()}
   ${notifyPanel()}
   <details class="panel more" ${rec?'':'open'}><summary><h2>${esc(t('moreTitle'))}</h2></summary>
+    ${rec&&g?infoTiles():''}
     <div class="ways">${fr}${act}</div>${cfg.contact?`<p class="muted small">${esc(t('claim',cfg.contact))}</p>`:''}
     ${g?journey(rec):''}${rec&&g?giftsPanel(rec):''}
     <h3 style="margin-top:14px">${esc(t('rules'))}</h3>${rulesList().map(x=>`<p>${esc(x)}</p>`).join('')}${glamRules}${bookingRulesHtml()}</details>
@@ -618,8 +654,7 @@ const val=id=>{const e=document.getElementById(id);return e?e.value.trim():'';};
 const saveCred=()=>{try{ if(cred) localStorage.setItem('bgCred',JSON.stringify(cred)); else localStorage.removeItem('bgCred'); }catch(e){}};
 
 function accountBlock(){
-  if(rec) return `<div class="panel acct"><div class="rowline"><div><b>${esc(rec.n)}</b><div class="muted small">@${esc(rec.login)}</div></div>
-    <div class="actions"><button data-act="profile">${esc(t('profile'))}</button><button class="ghost" data-act="logout">${esc(t('logout'))}</button></div></div></div>`;
+  if(rec) return `<div class="acct-slim"><span class="muted small">@${esc(rec.login)}</span><span><button class="link" data-act="profile">${esc(t('profile'))}</button><span class="muted"> · </span><button class="link" data-act="logout">${esc(t('logout'))}</button></span></div>`;
   const reg=authTab==='register';
   return `<div class="panel" id="acct"><div class="tabs"><button data-authtab="login" class="${!reg?'on':''}">${esc(t('tLogin'))}</button><button data-authtab="register" class="${reg?'on':''}">${esc(t('tRegister'))}</button></div>
     <form id="authForm" style="display:flex;flex-direction:column;gap:12px">
