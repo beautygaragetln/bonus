@@ -188,6 +188,9 @@ h1,.it{font-style:normal}
 .steps{display:grid;gap:10px;padding-left:20px}
 .steps li{padding-left:4px}
 .prefs{display:grid;gap:10px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#D33A4E;margin-left:8px;vertical-align:middle;box-shadow:0 0 0 3px rgba(211,58,78,.18)}
+.notice{border-left:4px solid #D33A4E;gap:10px}
+.notice .eyebrow{display:flex;align-items:center;gap:6px}
 </style>
 </head>
 <body>
@@ -534,6 +537,18 @@ Object.assign(T.et,{
  pnDenied:'Teavitused on brauseri või telefoni seadetes keelatud. Luba need ja laadi leht uuesti.', pnOn:'Lülita teavitused sisse', pnOff:'Lülita sellel seadmel välja', pnEnabled:'Teavitused on sellel seadmel sees.', pnFail:'Teavituste sisselülitamine ebaõnnestus. Proovi uuesti.',
  pnBooking:'Broneeringu meeldetuletused', pnBonus:'Boonused (aegumine)', pnLevel:'Tasemed ja kingitused', pnBirthday:'Sünnipäev', pnPromo:'Uudised ja eripakkumised (Midweek Glam)', pnSaved:'Seaded salvestatud.'
 });
+Object.assign(T.ru,{
+ nTitle:'Обновления по записям', nOk:'Понятно', nAnother:'Выбрать другое время', nComment:'Комментарий мастера:',
+ nDeclined:d=>`Мастер не смог принять запрос на ${d}.`, nCancelled:d=>`Запись на ${d} отменена мастером.`, nConfirmed:d=>`Запись на ${d} подтверждена.`
+});
+Object.assign(T.en,{
+ nTitle:'Booking updates', nOk:'Got it', nAnother:'Choose another time', nComment:'Note from the master:',
+ nDeclined:d=>`The master could not accept your request for ${d}.`, nCancelled:d=>`Your booking for ${d} was cancelled by the master.`, nConfirmed:d=>`Your booking for ${d} is confirmed.`
+});
+Object.assign(T.et,{
+ nTitle:'Broneeringute uuendused', nOk:'Selge', nAnother:'Vali teine aeg', nComment:'Meistri kommentaar:',
+ nDeclined:d=>`Meister ei saanud sinu soovi ${d} jaoks vastu võtta.`, nCancelled:d=>`Meister tühistas sinu broneeringu ${d} jaoks.`, nConfirmed:d=>`Sinu broneering ${d} jaoks on kinnitatud.`
+});
 const t=(k,...a)=>{const v=(T[lang]&&T[lang][k]!==undefined)?T[lang][k]:T.ru[k];return typeof v==='function'?v(...a):v;};
 const ACTION_EN={reel:'Make a Reel about the studio or a service and tag us',review:'Leave a review with a photo',bday:'Visit during your birthday week'};
 const ACTION_ET={reel:'Tee Reel stuudiost või teenusest ja märgi meid',review:'Jäta foto ja arvustus',bday:'Külasta sünnipäevanädalal'};
@@ -685,6 +700,7 @@ function render(){
   ${accountBlock()}
   ${installPanel()}
   ${notifyPanel()}
+  ${noticePanel()}
   ${bookingCta()}
   ${myBookingsPanel()}
   ${rec?(g?heroBlocks(rec):oldBalanceCard(rec)):''}
@@ -774,7 +790,7 @@ async function doLogin(login,pin,silent){
   try{
     const data=await rpc('client_login',{p_login:login,p_pin:pin});
     if(data.error){ authErr=silent?'':errMsg(data.error); if(silent){ cred={login:cred?cred.login:login,pin:''}; } }
-    else { rec=data; cred={login:data.login,pin}; saveCred(); authErr=''; checkLevelUp(); setTimeout(pushRefresh,0); }
+    else { rec=data; cred={login:data.login,pin}; saveCred(); authErr=''; seenSeed(); checkLevelUp(); updateBadge(); setTimeout(pushRefresh,0); }
   }catch(e){ authErr=silent?'':t('e_net'); }
   busy=false; render();
 }
@@ -783,7 +799,7 @@ async function doRegister(login,name,pin,email,mkt){
   try{
     const data=await rpc('register_client',{p_login:login,p_name:name,p_pin:pin,p_email:email,p_marketing:mkt});
     if(data.error) authErr=errMsg(data.error);
-    else { rec=data; cred={login:data.login,pin}; saveCred(); }
+    else { rec=data; cred={login:data.login,pin}; saveCred(); seenSeed(); }
   }catch(e){ authErr=t('e_net'); }
   busy=false; render();
 }
@@ -805,7 +821,7 @@ function myBookingsPanel(){
       <div class="actions">${can?`<button data-act="resched" data-id="${b.id}">${esc(t('bResched'))}</button>`:''}<button data-act="cancel" data-id="${b.id}">${esc(t('bCancel'))}</button><button class="ghost" data-act="ics" data-id="${b.id}">${esc(t('bCal'))}</button></div>
       ${can?'':`<p class="muted small">${esc(t('lateHint',cfg.contact||''))}</p>`}</div>`; };
   const rc=b=>`<p class="small ${b.status==='declined'?'muted':'neg'}">${esc(b.status==='declined'?t('declinedNote',dayLabel(b.ld)):t('feeNote',dayLabel(b.ld),eur(b.fee)))}${b.status==='declined'&&b.admin_note?' '+esc(b.admin_note):''}</p>`;
-  return `<div class="panel"><h2>${esc(t('myBookings'))}</h2>${up.length?up.map(row).join(''):`<p class="muted">${esc(t('noBookings'))}</p>`}
+  return `<div class="panel"><h2>${esc(t('myBookings'))}${notices().length?'<span class="dot" aria-hidden="true"></span>':''}</h2>${up.length?up.map(row).join(''):`<p class="muted">${esc(t('noBookings'))}</p>`}
     ${recent.length?`<div><div class="eyebrow">${esc(t('recent'))}</div>${recent.map(rc).join('')}</div>`:''}</div>`;
 }
 function bookingRulesHtml(){
@@ -888,7 +904,7 @@ async function confirmBooking(){
       ? await rpc('reschedule_booking',{p_login:cred.login,p_pin:cred.pin,p_id:bk.id,p_start:sl.u})
       : await rpc('create_booking',{p_login:cred.login,p_pin:cred.pin,p_service:bk.service,p_start:sl.u,p_note:bk.note});
     if(data.error){ bk.err=errMsg(data.error); if(['busy','not_available','too_soon'].includes(data.error)){ delete bk.slots[slotKey()]; bk.step=2; bk.time=null; bk.busy=false; await loadMonth(); return; } }
-    else { rec=data; bk.done=data.booking; bk.step=4; }
+    else { rec=data; bk.done=data.booking; bk.step=4; seenMark([data.booking.id]); }
   }catch(e){ bk.err=t('e_net'); }
   bk.busy=false; render();
 }
@@ -918,7 +934,7 @@ async function doCancel(){
     const data=await rpc('cancel_booking',{p_login:cred.login,p_pin:cred.pin,p_id:id});
     if(data.error){ sheet.err=errMsg(data.error); sheet.busy=false; render(); return; }
     const b=(data.bookings||[]).find(x=>x.id===id);
-    rec=data; sheet={type:'cxdone',msg:data.result==='late'?t('cxDoneLate',eur(b?b.fee:0)):t('cxDone')};
+    rec=data; seenMark([id]); sheet={type:'cxdone',msg:data.result==='late'?t('cxDoneLate',eur(b?b.fee:0)):t('cxDone')};
   }catch(e){ sheet.err=t('e_net'); sheet.busy=false; }
   render();
 }
@@ -948,6 +964,34 @@ function downloadIcs(id){
     `SUMMARY:${x(svcName(b.service)+' · '+cfg.studio)}`,`DESCRIPTION:${x(b.status==='pending'?t('stPending'):t('stConfirmed'))}`,`STATUS:${b.status==='pending'?'TENTATIVE':'CONFIRMED'}`,'END:VEVENT','END:VCALENDAR'].join('\r\n');
   const url=URL.createObjectURL(new Blob([ics],{type:'text/calendar'})), a=document.createElement('a');
   a.href=url; a.download='beauty-garage.ics'; document.body.append(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+/* ---------- обновления по записям: красная точка, баннер, значок на иконке ---------- */
+const seenKey=()=>'bgSeen:'+(rec?rec.login:'');
+const seenGet=()=>{ try{ return JSON.parse(localStorage.getItem(seenKey())||'null'); }catch(e){ return null; } };
+const seenSet=m=>{ try{ localStorage.setItem(seenKey(),JSON.stringify(m)); }catch(e){} };
+function seenSeed(){ if(!rec||seenGet()) return; const m={}; (rec.bookings||[]).forEach(b=>{ m[b.id]=b.status; }); seenSet(m); }
+function seenMark(ids){ if(!rec) return; const m=seenGet()||{}; (rec.bookings||[]).forEach(b=>{ if(!ids||ids.includes(b.id)) m[b.id]=b.status; }); seenSet(m); }
+function notices(){
+  if(!rec) return [];
+  const m=seenGet(); if(!m) return [];
+  const out=[], now=Date.now();
+  (rec.bookings||[]).forEach(b=>{
+    const prev=m[b.id]; if(prev===b.status) return;
+    if(b.status==='declined') out.push({b,kind:'declined'});
+    else if(b.status==='cancelled'&&b.end>now-7*864e5) out.push({b,kind:'cancelled'});
+    else if(b.status==='confirmed'&&prev==='pending') out.push({b,kind:'confirmed'});
+  });
+  return out.sort((a,b)=>b.b.start-a.b.start);
+}
+function updateBadge(){
+  try{ const n=notices().length; if(n&&navigator.setAppBadge) navigator.setAppBadge(n); else if(!n&&navigator.clearAppBadge) navigator.clearAppBadge(); }catch(e){}
+}
+function noticePanel(){
+  const ns=notices(); if(!ns.length) return '';
+  const msg={declined:'nDeclined',cancelled:'nCancelled',confirmed:'nConfirmed'};
+  return `<div class="panel notice" role="status"><div class="eyebrow"><span class="dot" style="margin:0"></span>${esc(t('nTitle'))}</div>
+    ${ns.map(({b,kind})=>`<div class="bk-row"><div><b>${esc(t(msg[kind],dayLabel(b.ld)+', '+b.lt))}</b><div class="muted small">${esc(svcName(b.service))}</div>${b.admin_note&&kind!=='confirmed'?`<div class="small">${esc(t('nComment'))} ${esc(b.admin_note)}</div>`:(b.admin_note?`<div class="small">${esc(b.admin_note)}</div>`:'')}</div>
+      <div class="actions">${kind!=='confirmed'?`<button data-act="book">${esc(t('nAnother'))}</button>`:''}<button class="primary" data-act="seen" data-id="${b.id}">${esc(t('nOk'))}</button></div></div>`).join('')}</div>`;
 }
 /* ---------- установка (PWA) и push ---------- */
 const isStandalone=()=>{ try{ return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true; }catch(e){ return false; } };
@@ -1034,6 +1078,7 @@ function bindPush(){
     if(a==='install') b.onclick=()=>{ sheet={type:'install'}; render(); };
     else if(a==='insHide') b.onclick=()=>{ try{ localStorage.setItem('bgInstallHide','1'); }catch(e){} render(); };
     else if(a==='nativeInstall') b.onclick=async()=>{ if(installEvt){ installEvt.prompt(); try{ await installEvt.userChoice; }catch(e){} installEvt=null; sheet=null; render(); } };
+    else if(a==='seen') b.onclick=()=>{ seenMark([b.dataset.id]); updateBadge(); render(); };
     else if(a==='pushOn') b.onclick=pushOn;
     else if(a==='pushOff') b.onclick=pushOff; });
   document.querySelectorAll('[data-pref]').forEach(el=>el.onchange=savePrefs);

@@ -705,8 +705,9 @@ async function confirmBk(id,note,force){
   if(error){ toast('Не удалось подтвердить: '+error.message); return; }
   if(data&&data.error==='conflict'){ if(confirm('Это время уже занято (мастер или кушетка). Подтвердить всё равно?')) return confirmBk(id,note,true); return; }
   if(data&&data.error){ toast('Не удалось подтвердить: '+data.error); return; }
-  const b=S.bookings.find(x=>x.id===id); if(b){ b.status='confirmed'; b.admin_note=note; } toast('Подтверждено'); render();
+  const b=S.bookings.find(x=>x.id===id); if(b){ b.status='confirmed'; b.admin_note=note; } toast('Подтверждено'); render(); pushBooking(id,'confirmed');
 }
+function pushBooking(id,event){ if(S.pushKey&&typeof fn==='function') fn({action:'booking',id,event}).catch(()=>{}); }
 async function reloadBookings(){ const {data}=await sb.from('bookings').select('*').order('start_at'); if(data) S.bookings=data; }
 async function addManual(e,force){
   if(e&&e.preventDefault) e.preventDefault();
@@ -733,10 +734,10 @@ function bindBook(){
   document.querySelectorAll('[data-bkf]').forEach(b=>b.onclick=()=>{ bkFilter=b.dataset.bkf; render(); });
   document.querySelectorAll('[data-bkact]').forEach(b=>b.onclick=async()=>{ const a=b.dataset.bkact,id=b.dataset.id;
     if(a==='confirm'){ const n=document.getElementById('dn-'+id); confirmBk(id,n?n.value.trim():''); }
-    else if(a==='decline'){ const n=document.getElementById('dn-'+id); bkUpdate(id,{status:'declined',admin_note:n?n.value.trim():''},'Отклонено'); }
+    else if(a==='decline'){ const n=document.getElementById('dn-'+id); bkUpdate(id,{status:'declined',admin_note:n?n.value.trim():''},'Отклонено').then(()=>pushBooking(id,'declined')); }
     else if(a==='done') bkUpdate(id,{status:'done'},'Отмечено');
     else if(a==='no_show') bkUpdate(id,{status:'no_show'},'Отмечено');
-    else if(a==='cancel') bkUpdate(id,{status:'cancelled'},'Отменено');
+    else if(a==='cancel') bkUpdate(id,{status:'cancelled'},'Отменено').then(()=>pushBooking(id,'cancelled'));
     else if(a==='clearfee') bkUpdate(id,{fee:0},'Штраф снят');
     else if(a==='delblock'){ const {error}=await sb.from('blocks').delete().eq('id',id); if(error){ toast('Не удалось'); return; } S.blocks=S.blocks.filter(x=>x.id!==id); render(); } });
   on('#manForm','submit',addManual); on('#blkForm','submit',addBlock);
