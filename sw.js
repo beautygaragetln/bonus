@@ -1,4 +1,4 @@
-/* Glam Club: Service Worker. Кэширует только оболочку страницы. Данные клиенток (Supabase) не кэшируются никогда. */
+/* Beauty Garage: Service Worker. Кэширует только оболочку страницы. Данные клиенток (Supabase) не кэшируются никогда. */
 const CACHE = 'glam-shell-v1';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png'];
 
@@ -29,7 +29,7 @@ self.addEventListener('fetch', (e) => {
 self.addEventListener('push', (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (_) { d = { body: e.data ? e.data.text() : '' }; }
-  const title = d.title || 'Glam Club';
+  const title = d.title || 'Beauty Garage';
   try { if (self.navigator && self.navigator.setAppBadge) self.navigator.setAppBadge(1); } catch (_) { /* ignore */ }
   self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((l) => l.forEach((c) => c.postMessage({ type: 'push' }))).catch(() => {});
   e.waitUntil(self.registration.showNotification(title, {

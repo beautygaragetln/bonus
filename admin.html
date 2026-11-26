@@ -655,7 +655,7 @@ async function del(){ const {error}=await sb.from('clients').delete().eq('id',op
 
 
 /* ---------- записи ---------- */
-const BK_DEF={enabled:false,tz:'Europe/Tallinn',stepMin:60,horizonMonths:3,minNoticeHours:12,capacity:1,weekday:{autoFrom:'16:00',autoTo:'20:00',reqFrom:'06:00',reqTo:'16:00'},weekend:{autoFrom:'09:00',autoTo:'21:00',reqFrom:'',reqTo:''},defaultMinutes:60,durations:{},cancelHours:24,lateFee:10,freeLate:{'3':2,'4':3},masters:{tattoo:'Тату-мастер',beauty:'Бьюти-мастер'},svc:{}};
+const BK_DEF={enabled:false,tz:'Europe/Tallinn',stepMin:60,horizonMonths:3,minNoticeHours:12,capacity:1,weekday:{autoFrom:'16:00',autoTo:'20:00',reqFrom:'06:00',reqTo:'16:00'},weekend:{autoFrom:'09:00',autoTo:'21:00',reqFrom:'',reqTo:''},defaultMinutes:60,durations:{},cancelHours:24,lateFee:10,maxActive:5,maxPending:3,freeLate:{'3':2,'4':3},masters:{tattoo:'Тату-мастер',beauty:'Бьюти-мастер'},svc:{}};
 function mergeBooking(b){ b=b||{}; return {...BK_DEF,...b,weekday:{...BK_DEF.weekday,...(b.weekday||{})},weekend:{...BK_DEF.weekend,...(b.weekend||{})},durations:{...(b.durations||{})},freeLate:{...BK_DEF.freeLate,...(b.freeLate||{})},masters:{...BK_DEF.masters,...(b.masters||{})},svc:{...(b.svc||{})}}; }
 const BKC=()=>S.cfg.booking;
 const tzn=()=>BKC().tz||'Europe/Tallinn';
@@ -817,7 +817,7 @@ function pushView(){
   return `<div class="panel"><h2>Уведомления</h2>
     <p>Подписаны: <b>${cl}</b> клиенток, устройств: <b>${devs}</b>.</p>
     ${S.pushKey?'<p class="pos small">Ключи созданы, отправка готова.</p>':`<p class="neg small">Нужно один раз подготовить отправку.</p><button class="primary" id="pushInit">Подготовить уведомления</button>`}
-    <p class="muted small">Клиентки включают уведомления сами: в приложении Glam Club, после установки на телефон.</p></div>
+    <p class="muted small">Клиентки включают уведомления сами: в приложении Beauty Garage, после установки на телефон.</p></div>
   <div class="panel"><h2>Отправить сейчас</h2>
     <form id="pushForm" style="display:flex;flex-direction:column;gap:12px">
       <div class="grid"><label>Кому<select id="pAud"><option value="all">Всем подписанным</option>${L.map((l,i)=>i?`<option value="lvl${i}">Уровень ${esc(l.name)} и выше</option>`:'').join('')}<option value="one">Одной клиентке</option></select></label>
@@ -1055,6 +1055,9 @@ function scheduleView(){
     <div class="grid"><label>Длительность по умолчанию, минут<input type="number" min="15" step="15" id="sDef" value="${B.defaultMinutes}"></label></div>
     <div class="sub">Отмена</div>
     <div class="grid"><label>Бесплатно за, часов<input id="sCh" type="number" min="0" value="${B.cancelHours}"></label><label>Штраф за позднюю отмену, €<input id="sFee" type="number" min="0" step="0.5" value="${B.lateFee}"></label></div>
+    <div class="sub">Лимиты записей на одну клиентку</div>
+    <div class="grid"><label>Активных записей одновременно<input id="sMaxA" type="number" min="1" max="30" value="${+B.maxActive||5}"></label><label>Из них ждут подтверждения<input id="sMaxP" type="number" min="1" max="30" value="${+B.maxPending||3}"></label></div>
+    <p class="muted small">Защита от «забивания» календаря: записаться могут только зарегистрированные клиентки. Подтверждённые визиты в прошлом в лимит не входят.</p>
     <div class="sub">Бесплатные поздние отмены в месяц, по уровням</div>
     <div class="grid">${L.map((l,i)=>`<label>${esc(l.name)}<input type="number" min="0" data-fl="${i}" value="${+B.freeLate[i]||0}"></label>`).join('')}</div>
     <button class="primary">Сохранить</button></form>
@@ -1078,7 +1081,7 @@ function collectSched(){
     ps.push({master:el.value,min:Math.max(15,+document.querySelector(`[data-si="${si}"][data-pi="${pi}"][data-f="min"]`).value||60),couch:document.querySelector(`[data-si="${si}"][data-pi="${pi}"][data-f="couch"]`).checked}); });
     svc[n]={parts:ps.length?ps:svcParts(B,n)}; });
   B.svc=svc; B.durations={}; names.forEach(n=>{ B.durations[n]=svc[n].parts.reduce((a,p)=>a+p.min,0); });
-  B.cancelHours=Math.max(0,+$('#sCh').value||0); B.lateFee=Math.max(0,+$('#sFee').value||0); B.freeLate={};
+  B.maxActive=Math.min(30,Math.max(1,Math.floor(+$('#sMaxA').value||5))); B.maxPending=Math.min(30,Math.max(1,Math.floor(+$('#sMaxP').value||3))); B.cancelHours=Math.max(0,+$('#sCh').value||0); B.lateFee=Math.max(0,+$('#sFee').value||0); B.freeLate={};
   document.querySelectorAll('[data-fl]').forEach(el=>{ const n=Math.max(0,Math.floor(+el.value||0)); if(n) B.freeLate[el.dataset.fl]=n; });
   return B;
 }

@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Glam Club · Beauty Garage</title>
+<title>Beauty Garage</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#F2ABC4">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Glam Club">
+<meta name="apple-mobile-web-app-title" content="Beauty Garage">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
@@ -108,6 +108,8 @@ label.check input{width:auto}
 .lrow.passed .lbadge{color:var(--good)}
 .lrow.locked .lv{opacity:.45;filter:grayscale(.4)}
 .lrow.locked .lt{opacity:.7}
+.lock{position:fixed;left:0;right:0;width:100%;overflow:hidden}
+.sheet-bg,.sheet{overscroll-behavior:contain}
 .sheet-bg{position:fixed;inset:0;background:rgba(36,25,23,.6);z-index:50;display:flex;align-items:flex-end;justify-content:center}
 .sheet{background:var(--surface);color:var(--fg);width:100%;max-width:560px;max-height:88vh;overflow:auto;border-radius:22px 22px 0 0;padding:22px 20px calc(24px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
 .sheet.center{text-align:center;align-items:center}
@@ -207,7 +209,8 @@ h1,.it{font-style:normal}
 const r2 = n => Math.round(n*100)/100;
 let LOCALE='ru-RU';
 const eur = n => r2(n).toLocaleString(LOCALE,{minimumFractionDigits:Number.isInteger(r2(n))?0:2,maximumFractionDigits:2})+' €';
-const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const tk=k=>'\u0001'+k; /* ошибка хранится как ключ и переводится при каждой отрисовке: язык можно менять, пока она на экране */
+const esc = s => String(s??'').replace(/\u0001(\w+)/g,(m0,k)=>t(k)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmtDate = ts => new Date(ts).toLocaleDateString(LOCALE,{day:'numeric',month:'long'});
 const norm = s => String(s||'').toLowerCase().replace(/ё/g,'е').replace(/^@+/,'').replace(/\s+/g,' ').trim();
 function hash(str,seed){let h1=0xdeadbeef^seed,h2=0x41c6ce57^seed;for(let i=0;i<str.length;i++){const ch=str.charCodeAt(i);h1=Math.imul(h1^ch,2654435761);h2=Math.imul(h2^ch,1597334677);}
@@ -317,7 +320,7 @@ function perksRows(G,i){
 
 
 const app=document.getElementById('app');
-let pushCfg=null,pushSt={sub:false,prefs:null,devices:0,msg:'',busy:false,checked:false},installEvt=null,cfg=null,rec=null,err='',busy=false,sheet=null,lvlup=null,lang='ru',cred=null,authTab='login',authErr='',bk=null;
+let lockY=0,pushCfg=null,pushSt={sub:false,prefs:null,devices:0,msg:'',busy:false,checked:false},installEvt=null,cfg=null,rec=null,err='',busy=false,sheet=null,lvlup=null,lang='ru',cred=null,authTab='login',authErr='',bk=null;
 const PREVIEW=/[?&]preview=glam/.test(location.search);
 try{ cred=JSON.parse(localStorage.getItem('bgCred')||'null'); }catch(e){}
 try{ const nl=navigator.language||'ru'; lang=localStorage.getItem('bgLang')||(/^et/i.test(nl)?'et':/^(ru|uk|be)/i.test(nl)?'ru':'en'); }catch(e){}
@@ -471,7 +474,7 @@ function sheetHtml(){
 function render(){
   if(!configured){ app.innerHTML=`<div class="panel"><h2>${esc(t('setup'))}</h2><p class="muted">${esc(t('setupText'))}</p></div>`; return; }
   if(!cfg){ app.innerHTML=`<p class="muted">${esc(err||t('loading'))}</p>`; return; }
-  const sh0=document.querySelector('.sheet'), sTop=sh0?sh0.scrollTop:0, y0=window.scrollY;
+  const sh0=document.querySelector('.sheet'), sTop=sh0?sh0.scrollTop:0, y0=document.body.classList.contains('lock')?lockY:window.scrollY;
   const g=glamOn(), G=cfg.glam;
   const act=cfg.actions.filter(a=>a.val>0).map(a=>`<div><span>${esc(actTitle(a))}</span><b>${rewardT(a)}</b></div>`).join('');
   const fr=cfg.friend&&cfg.friend.val>0?`<div><span>${esc(t('friendRow'))}</span><b>${rewardT(cfg.friend)}</b></div>`:'';
@@ -507,7 +510,11 @@ function render(){
     render(); const c=document.getElementById('sheetClose'); if(c) c.focus(); });
   document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',e=>{ if(e.target===b){ const np=b.dataset.newperks; sheet=np!==undefined?{type:'level',i:+np}:null; lvlup=null; render(); } }));
   const sh1=document.querySelector('.sheet'); if(sh1) sh1.scrollTop=sTop;
-  if(!window.__keepScroll) window.scrollTo(0,y0);
+  /* пока открыто окно (sheet), страница под ним не прокручивается */
+  const need=!!(sheet||lvlup!=null), locked=document.body.classList.contains('lock');
+  if(need&&!locked){ lockY=y0; document.body.style.top=(-y0)+'px'; document.body.classList.add('lock'); }
+  else if(!need&&locked){ document.body.classList.remove('lock'); document.body.style.top=''; window.scrollTo(0,lockY); }
+  else if(!need&&!window.__keepScroll) window.scrollTo(0,y0);
 }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&(sheet||lvlup!=null)){ sheet=null; lvlup=null; render(); } });
 
@@ -533,7 +540,7 @@ const dayLabel=(d,o)=>{const [y,m,dd]=d.split('-').map(Number);return new Date(y
 const ym=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
 const addMonths=(d,n)=>new Date(d.getFullYear(),d.getMonth()+n,1);
 const addMin=(hhmm,m)=>{const [h,mi]=hhmm.split(':').map(Number),x=h*60+mi+m;return String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0');};
-const errMsg=c=>T.ru['e_'+c]!==undefined?t('e_'+c):t('e_other');
+const errMsg=c=>T.ru['e_'+c]!==undefined?tk('e_'+c):tk('e_other');
 const val=id=>{const e=document.getElementById(id);return e?e.value.trim():'';};
 const saveCred=()=>{try{ if(cred) localStorage.setItem('bgCred',JSON.stringify(cred)); else localStorage.removeItem('bgCred'); }catch(e){}};
 
@@ -545,10 +552,12 @@ function accountBlock(){
     <form id="authForm" style="display:flex;flex-direction:column;gap:12px">
       <label for="aLogin">${esc(t('nickLabel'))}<input id="aLogin" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="anna_lash" value="${esc((cred&&cred.login)||'')}"></label>
       ${reg?`<label for="aName">${esc(t('nameLabel'))}<input id="aName" autocomplete="given-name"></label>`:''}
-      <label for="aPin">${esc(reg?t('pinNew'):t('pinLabel'))}<input id="aPin" type="password" inputmode="numeric" autocomplete="${reg?'new-password':'current-password'}" maxlength="8" placeholder="••••"></label>
+      <label for="aPin">${esc(reg?t('pinNew'):t('pinLabel'))}<input id="aPin" type="password" autocomplete="${reg?'new-password':'current-password'}" maxlength="40" placeholder="••••••"></label>
       ${reg?`<label for="aEmail">${esc(t('emailLabel'))}<input id="aEmail" type="email" autocomplete="email" autocapitalize="none" spellcheck="false"></label>
         <div id="aEmailErr" class="neg small"></div>
+        <label for="aPhone">${esc(t('phoneLabel'))}<input id="aPhone" type="tel" autocomplete="tel" inputmode="tel" maxlength="20" placeholder="+372 …"></label>
         <label class="check"><input type="checkbox" id="aMkt" disabled><span>${esc(t('marketing'))}</span></label>
+        <div id="aMktHint" class="muted small"></div>
         <label class="check"><input type="checkbox" id="aConsent"><span>${esc(t('consent'))}</span></label>`:''}
       <button class="primary" id="aSubmit" ${(busy||reg)?'disabled':''}>${esc(busy?t('wait'):(reg?t('btnRegister'):t('btnLogin')))}</button>
       ${authErr?`<div class="neg small">${esc(authErr)}</div>`:''}
@@ -559,9 +568,9 @@ function bindAuth(){
   const f=document.getElementById('authForm');
   if(f) f.addEventListener('submit',e=>{ e.preventDefault();
     if(authTab==='register'){
-      if(!document.getElementById('aConsent').checked){ authErr=t('e_consent'); render(); return; }
-      const em0=val('aEmail'); if(em0&&!EMAIL_RE.test(em0)){ authErr=t('e_email_fmt'); render(); return; }
-      doRegister(val('aLogin'),val('aName'),document.getElementById('aPin').value,val('aEmail'),document.getElementById('aMkt').checked);
+      if(!document.getElementById('aConsent').checked){ authErr=tk('e_consent'); render(); return; }
+      const em0=val('aEmail'); if(em0&&!EMAIL_RE.test(em0)){ authErr=tk('e_email_fmt'); render(); return; }
+      doRegister(val('aLogin'),val('aName'),document.getElementById('aPin').value,val('aEmail'),document.getElementById('aMkt').checked&&EMAIL_RE.test(em0),val('aPhone'));
     } else doLogin(val('aLogin'),document.getElementById('aPin').value); });
   if(f&&authTab==='register'){ ['aEmail','aConsent','aMkt'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.addEventListener('input',syncReg); el.addEventListener('change',syncReg); } }); syncReg(); }
   document.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{ const a=b.dataset.act;
@@ -570,11 +579,13 @@ function bindAuth(){
     else if(a==='book') openBooking();
     else if(a==='resched') openBooking(b.dataset.id);
     else if(a==='cancel'){ sheet={type:'cancel',id:b.dataset.id,err:'',busy:false}; render(); }
+    else if(a==='bkall'){ showAllBk=!showAllBk; render(); }
     else if(a==='ics') downloadIcs(b.dataset.id); });
 }
 function syncReg(){
   const em=val('aEmail'), ok=EMAIL_RE.test(em), mk=document.getElementById('aMkt'), er=document.getElementById('aEmailErr'), btn=document.getElementById('aSubmit'), cs=document.getElementById('aConsent');
   if(mk){ mk.disabled=!ok; if(!ok) mk.checked=false; }
+  const mh=document.getElementById('aMktHint'); if(mh) mh.textContent=ok?'':t('mktNeedEmail');
   if(er) er.textContent=(em&&!ok)?t('e_email_fmt'):'';
   if(btn) btn.disabled=busy||!(cs&&cs.checked)||(!!em&&!ok);
 }
@@ -586,22 +597,22 @@ function syncProfile(){
 }
 async function rpc(name,args){ const {data,error}=await sb.rpc(name,args); if(error) throw error; return data; }
 async function doLogin(login,pin,silent){
-  if(!norm(login)||!pin){ authErr=t('e_empty'); render(); return; }
+  if(!norm(login)||!pin){ authErr=tk('e_empty'); render(); return; }
   busy=true; authErr=''; if(!silent) render();
   try{
     const data=await rpc('client_login',{p_login:login,p_pin:pin});
     if(data.error){ authErr=silent?'':errMsg(data.error); if(silent){ cred={login:cred?cred.login:login,pin:''}; } }
     else { rec=data; cred={login:data.login,pin}; saveCred(); authErr=''; seenSeed(); checkLevelUp(); updateBadge(); setTimeout(pushRefresh,0); }
-  }catch(e){ authErr=silent?'':t('e_net'); }
+  }catch(e){ authErr=silent?'':tk('e_net'); }
   busy=false; render();
 }
-async function doRegister(login,name,pin,email,mkt){
+async function doRegister(login,name,pin,email,mkt,phone){
   busy=true; authErr=''; render();
   try{
-    const data=await rpc('register_client',{p_login:login,p_name:name,p_pin:pin,p_email:email,p_marketing:mkt});
+    const data=await rpc('register_client',{p_login:login,p_name:name,p_pin:pin,p_email:email,p_marketing:!!(mkt&&EMAIL_RE.test(email)),p_phone:phone||''});
     if(data.error) authErr=errMsg(data.error);
     else { rec=data; cred={login:data.login,pin}; saveCred(); seenSeed(); }
-  }catch(e){ authErr=t('e_net'); }
+  }catch(e){ authErr=tk('e_net'); }
   busy=false; render();
 }
 function logout(){ pushDropDevice(); pushSt={sub:false,prefs:null,devices:0,msg:'',busy:false,checked:false}; rec=null; cred=null; saveCred(); sheet=null; bk=null; authErr=''; authTab='login'; render(); }
@@ -610,19 +621,27 @@ function bookingCta(){
   if(!bookingOn()) return '';
   return `<div class="panel cta"><div><h2>${esc(t('bookTitle'))}</h2><p class="muted small">${esc(t('bookSub',+BK().horizonMonths||3,plw('fmMonth',+BK().horizonMonths||3)))}</p></div><button class="primary" data-act="book">${esc(t('bookBtn'))}</button></div>`;
 }
+let showAllBk=false;
 function myBookingsPanel(){
   if(!rec||!bookingOn()) return '';
-  const now=Date.now(), ch=(+BK().cancelHours||24)*3600000, all=rec.bookings||[];
+  const now=Date.now(), ch=(+BK().cancelHours||24)*3600000, all=rec.bookings||[], MAXA=+BK().maxActive||5;
   const up=all.filter(b=>(b.status==='pending'||b.status==='confirmed')&&b.end>now).sort((a,b)=>a.start-b.start);
-  const recent=all.filter(b=>b.start>now-30*864e5&&((b.status==='declined')||(b.status==='cancelled_late'&&b.fee>0)));
+  const recent=all.filter(b=>b.start>now-30*864e5&&(b.status==='declined'||(b.status==='cancelled'&&b.by==='admin')||(b.status==='cancelled_late'&&b.fee>0))).sort((a,b)=>b.start-a.start);
   const row=b=>{
     const can=b.start-now>=ch;
     return `<div class="bk-row"><div class="rowline"><b>${esc(dayLabel(b.ld))}, ${b.lt}–${b.le}</b><span class="pill ${b.status==='pending'?'dash':''}">${esc(b.status==='pending'?t('stPending'):t('stConfirmed'))}</span></div>
       <div class="muted">${esc(svcName(b.service))}</div>
       <div class="actions">${can?`<button data-act="resched" data-id="${b.id}">${esc(t('bResched'))}</button>`:''}<button data-act="cancel" data-id="${b.id}">${esc(t('bCancel'))}</button><button class="ghost" data-act="ics" data-id="${b.id}">${esc(t('bCal'))}</button></div>
       ${can?'':`<p class="muted small">${esc(t('lateHint',cfg.contact?': '+cfg.contact:''))}</p>`}</div>`; };
-  const rc=b=>`<p class="small ${b.status==='declined'?'muted':'neg'}">${esc(b.status==='declined'?t('declinedNote',dayLabel(b.ld)):t('feeNote',dayLabel(b.ld),eur(b.fee)))}${b.status==='declined'&&b.admin_note?' '+esc(b.admin_note):''}</p>`;
-  return `<div class="panel"><h2>${esc(t('myBookings'))}${notices().length?'<span class="dot" aria-hidden="true"></span>':''}</h2>${up.length?up.map(row).join(''):`<p class="muted">${esc(t('noBookings'))}</p>`}
+  const rc=b=>{
+    const late=b.status==='cancelled_late', dec=b.status==='declined';
+    const pill=dec?t('stDeclined'):late?t('stLateFee'):t('stCancelledM');
+    const txt=dec?t('rcDeclined'):late?t('feeNote',dayLabel(b.ld),eur(b.fee)):t('rcCancelled');
+    return `<div class="bk-row"><div class="rowline"><b>${esc(dayLabel(b.ld))}, ${b.lt}–${b.le}</b><span class="pill neg">${esc(pill)}</span></div>
+      <div class="muted">${esc(svcName(b.service))}</div><p class="small ${late?'neg':'muted'}">${esc(txt)}${(dec||!late)&&b.admin_note?' '+esc(b.admin_note):''}</p></div>`; };
+  const LIM=3, shown=(showAllBk||up.length<=LIM)?up:up.slice(0,LIM);
+  return `<div class="panel"><h2>${esc(t('myBookings'))}${notices().length?'<span class="dot" aria-hidden="true"></span>':''}</h2>
+    ${up.length?`<p class="muted small">${esc(t('bkCount',up.length,MAXA))}</p>${shown.map(row).join('')}${up.length>LIM?`<button class="ghost" data-act="bkall">${esc(showAllBk?t('bkShowLess'):t('bkShowAll',up.length))}</button>`:''}`:`<p class="muted">${esc(t('noBookings'))}</p>`}
     ${recent.length?`<div><div class="eyebrow">${esc(t('recent'))}</div>${recent.map(rc).join('')}</div>`:''}</div>`;
 }
 function bookingRulesHtml(){
@@ -639,7 +658,7 @@ function bookingRulesHtml(){
 
 /* --- мастер записи --- */
 function openBooking(id){
-  if(!rec){ authErr=t('needLogin'); authTab='login'; render(); const a=document.getElementById('acct'); if(a) a.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+  if(!rec){ authErr=tk('needLogin'); authTab='login'; render(); const a=document.getElementById('acct'); if(a) a.scrollIntoView({behavior:'smooth',block:'center'}); return; }
   const b0=id?(rec.bookings||[]).find(x=>x.id===id):null;
   bk={mode:b0?'resched':'new',id:b0?b0.id:null,step:b0?2:1,service:b0?b0.service:null,month:ym(new Date()),slots:{},date:null,time:null,note:'',busy:false,err:'',done:null,loading:false};
   sheet={type:'book'}; render(); if(b0) loadMonth();
@@ -652,7 +671,7 @@ async function loadMonth(){
   try{
     const data=await rpc('get_slots',{p_service:bk.service,p_from:`${bk.month}-01`,p_to:`${bk.month}-${String(last).padStart(2,'0')}`});
     if(data.error) bk.err=errMsg(data.error); else bk.slots[key]=data.slots;
-  }catch(e){ bk.err=t('e_net'); }
+  }catch(e){ bk.err=tk('e_net'); }
   bk.loading=false; render();
 }
 function shiftMonth(dir){ const [y,m]=bk.month.split('-').map(Number); bk.month=ym(new Date(y,m-1+dir,1)); bk.date=null; bk.time=null; render(); loadMonth(); }
@@ -706,7 +725,7 @@ async function confirmBooking(){
       : await rpc('create_booking',{p_login:cred.login,p_pin:cred.pin,p_service:bk.service,p_start:sl.u,p_note:bk.note});
     if(data.error){ bk.err=errMsg(data.error); if(['busy','not_available','too_soon'].includes(data.error)){ delete bk.slots[slotKey()]; bk.step=2; bk.time=null; bk.busy=false; await loadMonth(); return; } }
     else { rec=data; bk.done=data.booking; bk.step=4; seenMark([data.booking.id]); }
-  }catch(e){ bk.err=t('e_net'); }
+  }catch(e){ bk.err=tk('e_net'); }
   bk.busy=false; render();
 }
 function bindBooking(){
@@ -736,7 +755,7 @@ async function doCancel(){
     if(data.error){ sheet.err=errMsg(data.error); sheet.busy=false; render(); return; }
     const b=(data.bookings||[]).find(x=>x.id===id);
     rec=data; seenMark([id]); sheet={type:'cxdone',msg:data.result==='late'?t('cxDoneLate',eur(b?b.fee:0)):t('cxDone')};
-  }catch(e){ sheet.err=t('e_net'); sheet.busy=false; }
+  }catch(e){ sheet.err=tk('e_net'); sheet.busy=false; }
   render();
 }
 function profileSheet(){
@@ -744,18 +763,20 @@ function profileSheet(){
     <label>${esc(t('pfEmail'))}<input id="pfEmail" type="email" autocapitalize="none" spellcheck="false" value="${esc(rec.email||'')}"></label>
     <div id="pfEmailErr" class="neg small"></div>
     <label class="check"><input type="checkbox" id="pfMkt" ${(rec.marketing&&EMAIL_RE.test(rec.email||''))?'checked':''} ${EMAIL_RE.test(rec.email||'')?'':'disabled'}><span>${esc(t('pfMkt'))}</span></label>
+    <label>${esc(t('pfPhone'))}<input id="pfPhone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" value="${esc(rec.phone||'')}"></label>
     <label>${esc(t('pfBday'))}<input id="pfBday" type="date" value="${esc(rec.bd||'')}"></label>
-    <label>${esc(t('pfPin'))}<input id="pfPin" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password"></label>
+    <label>${esc(t('pfPin'))}<input id="pfPin" type="password" maxlength="40" autocomplete="new-password"></label>
+    ${cred&&cred.pin&&cred.pin.length<6?`<p class="muted small">${esc(t('pfPinOld'))}</p>`:''}
     ${sheet.err?`<div class="neg small">${esc(sheet.err)}</div>`:''}${sheet.msg?`<div class="pos small">${esc(sheet.msg)}</div>`:''}
     <button class="primary" id="pfSubmit">${esc(t('pfSave'))}</button></form><button class="ghost" data-close="1">${esc(t('close'))}</button>`);
 }
 async function saveProfile(){
-  const np=document.getElementById('pfPin').value, args={p_login:cred.login,p_pin:cred.pin,p_email:val('pfEmail'),p_marketing:document.getElementById('pfMkt').checked,p_birthday:val('pfBday'),p_new_pin:np};
+  const np=document.getElementById('pfPin').value, args={p_login:cred.login,p_pin:cred.pin,p_email:val('pfEmail'),p_marketing:document.getElementById('pfMkt').checked,p_birthday:val('pfBday'),p_new_pin:np,p_phone:val('pfPhone')};
   try{
     const data=await rpc('client_update',args);
     if(data.error){ sheet.err=errMsg(data.error); sheet.msg=''; }
-    else { rec=data; if(np){ cred.pin=np; saveCred(); } sheet={type:'profile',err:'',msg:t('pfSaved')}; }
-  }catch(e){ sheet.err=t('e_net'); }
+    else { rec=data; if(np){ cred.pin=np; saveCred(); } sheet={type:'profile',err:'',msg:tk('pfSaved')}; }
+  }catch(e){ sheet.err=tk('e_net'); }
   render();
 }
 function downloadIcs(id){
@@ -873,14 +894,14 @@ async function pushOn(){
   pushSt.busy=true; pushSt.msg=''; pushSt.err=false; render();
   try{
     const perm=await Notification.requestPermission();
-    if(perm!=='granted'){ pushSt.busy=false; if(perm==='default'){ pushSt.msg=t('pnDismissed'); pushSt.err=false; } render(); return; }
+    if(perm!=='granted'){ pushSt.busy=false; if(perm==='default'){ pushSt.msg=tk('pnDismissed'); pushSt.err=false; } render(); return; }
     const reg=await swReg();
     const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(pushCfg.key)});
     const k=sub.toJSON().keys||{};
     const r=await rpc('push_subscribe',{p_login:cred.login,p_pin:cred.pin,p_endpoint:sub.endpoint,p_p256dh:k.p256dh,p_auth:k.auth,p_ua:navigator.userAgent,p_lang:lang});
     if(!r.ok){ await sub.unsubscribe(); throw new Error(r.error||'x'); }
     pushSt.sub=true; pushSt.prefs=r.prefs; pushSt.msg='';
-  }catch(e){ pushSt.msg=t('pnFail'); pushSt.err=true; }
+  }catch(e){ pushSt.msg=tk('pnFail'); pushSt.err=true; }
   pushSt.busy=false; render();
 }
 async function pushOff(){
@@ -902,7 +923,7 @@ function pushDropDevice(){
 }
 async function savePrefs(){
   const p={}; document.querySelectorAll('[data-pref]').forEach(el=>{ p[el.dataset.pref]=el.checked; });
-  try{ const r=await rpc('push_set_prefs',{p_login:cred.login,p_pin:cred.pin,p_prefs:p}); if(r.ok){ pushSt.prefs=r.prefs; pushSt.msg=t('pnSaved'); pushSt.err=false; } }catch(e){ pushSt.msg=t('e_net'); pushSt.err=true; }
+  try{ const r=await rpc('push_set_prefs',{p_login:cred.login,p_pin:cred.pin,p_prefs:p}); if(r.ok){ pushSt.prefs=r.prefs; pushSt.msg=tk('pnSaved'); pushSt.err=false; } }catch(e){ pushSt.msg=tk('e_net'); pushSt.err=true; }
   render();
 }
 function bindPush(){
@@ -917,10 +938,10 @@ function bindPush(){
   document.querySelectorAll('[data-pref]').forEach(el=>el.onchange=savePrefs);
 }
 (async()=>{
-  if(!window.GC_TEXTS){ document.getElementById('app').innerHTML='<div class="panel"><h2>Glam Club</h2><p>Не найден файл texts.js. Загрузите его в репозиторий рядом с index.html.</p></div>'; return; }
+  if(!window.GC_TEXTS){ document.getElementById('app').innerHTML='<div class="panel"><h2>Beauty Garage</h2><p>Не найден файл texts.js. Загрузите его в репозиторий рядом с index.html.</p></div>'; return; }
   render(); if(!sb) return;
   try{ const {data,error}=await sb.from('settings').select('cfg').eq('id',1).single(); if(error) throw error; cfg=data.cfg; cfg.glam=mergeGlam(cfg.glam); applyTexts(cfg.texts); }
-  catch(e){ err=t('loadErr'); }
+  catch(e){ err=tk('loadErr'); }
   try{ const pc=await rpc('push_config',{}); pushCfg=pc; }catch(e){}
   if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('sw.js'); }catch(e){} }
   render(); if(cfg&&cred&&cred.pin) await doLogin(cred.login,cred.pin,true);
