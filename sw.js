@@ -30,6 +30,7 @@ self.addEventListener('push', (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (_) { d = { body: e.data ? e.data.text() : '' }; }
   const title = d.title || 'Glam Club';
+  try { if (self.navigator && self.navigator.setAppBadge) self.navigator.setAppBadge(1); } catch (_) { /* ignore */ }
   e.waitUntil(self.registration.showNotification(title, {
     body: d.body || '',
     icon: 'icons/icon-192.png',
