@@ -549,6 +549,22 @@ Object.assign(T.et,{
  nTitle:'Broneeringute uuendused', nOk:'Selge', nAnother:'Vali teine aeg', nComment:'Meistri kommentaar:',
  nDeclined:d=>`Meister ei saanud sinu soovi ${d} jaoks vastu võtta.`, nCancelled:d=>`Meister tühistas sinu broneeringu ${d} jaoks.`, nConfirmed:d=>`Sinu broneering ${d} jaoks on kinnitatud.`
 });
+Object.assign(T.ru,{
+ e_email_fmt:'Введите email полностью, например name@mail.com', insLink:'Установить приложение на телефон', pnRecheck:'Проверить снова',
+ pnDenied:'Уведомления заблокированы. iPhone: Настройки → Уведомления → Glam Club. Android и Chrome: значок замка рядом с адресом → Разрешения → Уведомления. Затем нажмите «Проверить снова».',
+ pnDismissed:'Запрос закрыт. Нажмите кнопку ещё раз, когда будете готовы разрешить уведомления.'
+});
+Object.assign(T.en,{
+ e_email_fmt:'Enter the full email address, e.g. name@mail.com', insLink:'Install the app on your phone', pnRecheck:'Check again',
+ pnDenied:'Notifications are blocked. iPhone: Settings → Notifications → Glam Club. Android and Chrome: lock icon next to the address → Permissions → Notifications. Then tap “Check again”.',
+ pnDismissed:'The request was closed. Tap the button again when you are ready to allow notifications.'
+});
+Object.assign(T.et,{
+ e_email_fmt:'Sisesta e-posti aadress täielikult, nt name@mail.com', insLink:'Paigalda rakendus telefoni', pnRecheck:'Kontrolli uuesti',
+ pnDenied:'Teavitused on blokeeritud. iPhone: Seaded → Teavitused → Glam Club. Android ja Chrome: lukuikoon aadressi kõrval → Load → Teavitused. Seejärel vajuta „Kontrolli uuesti“.',
+ pnDismissed:'Päring suleti. Vajuta nuppu uuesti, kui oled valmis teavitused lubama.'
+});
+const EMAIL_RE=/^[^@\s]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/;
 const t=(k,...a)=>{const v=(T[lang]&&T[lang][k]!==undefined)?T[lang][k]:T.ru[k];return typeof v==='function'?v(...a):v;};
 const ACTION_EN={reel:'Make a Reel about the studio or a service and tag us',review:'Leave a review with a photo',bday:'Visit during your birthday week'};
 const ACTION_ET={reel:'Tee Reel stuudiost või teenusest ja märgi meid',review:'Jäta foto ja arvustus',bday:'Külasta sünnipäevanädalal'};
@@ -760,10 +776,11 @@ function accountBlock(){
       <label for="aLogin">${esc(t('nickLabel'))}<input id="aLogin" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="anna_lash" value="${esc((cred&&cred.login)||'')}"></label>
       ${reg?`<label for="aName">${esc(t('nameLabel'))}<input id="aName" autocomplete="given-name"></label>`:''}
       <label for="aPin">${esc(reg?t('pinNew'):t('pinLabel'))}<input id="aPin" type="password" inputmode="numeric" autocomplete="${reg?'new-password':'current-password'}" maxlength="8" placeholder="••••"></label>
-      ${reg?`<label for="aEmail">${esc(t('emailLabel'))}<input id="aEmail" type="email" autocomplete="email"></label>
-        <label class="check"><input type="checkbox" id="aMkt"><span>${esc(t('marketing'))}</span></label>
+      ${reg?`<label for="aEmail">${esc(t('emailLabel'))}<input id="aEmail" type="email" autocomplete="email" autocapitalize="none" spellcheck="false"></label>
+        <div id="aEmailErr" class="neg small"></div>
+        <label class="check"><input type="checkbox" id="aMkt" disabled><span>${esc(t('marketing'))}</span></label>
         <label class="check"><input type="checkbox" id="aConsent"><span>${esc(t('consent'))}</span></label>`:''}
-      <button class="primary" ${busy?'disabled':''}>${esc(busy?t('wait'):(reg?t('btnRegister'):t('btnLogin')))}</button>
+      <button class="primary" id="aSubmit" ${(busy||reg)?'disabled':''}>${esc(busy?t('wait'):(reg?t('btnRegister'):t('btnLogin')))}</button>
       ${authErr?`<div class="neg small">${esc(authErr)}</div>`:''}
       <p class="muted small">${esc(reg?t('nickHintReg'):t('nickHint'))}</p></form></div>`;
 }
@@ -773,8 +790,10 @@ function bindAuth(){
   if(f) f.addEventListener('submit',e=>{ e.preventDefault();
     if(authTab==='register'){
       if(!document.getElementById('aConsent').checked){ authErr=t('e_consent'); render(); return; }
+      const em0=val('aEmail'); if(em0&&!EMAIL_RE.test(em0)){ authErr=t('e_email_fmt'); render(); return; }
       doRegister(val('aLogin'),val('aName'),document.getElementById('aPin').value,val('aEmail'),document.getElementById('aMkt').checked);
     } else doLogin(val('aLogin'),document.getElementById('aPin').value); });
+  if(f&&authTab==='register'){ ['aEmail','aConsent','aMkt'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.addEventListener('input',syncReg); el.addEventListener('change',syncReg); } }); syncReg(); }
   document.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{ const a=b.dataset.act;
     if(a==='logout') logout();
     else if(a==='profile'){ sheet={type:'profile',msg:'',err:''}; render(); }
@@ -782,6 +801,18 @@ function bindAuth(){
     else if(a==='resched') openBooking(b.dataset.id);
     else if(a==='cancel'){ sheet={type:'cancel',id:b.dataset.id,err:'',busy:false}; render(); }
     else if(a==='ics') downloadIcs(b.dataset.id); });
+}
+function syncReg(){
+  const em=val('aEmail'), ok=EMAIL_RE.test(em), mk=document.getElementById('aMkt'), er=document.getElementById('aEmailErr'), btn=document.getElementById('aSubmit'), cs=document.getElementById('aConsent');
+  if(mk){ mk.disabled=!ok; if(!ok) mk.checked=false; }
+  if(er) er.textContent=(em&&!ok)?t('e_email_fmt'):'';
+  if(btn) btn.disabled=busy||!(cs&&cs.checked)||(!!em&&!ok);
+}
+function syncProfile(){
+  const em=val('pfEmail'), ok=EMAIL_RE.test(em), mk=document.getElementById('pfMkt'), er=document.getElementById('pfEmailErr'), btn=document.getElementById('pfSubmit');
+  if(mk){ mk.disabled=!ok; if(!ok) mk.checked=false; }
+  if(er) er.textContent=(em&&!ok)?t('e_email_fmt'):'';
+  if(btn) btn.disabled=!!em&&!ok;
 }
 async function rpc(name,args){ const {data,error}=await sb.rpc(name,args); if(error) throw error; return data; }
 async function doLogin(login,pin,silent){
@@ -803,7 +834,7 @@ async function doRegister(login,name,pin,email,mkt){
   }catch(e){ authErr=t('e_net'); }
   busy=false; render();
 }
-function logout(){ pushDropDevice(); pushSt={sub:false,prefs:null,devices:0,msg:'',busy:false,checked:false}; rec=null; cred=null; saveCred(); sheet=null; bk=null; authErr=''; render(); }
+function logout(){ pushDropDevice(); pushSt={sub:false,prefs:null,devices:0,msg:'',busy:false,checked:false}; rec=null; cred=null; saveCred(); sheet=null; bk=null; authErr=''; authTab='login'; render(); }
 
 function bookingCta(){
   if(!bookingOn()) return '';
@@ -918,7 +949,7 @@ function bindBooking(){
     else if(a==='back'){ bk.step=Math.max(1,bk.step-1); bk.err=''; render(); }
     else if(a==='confirm'){ const n=document.getElementById('bkNote'); if(n) bk.note=n.value; confirmBooking(); } });
   document.querySelectorAll('[data-cx]').forEach(b=>b.onclick=()=>{ if(b.dataset.cx==='keep'){ sheet=null; render(); } else doCancel(); });
-  const pf=document.getElementById('pfForm'); if(pf) pf.addEventListener('submit',e=>{ e.preventDefault(); saveProfile(); });
+  const pf=document.getElementById('pfForm'); if(pf){ pf.addEventListener('submit',e=>{ e.preventDefault(); if(val('pfEmail')&&!EMAIL_RE.test(val('pfEmail'))) return; saveProfile(); }); const pe=document.getElementById('pfEmail'); pe.addEventListener('input',syncProfile); syncProfile(); }
 }
 function cancelSheet(){
   const b=(rec.bookings||[]).find(x=>x.id===sheet.id); if(!b) return '';
@@ -940,12 +971,13 @@ async function doCancel(){
 }
 function profileSheet(){
   return shell(`<h3>${esc(t('pfTitle'))}</h3><form id="pfForm" style="display:flex;flex-direction:column;gap:12px">
-    <label>${esc(t('pfEmail'))}<input id="pfEmail" type="email" value="${esc(rec.email||'')}"></label>
-    <label class="check"><input type="checkbox" id="pfMkt" ${rec.marketing?'checked':''}><span>${esc(t('pfMkt'))}</span></label>
+    <label>${esc(t('pfEmail'))}<input id="pfEmail" type="email" autocapitalize="none" spellcheck="false" value="${esc(rec.email||'')}"></label>
+    <div id="pfEmailErr" class="neg small"></div>
+    <label class="check"><input type="checkbox" id="pfMkt" ${(rec.marketing&&EMAIL_RE.test(rec.email||''))?'checked':''} ${EMAIL_RE.test(rec.email||'')?'':'disabled'}><span>${esc(t('pfMkt'))}</span></label>
     <label>${esc(t('pfBday'))}<input id="pfBday" type="date" value="${esc(rec.bd||'')}"></label>
     <label>${esc(t('pfPin'))}<input id="pfPin" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password"></label>
     ${sheet.err?`<div class="neg small">${esc(sheet.err)}</div>`:''}${sheet.msg?`<div class="pos small">${esc(sheet.msg)}</div>`:''}
-    <button class="primary">${esc(t('pfSave'))}</button></form><button class="ghost" data-close="1">${esc(t('close'))}</button>`);
+    <button class="primary" id="pfSubmit">${esc(t('pfSave'))}</button></form><button class="ghost" data-close="1">${esc(t('close'))}</button>`);
 }
 async function saveProfile(){
   const np=document.getElementById('pfPin').value, args={p_login:cred.login,p_pin:cred.pin,p_email:val('pfEmail'),p_marketing:document.getElementById('pfMkt').checked,p_birthday:val('pfBday'),p_new_pin:np};
@@ -1025,7 +1057,8 @@ window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); installEv
 window.addEventListener('appinstalled',()=>{ installEvt=null; render(); });
 function installPanel(){
   let hide=false; try{ hide=localStorage.getItem('bgInstallHide')==='1'; }catch(e){}
-  if(isStandalone()||hide||!cfg||!(isIOS()||/Android/i.test(navigator.userAgent))) return '';
+  if(isStandalone()||!cfg||!(isIOS()||/Android/i.test(navigator.userAgent))) return '';
+  if(hide) return `<div style="text-align:center"><button class="ghost" data-act="install">${esc(t('insLink'))}</button></div>`;
   return `<div class="panel install"><div><b>${esc(t('insTitle'))}</b><div class="muted small">${esc(t('insSub'))}</div></div>
     <div class="actions"><button data-act="install" class="primary">${esc(t('insBtn'))}</button><button class="x" data-act="insHide" aria-label="${esc(t('insHide'))}">×</button></div></div>`;
 }
@@ -1038,11 +1071,12 @@ function installSheet(){
 }
 function notifyPanel(){
   if(!rec||!pushVisible()) return '';
+  try{ if(typeof Notification!=='undefined') lastPerm=Notification.permission; }catch(e){}
   const head=`<h2>${esc(t('pnTitle'))}</h2><p class="muted small">${esc(t('pnWhat'))}</p>`;
   const wrap=x=>`<div class="panel">${head}${x}${pushSt.msg?`<div class="small ${pushSt.err?'neg':'pos'}">${esc(pushSt.msg)}</div>`:''}</div>`;
   if(isIOS()&&!isStandalone()) return wrap(`<p>${esc(t('pnNeedInstall'))}</p><button data-act="install">${esc(t('insBtn'))}</button>`);
   if(!pushSupported()) return wrap(`<p class="muted">${esc(t('pnUnsupported'))}</p>`);
-  if(Notification.permission==='denied') return wrap(`<p class="neg small">${esc(t('pnDenied'))}</p>`);
+  if(Notification.permission==='denied') return wrap(`<p class="neg small">${esc(t('pnDenied'))}</p><button data-act="pnRecheck">${esc(t('pnRecheck'))}</button>`);
   if(!pushSt.sub) return wrap(`<button class="primary" data-act="pushOn" ${pushSt.busy?'disabled':''}>${esc(pushSt.busy?t('wait'):t('pnOn'))}</button>`);
   const p=pushSt.prefs||{};
   const row=(k,lab)=>`<label class="check"><input type="checkbox" data-pref="${k}" ${p[k]?'checked':''}><span>${esc(t(lab))}</span></label>`;
@@ -1069,7 +1103,7 @@ async function pushOn(){
   pushSt.busy=true; pushSt.msg=''; pushSt.err=false; render();
   try{
     const perm=await Notification.requestPermission();
-    if(perm!=='granted'){ pushSt.busy=false; render(); return; }
+    if(perm!=='granted'){ pushSt.busy=false; if(perm==='default'){ pushSt.msg=t('pnDismissed'); pushSt.err=false; } render(); return; }
     const reg=await swReg();
     const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(pushCfg.key)});
     const k=sub.toJSON().keys||{};
@@ -1086,6 +1120,11 @@ async function pushOff(){
   }catch(e){}
   pushSt.sub=false; pushSt.msg=''; render();
 }
+let lastPerm=(typeof Notification!=='undefined')?Notification.permission:'';
+function permWatch(){ if(typeof Notification==='undefined') return; if(Notification.permission!==lastPerm){ lastPerm=Notification.permission; pushSt.msg=''; render(); pushRefresh(); } }
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) permWatch(); });
+window.addEventListener('focus',permWatch);
+try{ if(navigator.permissions&&navigator.permissions.query) navigator.permissions.query({name:'notifications'}).then(ps=>{ ps.onchange=permWatch; }).catch(()=>{}); }catch(e){}
 function pushDropDevice(){
   if(!pushSt.sub||!cred||!pushSupported()) return;
   const c={...cred};
@@ -1102,6 +1141,7 @@ function bindPush(){
     else if(a==='insHide') b.onclick=()=>{ try{ localStorage.setItem('bgInstallHide','1'); }catch(e){} render(); };
     else if(a==='nativeInstall') b.onclick=async()=>{ if(installEvt){ installEvt.prompt(); try{ await installEvt.userChoice; }catch(e){} installEvt=null; sheet=null; render(); } };
     else if(a==='seen') b.onclick=()=>{ seenMark([b.dataset.id]); updateBadge(); render(); };
+    else if(a==='pnRecheck') b.onclick=()=>{ pushSt.msg=''; render(); pushRefresh(); };
     else if(a==='pushOn') b.onclick=pushOn;
     else if(a==='pushOff') b.onclick=pushOff; });
   document.querySelectorAll('[data-pref]').forEach(el=>el.onchange=savePrefs);
