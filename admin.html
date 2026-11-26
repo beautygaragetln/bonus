@@ -656,7 +656,8 @@ const svcParts=(B,n)=>{ const p=B.svc&&B.svc[n]&&B.svc[n].parts; if(p&&p.length)
   return [{master:/тату/i.test(n)?'tattoo':'beauty',min:+(B.durations&&B.durations[n])||B.defaultMinutes||60,couch:/(тату|ресниц|ламин)/i.test(n)}]; };
 function filterChips(){
   const f=curF(), mine=S.me&&S.me.master;
-  const b=(k,l)=>`<button data-bkf="${k}" class="${f===k?'on':''}">${esc(l)}${mine===k?' (мой)':''}</button>`;
+  const now=new Date(), pc=k=>S.bookings.filter(x=>x.status==='pending'&&new Date(x.end_at)>now&&(k==='all'||bmasters(x).includes(k))).length;
+  const b=(k,l)=>`<button data-bkf="${k}" class="${f===k?'on':''}">${esc(l)}${mine===k?' (мой)':''}${pc(k)?`<span class="badge">${pc(k)}</span>`:''}</button>`;
   return `<div class="tabs" style="margin-bottom:4px">${b('tattoo',mName('tattoo'))}${b('beauty',mName('beauty'))}${b('all','Общий')}</div>`;
 }
 function bkCard(b,pend){
