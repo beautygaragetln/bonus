@@ -3,7 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Beauty Garage</title>
+<title>Glam Club · Beauty Garage</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#F2ABC4">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Glam Club">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,500;0,6..96,600;1,6..96,500;1,6..96,600&family=Manrope:wght@400;500;600;700&display=swap">
 <style>
 :root{
@@ -175,6 +183,11 @@ h1,.it{font-style:normal}
 .bk-row:first-child{border-top:0;padding-top:0}
 .pill.dash{background:transparent;border:1px dashed var(--accent)}
 
+.install{flex-direction:row;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--soft)}
+.install .x{border:0;background:none;color:var(--muted);padding:6px 10px}
+.steps{display:grid;gap:10px;padding-left:20px}
+.steps li{padding-left:4px}
+.prefs{display:grid;gap:10px}
 </style>
 </head>
 <body>
@@ -295,7 +308,7 @@ function perksRows(G,i){
 
 
 const app=document.getElementById('app');
-let cfg=null,rec=null,err='',busy=false,sheet=null,lvlup=null,lang='ru',cred=null,authTab='login',authErr='',bk=null;
+let pushCfg=null,pushSt={sub:false,prefs:null,devices:0,msg:'',busy:false,checked:false},installEvt=null,cfg=null,rec=null,err='',busy=false,sheet=null,lvlup=null,lang='ru',cred=null,authTab='login',authErr='',bk=null;
 const PREVIEW=/[?&]preview=glam/.test(location.search);
 try{ cred=JSON.parse(localStorage.getItem('bgCred')||'null'); }catch(e){}
 try{ const nl=navigator.language||'ru'; lang=localStorage.getItem('bgLang')||(/^et/i.test(nl)?'et':/^(ru|uk|be)/i.test(nl)?'ru':'en'); }catch(e){}
@@ -494,6 +507,33 @@ Object.assign(T.et,{
  e_invalid_credentials:'Vale kasutajanimi või PIN.', e_locked:'Liiga palju katseid. Oota 15 minutit.', e_no_pin:'Sellele kasutajanimele pole PIN-i määratud. Palu administraatoril see anda.', e_ask_admin:'See kasutajanimi on stuudios juba olemas. Palu administraatoril anda sulle PIN.', e_taken:'See kasutajanimi on juba registreeritud. Sisene PIN-iga.', e_bad_login:'Kasutajanimi: ainult ladina tähed, numbrid, punkt ja alakriips (nagu Instagramis).', e_bad_name:'Sisesta nimi.', e_bad_pin:'PIN: 4–8 numbrit.', e_bad_email:'Kontrolli e-posti aadressi.', e_bad_birthday:'Kontrolli sünnikuupäeva.', e_try_later:'Praegu on palju registreerimisi. Proovi hiljem.',
  e_disabled:'Veebibroneerimine ei ole veel avatud.', e_bad_service:'Sellist teenust ei ole.', e_too_soon:'Liiga lähedane aeg. Vali teine.', e_too_far:'Nii kaugele ette ei saa veel broneerida.', e_not_available:'See aeg ei ole saadaval.', e_busy:'See aeg võeti just ära. Vali teine.', e_overlap:'Sul on sellele ajale juba broneering.', e_limit:'Liiga palju aktiivseid broneeringuid. Tühista mittevajalikud.', e_not_found:'Broneeringut ei leitud.', e_bad_status:'Seda broneeringut ei saa enam muuta.', e_too_late:'Liiga hilja, et veebis muuta. Kirjuta administraatorile.', e_past:'See broneering on juba möödas.'
 });
+Object.assign(T.ru,{
+ insTitle:'Установите Glam Club', insSub:'Иконка на телефоне, быстрый вход и уведомления.', insBtn:'Как установить', insHide:'Скрыть',
+ insIosT:'Установка на iPhone и iPad', insIos:['Откройте эту страницу в Safari. Если она открылась внутри Instagram, нажмите «⋯» и выберите «Открыть в браузере».','Нажмите кнопку «Поделиться» (квадрат со стрелкой) внизу экрана.','Выберите «На экран «Домой»» и нажмите «Добавить».','Откройте Glam Club с иконки на экране. Уведомления включаются уже внутри приложения.'], insIosNote:'Нужна iOS 16.4 или новее.',
+ insAndT:'Установка на Android', insAnd:['Откройте страницу в Chrome.','Нажмите «⋮» вверху справа.','Выберите «Установить приложение» или «Добавить на главный экран».','Откройте Glam Club с иконки. Если уведомления задерживаются, отключите экономию батареи для Glam Club в настройках телефона.'], insNative:'Установить сейчас', insDone:'Приложение уже установлено.',
+ pnTitle:'Уведомления', pnWhat:'Напоминания о записи, бонусы, уровни и подарки. Отключить можно в любой момент.',
+ pnNeedInstall:'На iPhone уведомления работают после установки Glam Club на экран «Домой».', pnUnsupported:'Этот браузер не поддерживает уведомления.', pnSoon:'Уведомления скоро будут доступны.',
+ pnDenied:'Уведомления запрещены в настройках браузера или телефона. Разрешите их и обновите страницу.', pnOn:'Включить уведомления', pnOff:'Отключить на этом устройстве', pnEnabled:'Уведомления включены на этом устройстве.', pnFail:'Не удалось включить уведомления. Попробуйте ещё раз.',
+ pnBooking:'Напоминания о записи', pnBonus:'Бонусы (срок действия)', pnLevel:'Уровни и подарки', pnBirthday:'День рождения', pnPromo:'Новости и специальные предложения (Midweek Glam)', pnSaved:'Настройки сохранены.'
+});
+Object.assign(T.en,{
+ insTitle:'Install Glam Club', insSub:'Home screen icon, quick access and notifications.', insBtn:'How to install', insHide:'Hide',
+ insIosT:'Install on iPhone and iPad', insIos:['Open this page in Safari. If it opened inside Instagram, tap “⋯” and choose “Open in browser”.','Tap the Share button (square with an arrow) at the bottom.','Choose “Add to Home Screen” and tap “Add”.','Open Glam Club from the icon. Notifications are enabled inside the app.'], insIosNote:'Requires iOS 16.4 or newer.',
+ insAndT:'Install on Android', insAnd:['Open the page in Chrome.','Tap “⋮” at the top right.','Choose “Install app” or “Add to Home screen”.','Open Glam Club from the icon. If notifications are delayed, turn off battery saving for Glam Club in your phone settings.'], insNative:'Install now', insDone:'The app is already installed.',
+ pnTitle:'Notifications', pnWhat:'Booking reminders, bonuses, levels and gifts. You can turn them off at any time.',
+ pnNeedInstall:'On iPhone, notifications work after you add Glam Club to the Home Screen.', pnUnsupported:'This browser does not support notifications.', pnSoon:'Notifications will be available soon.',
+ pnDenied:'Notifications are blocked in your browser or phone settings. Allow them and reload the page.', pnOn:'Turn on notifications', pnOff:'Turn off on this device', pnEnabled:'Notifications are on for this device.', pnFail:'Could not turn on notifications. Please try again.',
+ pnBooking:'Booking reminders', pnBonus:'Bonuses (expiry)', pnLevel:'Levels and gifts', pnBirthday:'Birthday', pnPromo:'News and special offers (Midweek Glam)', pnSaved:'Settings saved.'
+});
+Object.assign(T.et,{
+ insTitle:'Paigalda Glam Club', insSub:'Ikoon telefonis, kiire ligipääs ja teavitused.', insBtn:'Kuidas paigaldada', insHide:'Peida',
+ insIosT:'Paigaldamine iPhone’i ja iPadi', insIos:['Ava see leht Safaris. Kui leht avanes Instagramis, vajuta „⋯“ ja vali „Ava brauseris“.','Vajuta all nuppu „Jaga“ (nool ruudus).','Vali „Lisa avakuvale“ ja vajuta „Lisa“.','Ava Glam Club ikoonilt. Teavitused lülitatakse sisse rakenduses.'], insIosNote:'Vajalik iOS 16.4 või uuem.',
+ insAndT:'Paigaldamine Androidi', insAnd:['Ava leht Chrome’is.','Vajuta paremal üleval „⋮“.','Vali „Installi rakendus“ või „Lisa avakuvale“.','Ava Glam Club ikoonilt. Kui teavitused hilinevad, lülita telefoni seadetes Glam Clubi akusäästurežiim välja.'], insNative:'Paigalda kohe', insDone:'Rakendus on juba paigaldatud.',
+ pnTitle:'Teavitused', pnWhat:'Broneeringu meeldetuletused, boonused, tasemed ja kingitused. Saad need igal ajal välja lülitada.',
+ pnNeedInstall:'iPhone’is töötavad teavitused pärast Glam Clubi lisamist avakuvale.', pnUnsupported:'See brauser ei toeta teavitusi.', pnSoon:'Teavitused tulevad varsti.',
+ pnDenied:'Teavitused on brauseri või telefoni seadetes keelatud. Luba need ja laadi leht uuesti.', pnOn:'Lülita teavitused sisse', pnOff:'Lülita sellel seadmel välja', pnEnabled:'Teavitused on sellel seadmel sees.', pnFail:'Teavituste sisselülitamine ebaõnnestus. Proovi uuesti.',
+ pnBooking:'Broneeringu meeldetuletused', pnBonus:'Boonused (aegumine)', pnLevel:'Tasemed ja kingitused', pnBirthday:'Sünnipäev', pnPromo:'Uudised ja eripakkumised (Midweek Glam)', pnSaved:'Seaded salvestatud.'
+});
 const t=(k,...a)=>{const v=(T[lang]&&T[lang][k]!==undefined)?T[lang][k]:T.ru[k];return typeof v==='function'?v(...a):v;};
 const ACTION_EN={reel:'Make a Reel about the studio or a service and tag us',review:'Leave a review with a photo',bday:'Visit during your birthday week'};
 const ACTION_ET={reel:'Tee Reel stuudiost või teenusest ja märgi meid',review:'Jäta foto ja arvustus',bday:'Külasta sünnipäevanädalal'};
@@ -602,6 +642,7 @@ function sheetHtml(){
   if(sheet.type==='cancel') return cancelSheet();
   if(sheet.type==='cxdone') return shell(`<h3>${esc(t('cxTitle').replace('?',''))}</h3><p>${esc(sheet.msg)}</p><button class="primary" data-close="1" id="sheetClose">${esc(t('close'))}</button>`);
   if(sheet.type==='profile') return profileSheet();
+  if(sheet.type==='install') return installSheet();
   if(sheet.type==='level'){
     const i=sheet.i,l=L[i],gc=rec?gcOf(rec):null;
     const st=!gc?t('levelWord'):(i<gc.level?t('passed'):i===gc.level?t('curLevel'):t('notYet'));
@@ -642,6 +683,8 @@ function render(){
   <header><div><h1>${esc(cfg.studio)}</h1>${tagline?`<p class="muted">${esc(tagline)}</p>`:''}</div></header>
   ${PREVIEW&&!G.enabled?`<div class="hint warn">${esc(t('draft'))}</div>`:''}
   ${accountBlock()}
+  ${installPanel()}
+  ${notifyPanel()}
   ${bookingCta()}
   ${myBookingsPanel()}
   ${rec?(g?heroBlocks(rec):oldBalanceCard(rec)):''}
@@ -652,7 +695,7 @@ function render(){
   ${g?'':`<div class="panel"><h2>${esc(t('oldTitle'))}</h2><div class="ways">${tiers}</div><p class="muted small">${esc(t('oldNote'))}</p></div>`}
   <div class="panel"><h2>${esc(t('rules'))}</h2>${rulesList().map(x=>`<p>${esc(x)}</p>`).join('')}${glamRules}${bookingRulesHtml()}</div>
   ${sheetHtml()}`;
-  bindAuth(); bindBooking();
+  bindAuth(); bindBooking(); bindPush();
   document.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{ setLang(b.dataset.lang); render(); });
   document.querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>{ sheet={type:'level',i:+b.dataset.lv}; render(); const c=document.getElementById('sheetClose'); if(c) c.focus(); });
   document.querySelectorAll('[data-sheet]').forEach(b=>b.onclick=()=>{
@@ -731,7 +774,7 @@ async function doLogin(login,pin,silent){
   try{
     const data=await rpc('client_login',{p_login:login,p_pin:pin});
     if(data.error){ authErr=silent?'':errMsg(data.error); if(silent){ cred={login:cred?cred.login:login,pin:''}; } }
-    else { rec=data; cred={login:data.login,pin}; saveCred(); authErr=''; checkLevelUp(); }
+    else { rec=data; cred={login:data.login,pin}; saveCred(); authErr=''; checkLevelUp(); setTimeout(pushRefresh,0); }
   }catch(e){ authErr=silent?'':t('e_net'); }
   busy=false; render();
 }
@@ -744,7 +787,7 @@ async function doRegister(login,name,pin,email,mkt){
   }catch(e){ authErr=t('e_net'); }
   busy=false; render();
 }
-function logout(){ rec=null; cred=null; saveCred(); sheet=null; bk=null; authErr=''; render(); }
+function logout(){ pushDropDevice(); pushSt={sub:false,prefs:null,devices:0,msg:'',busy:false,checked:false}; rec=null; cred=null; saveCred(); sheet=null; bk=null; authErr=''; render(); }
 
 function bookingCta(){
   if(!bookingOn()) return '';
@@ -906,11 +949,102 @@ function downloadIcs(id){
   const url=URL.createObjectURL(new Blob([ics],{type:'text/calendar'})), a=document.createElement('a');
   a.href=url; a.download='beauty-garage.ics'; document.body.append(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
+/* ---------- установка (PWA) и push ---------- */
+const isStandalone=()=>{ try{ return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true; }catch(e){ return false; } };
+const isIOS=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const pushSupported=()=>('serviceWorker' in navigator)&&('PushManager' in window)&&('Notification' in window);
+const pushVisible=()=>{ let t=false; try{ t=/[?&]push=1/.test(location.search); if(t) localStorage.setItem('bgPushTest','1'); else t=localStorage.getItem('bgPushTest')==='1'; }catch(e){} return !!(pushCfg&&pushCfg.key&&(pushCfg.show||t)); };
+window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); installEvt=e; if(typeof render==='function'&&cfg) render(); });
+window.addEventListener('appinstalled',()=>{ installEvt=null; render(); });
+function installPanel(){
+  let hide=false; try{ hide=localStorage.getItem('bgInstallHide')==='1'; }catch(e){}
+  if(isStandalone()||hide||!cfg||!(isIOS()||/Android/i.test(navigator.userAgent))) return '';
+  return `<div class="panel install"><div><b>${esc(t('insTitle'))}</b><div class="muted small">${esc(t('insSub'))}</div></div>
+    <div class="actions"><button data-act="install" class="primary">${esc(t('insBtn'))}</button><button class="x" data-act="insHide" aria-label="${esc(t('insHide'))}">×</button></div></div>`;
+}
+function installSheet(){
+  const ios=isIOS(), L=ios?T[lang].insIos:T[lang].insAnd;
+  return shell(`<h3>${esc(ios?t('insIosT'):t('insAndT'))}</h3><ol class="steps">${L.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>
+    ${ios?`<p class="muted small">${esc(t('insIosNote'))}</p>`:''}
+    ${(!ios&&installEvt)?`<button class="primary" data-act="nativeInstall">${esc(t('insNative'))}</button>`:''}
+    <button class="ghost" data-close="1" id="sheetClose">${esc(t('close'))}</button>`);
+}
+function notifyPanel(){
+  if(!rec||!pushVisible()) return '';
+  const head=`<h2>${esc(t('pnTitle'))}</h2><p class="muted small">${esc(t('pnWhat'))}</p>`;
+  const wrap=x=>`<div class="panel">${head}${x}${pushSt.msg?`<div class="small ${pushSt.err?'neg':'pos'}">${esc(pushSt.msg)}</div>`:''}</div>`;
+  if(isIOS()&&!isStandalone()) return wrap(`<p>${esc(t('pnNeedInstall'))}</p><button data-act="install">${esc(t('insBtn'))}</button>`);
+  if(!pushSupported()) return wrap(`<p class="muted">${esc(t('pnUnsupported'))}</p>`);
+  if(Notification.permission==='denied') return wrap(`<p class="neg small">${esc(t('pnDenied'))}</p>`);
+  if(!pushSt.sub) return wrap(`<button class="primary" data-act="pushOn" ${pushSt.busy?'disabled':''}>${esc(pushSt.busy?t('wait'):t('pnOn'))}</button>`);
+  const p=pushSt.prefs||{};
+  const row=(k,lab)=>`<label class="check"><input type="checkbox" data-pref="${k}" ${p[k]?'checked':''}><span>${esc(t(lab))}</span></label>`;
+  return wrap(`<p class="pos small">${esc(t('pnEnabled'))}</p><div class="prefs">${row('booking','pnBooking')}${row('bonus','pnBonus')}${row('level','pnLevel')}${row('birthday','pnBirthday')}${row('promo','pnPromo')}</div>
+    <button class="ghost" data-act="pushOff">${esc(t('pnOff'))}</button>`);
+}
+const b64u=k=>{ const p='='.repeat((4-k.length%4)%4), b=atob((k+p).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from([...b].map(c=>c.charCodeAt(0))); };
+async function swReg(){ try{ return await navigator.serviceWorker.ready; }catch(e){ return null; } }
+async function pushRefresh(){
+  if(!rec||!cred||!pushVisible()||!pushSupported()||(isIOS()&&!isStandalone())){ return; }
+  try{
+    const reg=await swReg(); if(!reg) return;
+    const sub=await reg.pushManager.getSubscription();
+    if(sub&&Notification.permission==='granted'){
+      const k=sub.toJSON().keys||{};
+      const r=await rpc('push_subscribe',{p_login:cred.login,p_pin:cred.pin,p_endpoint:sub.endpoint,p_p256dh:k.p256dh,p_auth:k.auth,p_ua:navigator.userAgent,p_lang:lang});
+      pushSt.sub=!!r.ok; pushSt.prefs=r.prefs||null;
+    } else pushSt.sub=false;
+    pushSt.checked=true;
+  }catch(e){}
+  render();
+}
+async function pushOn(){
+  pushSt.busy=true; pushSt.msg=''; pushSt.err=false; render();
+  try{
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted'){ pushSt.busy=false; render(); return; }
+    const reg=await swReg();
+    const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(pushCfg.key)});
+    const k=sub.toJSON().keys||{};
+    const r=await rpc('push_subscribe',{p_login:cred.login,p_pin:cred.pin,p_endpoint:sub.endpoint,p_p256dh:k.p256dh,p_auth:k.auth,p_ua:navigator.userAgent,p_lang:lang});
+    if(!r.ok){ await sub.unsubscribe(); throw new Error(r.error||'x'); }
+    pushSt.sub=true; pushSt.prefs=r.prefs; pushSt.msg='';
+  }catch(e){ pushSt.msg=t('pnFail'); pushSt.err=true; }
+  pushSt.busy=false; render();
+}
+async function pushOff(){
+  try{
+    const reg=await swReg(), sub=reg&&await reg.pushManager.getSubscription();
+    if(sub){ await rpc('push_unsubscribe',{p_login:cred.login,p_pin:cred.pin,p_endpoint:sub.endpoint}); await sub.unsubscribe(); }
+  }catch(e){}
+  pushSt.sub=false; pushSt.msg=''; render();
+}
+function pushDropDevice(){
+  if(!pushSt.sub||!cred||!pushSupported()) return;
+  const c={...cred};
+  navigator.serviceWorker.ready.then(reg=>reg.pushManager.getSubscription().then(sub=>{ if(sub){ rpc('push_unsubscribe',{p_login:c.login,p_pin:c.pin,p_endpoint:sub.endpoint}).catch(()=>{}); sub.unsubscribe(); } })).catch(()=>{});
+}
+async function savePrefs(){
+  const p={}; document.querySelectorAll('[data-pref]').forEach(el=>{ p[el.dataset.pref]=el.checked; });
+  try{ const r=await rpc('push_set_prefs',{p_login:cred.login,p_pin:cred.pin,p_prefs:p}); if(r.ok){ pushSt.prefs=r.prefs; pushSt.msg=t('pnSaved'); pushSt.err=false; } }catch(e){ pushSt.msg=t('e_net'); pushSt.err=true; }
+  render();
+}
+function bindPush(){
+  document.querySelectorAll('[data-act]').forEach(b=>{ const a=b.dataset.act;
+    if(a==='install') b.onclick=()=>{ sheet={type:'install'}; render(); };
+    else if(a==='insHide') b.onclick=()=>{ try{ localStorage.setItem('bgInstallHide','1'); }catch(e){} render(); };
+    else if(a==='nativeInstall') b.onclick=async()=>{ if(installEvt){ installEvt.prompt(); try{ await installEvt.userChoice; }catch(e){} installEvt=null; sheet=null; render(); } };
+    else if(a==='pushOn') b.onclick=pushOn;
+    else if(a==='pushOff') b.onclick=pushOff; });
+  document.querySelectorAll('[data-pref]').forEach(el=>el.onchange=savePrefs);
+}
 (async()=>{
   render(); if(!sb) return;
   try{ const {data,error}=await sb.from('settings').select('cfg').eq('id',1).single(); if(error) throw error; cfg=data.cfg; cfg.glam=mergeGlam(cfg.glam); }
   catch(e){ err=t('loadErr'); }
-  render(); if(cfg&&cred&&cred.pin) doLogin(cred.login,cred.pin,true);
+  try{ const pc=await rpc('push_config',{}); pushCfg=pc; }catch(e){}
+  if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('sw.js'); }catch(e){} }
+  render(); if(cfg&&cred&&cred.pin) await doLogin(cred.login,cred.pin,true);
 })();
 </script>
 </body>

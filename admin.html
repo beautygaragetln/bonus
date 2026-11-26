@@ -277,7 +277,7 @@ function perksRows(G,i){
 }
 
 
-let S={cfg:null,clients:[],bookings:[],blocks:[],token:''};
+let S={cfg:null,clients:[],bookings:[],blocks:[],token:'',psubs:[],plog:[],pushReady:false,pushKey:false};
 let shownPin=null;
 let tab='clients', view='list', openId=null, search='', toastT, draft=null, gdraft=null;
 const $app=document.getElementById('app'), $=s=>document.querySelector(s), on=(s,ev,fn)=>{const e=$(s); if(e) e.addEventListener(ev,fn);};
@@ -497,8 +497,8 @@ function collectGlam(){
 function render(){
   const y=scrollY, ae=document.activeElement, fid=ae&&ae.id, pos=ae&&ae.selectionStart;
   const inList=view==='list';
-  $app.innerHTML=`<header><h1>Beauty Garage: админка</h1><button class="ghost" id="logout">Выйти</button>${inList?`<div class="tabs" style="width:100%;order:3"><button data-tab="clients" class="${tab==='clients'?'on':''}">Клиентки</button><button data-tab="bookings" class="${tab==='bookings'?'on':''}">Записи${pendingCount()?`<span class="badge">${pendingCount()}</span>`:''}</button><button data-tab="schedule" class="${tab==='schedule'?'on':''}">Расписание</button><button data-tab="settings" class="${tab==='settings'?'on':''}">Условия</button><button data-tab="glam" class="${tab==='glam'?'on':''}">Glam Levels</button><button data-tab="data" class="${tab==='data'?'on':''}">Данные</button></div>`:''}</header>`
-   + (view==='detail'&&cur() ? detailView(cur()) : tab==='bookings' ? bookingsView() : tab==='schedule' ? scheduleView() : tab==='settings' ? settingsView() : tab==='glam' ? glamView() : tab==='data' ? dataView() : (view='list',listView()));
+  $app.innerHTML=`<header><h1>Beauty Garage: админка</h1><button class="ghost" id="logout">Выйти</button>${inList?`<div class="tabs" style="width:100%;order:3"><button data-tab="clients" class="${tab==='clients'?'on':''}">Клиентки</button><button data-tab="bookings" class="${tab==='bookings'?'on':''}">Записи${pendingCount()?`<span class="badge">${pendingCount()}</span>`:''}</button><button data-tab="schedule" class="${tab==='schedule'?'on':''}">Расписание</button><button data-tab="push" class="${tab==='push'?'on':''}">Уведомления</button><button data-tab="settings" class="${tab==='settings'?'on':''}">Условия</button><button data-tab="glam" class="${tab==='glam'?'on':''}">Glam Levels</button><button data-tab="data" class="${tab==='data'?'on':''}">Данные</button></div>`:''}</header>`
+   + (view==='detail'&&cur() ? detailView(cur()) : tab==='bookings' ? bookingsView() : tab==='schedule' ? scheduleView() : tab==='push' ? pushView() : tab==='settings' ? settingsView() : tab==='glam' ? glamView() : tab==='data' ? dataView() : (view='list',listView()));
   bind(); scrollTo(0,y);
   if(fid){ const e=document.getElementById(fid); if(e){ e.focus(); try{e.setSelectionRange(pos,pos)}catch(_){} } }
 }
@@ -515,7 +515,7 @@ function bind(){
   on('#cfgForm','submit',saveCfg); on('#bakJson','click',backupJson); on('#bakCsv','click',backupCsv); on('#expClient','click',()=>{const c=cur(); if(c) exportClient(c);}); on('#glamForm','submit',saveGlam);
   on('#addAct','click',()=>{collectCfg();draft.actions.push({id:uid(),title:'Новое действие',type:'eur',val:2});render();});
   on('#del','click',e=>{ if(e.target.dataset.sure){ del(); } else { e.target.dataset.sure=1; e.target.textContent='Нажмите ещё раз, чтобы удалить'; e.target.style.color='var(--bad)'; } });
-  bindBook();
+  bindBook(); bindPushAdmin();
   on('#logout','click',async()=>{ await sb.auth.signOut(); location.reload(); });
 }
 
@@ -579,7 +579,7 @@ function recordVisit(e){
   if(v.cb>0) credit(c,v.cb,`Кэшбэк ${v.pct}%`);
   v.bonuses.forEach(b=>credit(c,b.amt,`Level Up: ${gname(b.lvl)}`,{kind:'lvlbonus',lvl:b.lvl}));
   if(v.ref){ settle(v.ref); giveReward(v.ref,cfgOf().friend,`Подруга ${c.name} пришла на первый визит`); c.refPaid=true; }
-  persist(); toast(`Записано. Кэшбэк ${eur(v.cb)}`); render();
+  persist(); toast(`Записано. Кэшбэк ${eur(v.cb)}`); render(); pushKick();
 }
 function giveGift(e){
   e.preventDefault(); const c=cur(); if(!c) return;
@@ -613,7 +613,7 @@ function saveCfg(e){
   e.preventDefault(); collectCfg();
   const t=draft.tiers; t[0].from=0;
   if(t.some((x,i)=>i&&x.from<=t[i-1].from)){ toast('Пороги уровней должны расти'); return; }
-  S.cfg={...draft,glam:S.cfg.glam,booking:S.cfg.booking}; draft=null; persist(); toast('Условия сохранены'); render();
+  S.cfg={...draft,glam:S.cfg.glam,booking:S.cfg.booking,push:S.cfg.push}; draft=null; persist(); toast('Условия сохранены'); render();
 }
 function saveGlam(e){
   e.preventDefault(); collectGlam();
@@ -714,6 +714,112 @@ function bindBook(){
   on('#pinGen','click',()=>setPin(true)); on('#pinSet','click',()=>setPin(false));
 }
 
+/* ---------- push-уведомления ---------- */
+const DEF_PUSH={clientUI:false,auto:false,dry:true,quietFrom:'21:00',quietTo:'09:00',remindHours:24,bdayHour:10,midweekDay:1,midweekHour:11,
+  rules:{booking:true,birthday:true,expiry:true,level:true,midweek:true},
+  midweekText:{ru:'Midweek Glam: на этой неделе есть свободные окошки в будни ({n}). Выберите время в приложении.',en:'Midweek Glam: there are free weekday slots this week ({n}). Pick a time in the app.',et:'Midweek Glam: sel nädalal on tööpäevadel vabu aegu ({n}). Vali aeg rakenduses.'}};
+function mergePush(p){ p=p||{}; return {...DEF_PUSH,...p,rules:{...DEF_PUSH.rules,...(p.rules||{})},midweekText:{...DEF_PUSH.midweekText,...(p.midweekText||{})}}; }
+async function fn(body){
+  const {data,error}=await sb.functions.invoke('push',{body});
+  if(error){ let m=error.message||'ошибка'; try{ const j=await error.context.json(); m=j.error||m; }catch(_){} throw new Error(m); }
+  if(data&&data.error) throw new Error(data.error);
+  return data;
+}
+function pushKick(){ if(S.cfg.push&&S.cfg.push.auto&&S.pushKey){ fn({action:'cron'}).catch(()=>{}); } }
+const PKIND={test:'Тест',manual_urgent:'Срочное',manual_promo:'Новости',booking:'Запись',birthday:'День рождения',expiry7:'Бонусы (7 дн.)',expiry1:'Бонусы (1 дн.)',levelUp:'Level Up',levelDown:'Level Down',remind:'60 дней без визита',warn:'Уровень под угрозой',midweek:'Midweek Glam'};
+const cronSql=()=>`create extension if not exists pg_cron;
+create extension if not exists pg_net with schema extensions;
+select cron.unschedule(jobid) from cron.job where jobname = 'glam-push';
+select cron.schedule('glam-push', '5 * * * *', $$
+  select net.http_post(
+    url := '${String(window.SUPABASE_URL).replace(/\/$/,'')}/functions/v1/push',
+    headers := jsonb_build_object('Content-Type', 'application/json', 'x-cron-secret', (select cron_secret from public.push_private where id = 1)),
+    body := '{"action":"cron"}'::jsonb
+  );
+$$);`;
+function pushView(){
+  if(!S.pushReady) return `<div class="panel"><h2>Уведомления</h2><p class="neg">Таблицы уведомлений ещё не созданы.</p><p class="muted">Выполните в Supabase (SQL Editor) скрипт migration-push.sql и обновите страницу.</p></div>`;
+  const P=S.cfg.push, devs=S.psubs.length, cl=new Set(S.psubs.map(x=>x.client_id)).size, L=G().levels;
+  const days=['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+  const chk=(id,v,l)=>`<label class="check"><input type="checkbox" id="${id}" ${v?'checked':''}><span>${l}</span></label>`;
+  return `<div class="panel"><h2>Уведомления</h2>
+    <p>Подписаны: <b>${cl}</b> клиенток, устройств: <b>${devs}</b>.</p>
+    ${S.pushKey?'<p class="pos small">Ключи созданы, отправка готова.</p>':`<p class="neg small">Нужно один раз подготовить отправку.</p><button class="primary" id="pushInit">Подготовить уведомления</button>`}
+    <p class="muted small">Клиентки включают уведомления сами: в приложении Glam Club, после установки на телефон.</p></div>
+  <div class="panel"><h2>Отправить сейчас</h2>
+    <form id="pushForm" style="display:flex;flex-direction:column;gap:12px">
+      <div class="grid"><label>Кому<select id="pAud"><option value="all">Всем подписанным</option>${L.map((l,i)=>i?`<option value="lvl${i}">Уровень ${esc(l.name)} и выше</option>`:'').join('')}<option value="one">Одной клиентке</option></select></label>
+      <label>Клиентка<select id="pOne">${byName(S.clients).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></label>
+      <label>Тип<select id="pCat"><option value="urgent">Срочное (получат все подписанные)</option><option value="promo">Новости и акции (только согласившиеся)</option></select></label></div>
+      <label>Заголовок<input id="pTitle" maxlength="80" required autocomplete="off" placeholder="Например: Студия закрыта сегодня"></label>
+      <label>Текст<textarea id="pText" maxlength="220" required rows="3" placeholder="Коротко и без личных данных"></textarea></label>
+      <details><summary class="muted small">Перевод на английский и эстонский (необязательно)</summary>
+        <div class="grid"><label>Title EN<input id="pTitleEn" maxlength="80"></label><label>Text EN<textarea id="pTextEn" maxlength="220" rows="2"></textarea></label>
+        <label>Pealkiri ET<input id="pTitleEt" maxlength="80"></label><label>Tekst ET<textarea id="pTextEt" maxlength="220" rows="2"></textarea></label></div></details>
+      <div class="actions"><button type="button" id="pPreview">Проверить охват</button><button class="primary">Отправить</button></div>
+      <div class="hint" id="pRes" style="display:none"></div></form>
+    <p class="muted small">Не указывайте суммы и личные данные: текст виден на заблокированном экране. Если перевода нет, отправится русский текст.</p></div>
+  <div class="panel"><h2>Автоматические уведомления</h2>
+    <form id="pcfgForm" style="display:flex;flex-direction:column;gap:12px">
+      ${chk('qUI',P.clientUI,'Показывать клиенткам блок «Уведомления» в приложении')}
+      ${chk('qAuto',P.auto,'Автоматика включена')}
+      ${chk('qDry',P.dry,'Пробный режим: только записывать в журнал, ничего не отправлять')}
+      <div class="sub">Что отправлять</div>
+      ${chk('rBooking',P.rules.booking,'Напоминание о записи')}${chk('rBirthday',P.rules.birthday,'День рождения')}${chk('rExpiry',P.rules.expiry,'Скоро сгорят бонусы')}${chk('rLevel',P.rules.level,'Level Up, Level Down, 60 дней без визита')}${chk('rMid',P.rules.midweek,'Midweek Glam (только согласившимся на новости)')}
+      <div class="grid"><label>Напоминать о записи за, часов<input id="qRemind" type="number" min="1" max="72" value="${P.remindHours}"></label>
+      <label>Тихие часы с<input id="qQf" type="time" value="${esc(P.quietFrom)}"></label><label>до<input id="qQt" type="time" value="${esc(P.quietTo)}"></label>
+      <label>День рождения: не раньше, часа<input id="qBd" type="number" min="0" max="23" value="${P.bdayHour}"></label>
+      <label>Midweek Glam: день<select id="qMd">${days.map((d,i)=>`<option value="${i}" ${+P.midweekDay===i?'selected':''}>${d}</option>`).join('')}</select></label>
+      <label>Midweek Glam: не раньше, часа<input id="qMh" type="number" min="0" max="19" value="${P.midweekHour}"></label></div>
+      <div class="sub">Текст Midweek Glam ({n} заменится на число окошек)</div>
+      <label>RU<textarea id="qMtRu" rows="2" maxlength="200">${esc(P.midweekText.ru)}</textarea></label><label>EN<textarea id="qMtEn" rows="2" maxlength="200">${esc(P.midweekText.en)}</textarea></label><label>ET<textarea id="qMtEt" rows="2" maxlength="200">${esc(P.midweekText.et)}</textarea></label>
+      <div class="actions"><button class="primary">Сохранить</button><button type="button" id="pDryRun">Пробный прогон сейчас</button></div>
+      <div class="hint" id="pCronRes" style="display:none"></div></form>
+    <p class="muted small">Не более 2 автоматических уведомлений в сутки на клиентку. Уведомления об изменении уровня и бонусах отправляются только если включён Glam Levels и срок бонусов.</p></div>
+  <div class="panel"><h2>Расписание запуска</h2>
+    <p class="muted">Чтобы автоматика работала сама, один раз выполните этот запрос в Supabase (SQL Editor): он запускает проверку каждый час.</p>
+    <div class="mono" style="white-space:pre-wrap">${esc(cronSql())}</div><div class="actions"><button id="copyCron">Скопировать запрос</button></div></div>
+  <div class="panel"><h2>Журнал</h2>${S.plog.length?S.plog.map(l=>`<div class="bk"><div class="top"><span><b>${esc(PKIND[l.kind]||l.kind)}</b> · ${esc(cname(l.client_id))}</span><span class="pill ${l.status==='dry'?'dash':''}">${esc(l.status==='dry'?'пробно':l.status==='failed'?'не доставлено':'отправлено')}</span></div><div class="muted small">${esc(l.title)}: ${esc(l.body)} · ${new Date(l.created_at).toLocaleString(LOCALE)}</div></div>`).join(''):'<p class="muted">Пока пусто.</p>'}</div>`;
+}
+async function refreshPush(){
+  const [ps,pl,pc]=await Promise.all([sb.from('push_subs').select('id,client_id,lang,enabled,last_ok,created_at,ua'),sb.from('push_log').select('*').order('created_at',{ascending:false}).limit(40),sb.rpc('push_config')]);
+  if(!ps.error) S.psubs=ps.data||[]; if(!pl.error) S.plog=pl.data||[]; S.pushKey=!!(pc.data&&pc.data.key);
+}
+function pushPayload(){
+  const v=id=>($('#'+id)?$('#'+id).value.trim():''), a=$('#pAud').value;
+  const aud=a==='all'?{type:'all'}:a==='one'?{type:'client',client_id:$('#pOne').value}:{type:'level',level:+a.slice(3)};
+  return {audience:aud,category:$('#pCat').value,title:{ru:v('pTitle'),en:v('pTitleEn'),et:v('pTitleEt')},text:{ru:v('pText'),en:v('pTextEn'),et:v('pTextEt')}};
+}
+function collectPush(){
+  const P=mergePush(S.cfg.push), c=id=>$('#'+id).checked, v=id=>$('#'+id).value;
+  P.clientUI=c('qUI'); P.auto=c('qAuto'); P.dry=c('qDry');
+  P.rules={booking:c('rBooking'),birthday:c('rBirthday'),expiry:c('rExpiry'),level:c('rLevel'),midweek:c('rMid')};
+  P.remindHours=Math.min(72,Math.max(1,+v('qRemind')||24)); P.quietFrom=v('qQf')||'21:00'; P.quietTo=v('qQt')||'09:00';
+  P.bdayHour=Math.min(23,Math.max(0,+v('qBd')||0)); P.midweekDay=+v('qMd'); P.midweekHour=Math.min(19,Math.max(0,+v('qMh')||0));
+  P.midweekText={ru:v('qMtRu').trim()||DEF_PUSH.midweekText.ru,en:v('qMtEn').trim()||DEF_PUSH.midweekText.en,et:v('qMtEt').trim()||DEF_PUSH.midweekText.et};
+  return P;
+}
+function showRes(id,t){ const e=$('#'+id); if(e){ e.style.display='block'; e.textContent=t; } }
+function bindPushAdmin(){
+  on('#pushInit','click',async()=>{ try{ await fn({action:'init'}); S.pushKey=true; toast('Отправка подготовлена'); render(); }catch(e){ toast('Не удалось: '+e.message+'. Проверьте, что функция push развёрнута.'); } });
+  on('#pPreview','click',async()=>{ try{ const r=await fn({...pushPayload(),preview:true}); showRes('pRes',`Получат: ${r.recipients} клиенток, устройств: ${r.devices}.`); }catch(e){ showRes('pRes','Ошибка: '+e.message); } });
+  on('#pushForm','submit',async e=>{ e.preventDefault();
+    const b=pushPayload();
+    try{ const pr=await fn({...b,preview:true});
+      if(!pr.recipients){ showRes('pRes','Некому отправлять: нет подписанных клиенток для этого выбора.'); return; }
+      if(!confirm(`Отправить ${pr.recipients} клиенткам (устройств: ${pr.devices})?\n\n${b.title.ru}\n${b.text.ru}`)) return;
+      const r=await fn(b); showRes('pRes',`Отправлено: ${r.sent}, не доставлено: ${r.failed}, устаревших подписок удалено: ${r.removed}.`);
+      await refreshPush(); render(); showRes('pRes',`Отправлено: ${r.sent}, не доставлено: ${r.failed}, устаревших подписок удалено: ${r.removed}.`);
+    }catch(err){ showRes('pRes','Ошибка: '+err.message); } });
+  on('#pcfgForm','submit',e=>{ e.preventDefault(); S.cfg={...S.cfg,push:collectPush()}; persist(); toast('Сохранено'); render(); });
+  on('#pDryRun','click',async()=>{ S.cfg={...S.cfg,push:collectPush()}; persist(); await saveQ;
+    try{ const r=await fn({action:'cron',force:true,dry:true}); await refreshPush(); render();
+      showRes('pCronRes',`Пробный прогон: найдено ${Object.entries(r.candidates||{}).map(([k,v])=>(PKIND[k]||k)+' '+v).join(', ')||'ничего'}. Записано в журнал: ${r.dryLogged}. Ничего не отправлено.`); }
+    catch(err){ showRes('pCronRes','Ошибка: '+err.message); } });
+  on('#copyCron','click',()=>{ if(navigator.clipboard) navigator.clipboard.writeText(cronSql()).then(()=>toast('Запрос скопирован')); });
+  on('#pushTest','click',async()=>{ const c=cur(); if(!c) return; try{ const r=await fn({action:'test',client_id:c.id}); toast(`Тест: отправлено ${r.sent}`); await refreshPush(); }catch(e){ toast('Ошибка: '+e.message); } });
+}
+
 /* ---------- расписание и календарь ---------- */
 const feedUrl=()=>S.token?`${String(window.SUPABASE_URL).replace(/\/$/,'')}/functions/v1/calendar?token=${S.token}`:'';
 async function genToken(){
@@ -769,6 +875,7 @@ function saveSchedule(e){
 function accessPanel(c){
   const up=S.bookings.filter(b=>b.client_id===c.id&&['pending','confirmed'].includes(b.status)&&new Date(b.end_at)>new Date()).length;
   return `<div class="panel"><h2>Доступ и запись</h2>
+    <p class="muted small">Устройств с уведомлениями: ${S.psubs.filter(x=>x.client_id===c.id).length}${S.psubs.some(x=>x.client_id===c.id)?' <button class="ghost" id="pushTest" style="padding:2px 10px">Тест</button>':''}</p>
     <p class="muted small">Email: ${esc(c.email||'не указан')}${c.email?(c.marketing?' · согласна на рассылки':' · без рассылок'):''} · будущих записей: ${up}</p>
     ${shownPin&&shownPin.id===c.id?`<div class="hint">PIN для ${esc(c.name)}: <b class="mono" style="font-size:18px">${esc(shownPin.pin)}</b><br>Передайте клиентке лично. После обновления страницы он больше не отображается.</div>`:''}
     <div class="grid"><label>Свой PIN (4–8 цифр)<input id="pinVal" inputmode="numeric" maxlength="8" autocomplete="off"></label>
@@ -840,7 +947,9 @@ async function load(){
   const [bk,bl,pr]=await Promise.all([sb.from('bookings').select('*').order('start_at'),sb.from('blocks').select('*').order('start_at'),sb.from('admin_private').select('feed_token').eq('id',1).single()]);
   if(bk.error||bl.error){ showMsg('Не удалось загрузить записи','Сначала выполните в Supabase скрипт migration-booking.sql (SQL Editor), затем обновите страницу.'); return; }
   S.bookings=bk.data||[]; S.blocks=bl.data||[]; S.token=(pr.data&&pr.data.feed_token)||'';
-  S.cfg=s.data.cfg; cfgSnap=JSON.stringify(S.cfg); S.cfg.glam=mergeGlam(S.cfg.glam); S.cfg.booking=mergeBooking(S.cfg.booking);
+  S.cfg=s.data.cfg; cfgSnap=JSON.stringify(S.cfg); S.cfg.glam=mergeGlam(S.cfg.glam); S.cfg.booking=mergeBooking(S.cfg.booking); S.cfg.push=mergePush(S.cfg.push);
+  const [ps,pl,pc]=await Promise.all([sb.from('push_subs').select('id,client_id,lang,enabled,last_ok,created_at,ua'),sb.from('push_log').select('*').order('created_at',{ascending:false}).limit(40),sb.rpc('push_config')]);
+  S.pushReady=!(ps.error||pl.error); S.psubs=(ps.data)||[]; S.plog=(pl.data)||[]; S.pushKey=!!(pc.data&&pc.data.key);
   S.clients=c.data.map(fromRow); S.clients.forEach(x=>snap.set(x.id,JSON.stringify(toRow(x))));
   S.clients.forEach(settle); persist(); render();
   setInterval(refreshBookings,60000);
