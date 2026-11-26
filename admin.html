@@ -277,7 +277,8 @@ function perksRows(G,i){
 }
 
 
-let S={cfg:null,clients:[],bookings:[],blocks:[],token:'',psubs:[],plog:[],pushReady:false,pushKey:false};
+let S={cfg:null,clients:[],bookings:[],blocks:[],token:'',psubs:[],plog:[],pushReady:false,pushKey:false,admins:[],me:{email:'',master:null},tokens:{all:'',tattoo:'',beauty:''},schedDraft:null};
+let bkFilter=null;
 let shownPin=null;
 let tab='clients', view='list', openId=null, search='', toastT, draft=null, gdraft=null;
 const $app=document.getElementById('app'), $=s=>document.querySelector(s), on=(s,ev,fn)=>{const e=$(s); if(e) e.addEventListener(ev,fn);};
@@ -503,7 +504,7 @@ function render(){
   if(fid){ const e=document.getElementById(fid); if(e){ e.focus(); try{e.setSelectionRange(pos,pos)}catch(_){} } }
 }
 function bind(){
-  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab; if(tab!=='settings') draft=null; if(tab!=='glam') gdraft=null; if(tab==='bookings'||tab==='schedule') view='list'; render();});
+  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab; if(tab!=='settings') draft=null; if(tab!=='glam') gdraft=null; if(tab!=='schedule') S.schedDraft=null; if(tab==='bookings'||tab==='schedule') view='list'; render();});
   document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{openId=b.dataset.open;view='detail';render();scrollTo(0,0);});
   document.querySelectorAll('[data-delact]').forEach(b=>b.onclick=()=>{collectCfg();draft.actions.splice(+b.dataset.delact,1);render();});
   on('#back','click',()=>{view='list';render();});
@@ -627,8 +628,8 @@ async function del(){ const {error}=await sb.from('clients').delete().eq('id',op
 
 
 /* ---------- записи ---------- */
-const BK_DEF={enabled:false,tz:'Europe/Tallinn',stepMin:60,horizonMonths:3,minNoticeHours:12,capacity:1,weekday:{autoFrom:'16:00',autoTo:'20:00',reqFrom:'06:00',reqTo:'16:00'},weekend:{autoFrom:'09:00',autoTo:'21:00',reqFrom:'',reqTo:''},defaultMinutes:60,durations:{},cancelHours:24,lateFee:10,freeLate:{'3':2,'4':3}};
-function mergeBooking(b){ b=b||{}; return {...BK_DEF,...b,weekday:{...BK_DEF.weekday,...(b.weekday||{})},weekend:{...BK_DEF.weekend,...(b.weekend||{})},durations:{...(b.durations||{})},freeLate:{...BK_DEF.freeLate,...(b.freeLate||{})}}; }
+const BK_DEF={enabled:false,tz:'Europe/Tallinn',stepMin:60,horizonMonths:3,minNoticeHours:12,capacity:1,weekday:{autoFrom:'16:00',autoTo:'20:00',reqFrom:'06:00',reqTo:'16:00'},weekend:{autoFrom:'09:00',autoTo:'21:00',reqFrom:'',reqTo:''},defaultMinutes:60,durations:{},cancelHours:24,lateFee:10,freeLate:{'3':2,'4':3},masters:{tattoo:'Тату-мастер',beauty:'Бьюти-мастер'},svc:{}};
+function mergeBooking(b){ b=b||{}; return {...BK_DEF,...b,weekday:{...BK_DEF.weekday,...(b.weekday||{})},weekend:{...BK_DEF.weekend,...(b.weekend||{})},durations:{...(b.durations||{})},freeLate:{...BK_DEF.freeLate,...(b.freeLate||{})},masters:{...BK_DEF.masters,...(b.masters||{})},svc:{...(b.svc||{})}}; }
 const BKC=()=>S.cfg.booking;
 const tzn=()=>BKC().tz||'Europe/Tallinn';
 const fmtDT=iso=>new Date(iso).toLocaleString(LOCALE,{timeZone:tzn(),weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
@@ -646,21 +647,35 @@ async function refreshBookings(){
   const before=pendingCount(); S.bookings=data||[];
   if(tab==='bookings'&&view==='list') render(); else if(pendingCount()!==before) render();
 }
+const mName=m=>(BKC().masters||{})[m]||(m==='tattoo'?'Тату-мастер':'Бьюти-мастер');
+const bmasters=b=>{ const ps=Array.isArray(b.parts)&&b.parts.length?b.parts:[{m:/тату/i.test(b.service)?'tattoo':'beauty'}]; return [...new Set(ps.map(p=>p.m))]; };
+const curF=()=>bkFilter||(S.me&&S.me.master)||'all';
+const inF=b=>{ const f=curF(); return f==='all'||bmasters(b).includes(f); };
+const blkInF=b=>{ const f=curF(); return f==='all'||b.kind==='couch'||!b.master||b.master===f; };
+const svcParts=(B,n)=>{ const p=B.svc&&B.svc[n]&&B.svc[n].parts; if(p&&p.length) return p;
+  return [{master:/тату/i.test(n)?'tattoo':'beauty',min:+(B.durations&&B.durations[n])||B.defaultMinutes||60,couch:/(тату|ресниц|ламин)/i.test(n)}]; };
+function filterChips(){
+  const f=curF(), mine=S.me&&S.me.master;
+  const b=(k,l)=>`<button data-bkf="${k}" class="${f===k?'on':''}">${esc(l)}${mine===k?' (мой)':''}</button>`;
+  return `<div class="tabs" style="margin-bottom:4px">${b('tattoo',mName('tattoo'))}${b('beauty',mName('beauty'))}${b('all','Общий')}</div>`;
+}
 function bkCard(b,pend){
   const fee=+b.fee>0;
   return `<div class="bk"><div class="top"><b>${esc(fmtDT(b.start_at))}–${esc(fmtHM(b.end_at))}</b><span class="pill ${b.status==='pending'?'dash':''}">${esc(STL[b.status]||b.status)}${b.auto?' · авто':''}</span></div>
-    <div>${esc(cname(b.client_id))} · ${esc(b.service)}</div>${b.note?`<div class="muted small">Комментарий: ${esc(b.note)}</div>`:''}
+    <div>${esc(cname(b.client_id))} · ${esc(b.service)} <span class="muted small">· ${esc(bmasters(b).map(mName).join(' + '))}</span></div>${b.note?`<div class="muted small">Комментарий: ${esc(b.note)}</div>`:''}
     ${fee?`<div class="neg small">Штраф ${eur(+b.fee)} <button class="ghost" data-bkact="clearfee" data-id="${b.id}">Снять штраф</button></div>`:''}
     ${pend?`<label>Ответ клиентке (необязательно)<input id="dn-${b.id}" autocomplete="off"></label><div class="actions"><button class="primary" data-bkact="confirm" data-id="${b.id}">Подтвердить</button><button data-bkact="decline" data-id="${b.id}">Отклонить</button></div>`
      :(b.status==='confirmed'?`<div class="actions"><button data-bkact="done" data-id="${b.id}">Состоялась</button><button data-bkact="no_show" data-id="${b.id}">Не пришла</button><button data-bkact="cancel" data-id="${b.id}">Отменить</button></div>`:'')}</div>`;
 }
 function bookingsView(){
-  const now=new Date(), up=S.bookings.filter(b=>new Date(b.end_at)>now);
+  const now=new Date(), all=S.bookings.filter(inF), up=all.filter(b=>new Date(b.end_at)>now);
   const pend=up.filter(b=>b.status==='pending'), conf=up.filter(b=>b.status==='confirmed');
-  const past=S.bookings.filter(b=>new Date(b.end_at)<=now||['declined','cancelled','cancelled_late'].includes(b.status)).filter(b=>!(up.includes(b)&&['pending','confirmed'].includes(b.status))).slice(-30).reverse();
-  const fees=S.bookings.filter(b=>+b.fee>0);
-  const today=new Date().toISOString().slice(0,10);
-  return `<div class="panel"><h2>Ждут подтверждения ${pend.length?`<span class="badge">${pend.length}</span>`:''}</h2>${pend.length?pend.map(b=>bkCard(b,true)).join(''):'<p class="muted">Новых запросов нет.</p>'}</div>
+  const past=all.filter(b=>new Date(b.end_at)<=now||['declined','cancelled','cancelled_late'].includes(b.status)).filter(b=>!(up.includes(b)&&['pending','confirmed'].includes(b.status))).slice(-30).reverse();
+  const fees=all.filter(b=>+b.fee>0);
+  const today=new Date().toISOString().slice(0,10), mine=(S.me&&S.me.master)||'both';
+  const blks=S.blocks.filter(b=>new Date(b.end_at)>now&&blkInF(b));
+  const who=m=>m?mName(m):'оба мастера';
+  return `${filterChips()}<div class="panel"><h2>Ждут подтверждения ${pend.length?`<span class="badge">${pend.length}</span>`:''}</h2>${pend.length?pend.map(b=>bkCard(b,true)).join(''):'<p class="muted">Новых запросов нет.</p>'}</div>
   <div class="panel"><h2>Ближайшие записи</h2>${conf.length?conf.map(b=>bkCard(b)).join(''):'<p class="muted">Подтверждённых записей нет.</p>'}</div>
   <div class="panel"><h2>Записать вручную</h2>
     <form id="manForm" class="grid">
@@ -668,13 +683,16 @@ function bookingsView(){
       <label>Услуга<select id="mSvc">${servicesOf().map(x=>`<option>${esc(x)}</option>`).join('')}</select></label>
       <label>Дата<input id="mDate" type="date" value="${today}" required></label>
       <label>Время<input id="mTime" type="time" step="900" value="12:00" required></label>
-      <label>Минут<input id="mMin" type="number" min="15" step="15" value="${BKC().defaultMinutes||60}" required></label>
+      <label>Минут (для услуг из одной части)<input id="mMin" type="number" min="15" step="15" placeholder="по услуге"></label>
       <button class="primary" style="align-self:end">Добавить</button></form></div>
-  <div class="panel"><h2>Закрыть время (выходной, отпуск, перерыв)</h2>
+  <div class="panel"><h2>Выходной, отпуск, кушетка</h2>
     <form id="blkForm" class="grid">
       <label>С<input id="bFrom" type="datetime-local" required></label><label>До<input id="bTo" type="datetime-local" required></label>
-      <label>Причина<input id="bWhy" autocomplete="off"></label><button style="align-self:end">Закрыть</button></form>
-    ${S.blocks.filter(b=>new Date(b.end_at)>now).map(b=>`<div class="bk"><div class="top"><span>${esc(fmtDT(b.start_at))} — ${esc(fmtDT(b.end_at))}${b.reason?' · '+esc(b.reason):''}</span><button class="ghost" data-bkact="delblock" data-id="${b.id}">Открыть снова</button></div></div>`).join('')}</div>
+      <label>Кому<select id="bWho"><option value="tattoo" ${mine==='tattoo'?'selected':''}>${esc(mName('tattoo'))}</option><option value="beauty" ${mine==='beauty'?'selected':''}>${esc(mName('beauty'))}</option><option value="both" ${mine==='both'?'selected':''}>Обоим</option></select></label>
+      <label>Что<select id="bKind"><option value="off">Выходной (мастер недоступен)</option><option value="couch">Занять кушетку</option></select></label>
+      <label>Причина<input id="bWhy" autocomplete="off"></label><button style="align-self:end">Добавить</button></form>
+    ${blks.map(b=>`<div class="bk"><div class="top"><span><b>${b.kind==='couch'?'Кушетка':'Выходной'}</b> · ${esc(who(b.master))} · ${esc(fmtDT(b.start_at))} — ${esc(fmtDT(b.end_at))}${b.reason?' · '+esc(b.reason):''}</span><button class="ghost" data-bkact="delblock" data-id="${b.id}">Убрать</button></div></div>`).join('')}
+    <p class="muted small">«Занять кушетку» блокирует кушетку для всех услуг, которые её требуют, и делает занятым выбранного мастера. «Выходной» закрывает только мастера.</p></div>
   ${fees.length?`<div class="panel"><h2>Неснятые штрафы</h2>${fees.map(b=>bkCard(b)).join('')}</div>`:''}
   <div class="panel"><h2>Недавние</h2>${past.length?past.map(b=>`<div class="bk"><div class="top"><span>${esc(fmtDT(b.start_at))} · ${esc(cname(b.client_id))} · ${esc(b.service)}</span><span class="pill">${esc(STL[b.status]||b.status)}</span></div></div>`).join(''):'<p class="muted">Пока пусто.</p>'}</div>`;
 }
@@ -682,26 +700,39 @@ async function bkUpdate(id,patch,msg){
   const {error}=await sb.from('bookings').update(patch).eq('id',id); if(error){ toast('Не удалось сохранить: '+error.message); return; }
   const b=S.bookings.find(x=>x.id===id); if(b) Object.assign(b,patch); toast(msg); render();
 }
-async function addManual(e){
-  e.preventDefault();
-  const min=+$('#mMin').value||60, st=zonedToUtc($('#mDate').value,$('#mTime').value);
-  const row={client_id:$('#mClient').value,service:$('#mSvc').value,start_at:new Date(st).toISOString(),end_at:new Date(st+min*60000).toISOString(),status:'confirmed',auto:false,note:''};
-  if(!row.client_id){ toast('Сначала добавьте клиентку'); return; }
-  const {data,error}=await sb.from('bookings').insert(row).select().single(); if(error){ toast('Не удалось добавить: '+error.message); return; }
-  S.bookings.push(data); S.bookings.sort((a,b)=>new Date(a.start_at)-new Date(b.start_at)); toast('Запись добавлена'); render();
+async function confirmBk(id,note,force){
+  const {data,error}=await sb.rpc('admin_confirm_booking',{p_id:id,p_note:note,p_force:!!force});
+  if(error){ toast('Не удалось подтвердить: '+error.message); return; }
+  if(data&&data.error==='conflict'){ if(confirm('Это время уже занято (мастер или кушетка). Подтвердить всё равно?')) return confirmBk(id,note,true); return; }
+  if(data&&data.error){ toast('Не удалось подтвердить: '+data.error); return; }
+  const b=S.bookings.find(x=>x.id===id); if(b){ b.status='confirmed'; b.admin_note=note; } toast('Подтверждено'); render();
+}
+async function reloadBookings(){ const {data}=await sb.from('bookings').select('*').order('start_at'); if(data) S.bookings=data; }
+async function addManual(e,force){
+  if(e&&e.preventDefault) e.preventDefault();
+  const svc=$('#mSvc').value, one=svcParts(BKC(),svc).length===1, mn=parseInt($('#mMin').value,10);
+  const st=zonedToUtc($('#mDate').value,$('#mTime').value), cl=$('#mClient').value;
+  if(!cl){ toast('Сначала добавьте клиентку'); return; }
+  const {data,error}=await sb.rpc('admin_create_booking',{p_client:cl,p_service:svc,p_start:new Date(st).toISOString(),p_min:(one&&mn>0)?mn:null,p_force:!!force});
+  if(error){ toast('Не удалось добавить: '+error.message); return; }
+  if(data&&data.error==='conflict'){ if(confirm('Это время занято (мастер или кушетка). Записать всё равно?')) return addManual(null,true); return; }
+  if(data&&data.error){ toast('Не удалось добавить: '+data.error); return; }
+  await reloadBookings(); toast('Запись добавлена'); render();
 }
 async function addBlock(e){
   e.preventDefault();
   const f=$('#bFrom').value,t=$('#bTo').value; if(!f||!t) return;
   const [fd,ft]=f.split('T'),[td,tt]=t.split('T'), a=zonedToUtc(fd,ft), b=zonedToUtc(td,tt);
   if(b<=a){ toast('Конец должен быть позже начала'); return; }
-  const {data,error}=await sb.from('blocks').insert({start_at:new Date(a).toISOString(),end_at:new Date(b).toISOString(),reason:$('#bWhy').value.trim()}).select().single();
-  if(error){ toast('Не удалось закрыть время: '+error.message); return; }
-  S.blocks.push(data); toast('Время закрыто'); render();
+  const w=$('#bWho').value;
+  const {data,error}=await sb.from('blocks').insert({start_at:new Date(a).toISOString(),end_at:new Date(b).toISOString(),kind:$('#bKind').value,master:w==='both'?null:w,reason:$('#bWhy').value.trim()}).select().single();
+  if(error){ toast('Не удалось сохранить: '+error.message); return; }
+  S.blocks.push(data); toast('Сохранено'); render();
 }
 function bindBook(){
+  document.querySelectorAll('[data-bkf]').forEach(b=>b.onclick=()=>{ bkFilter=b.dataset.bkf; render(); });
   document.querySelectorAll('[data-bkact]').forEach(b=>b.onclick=async()=>{ const a=b.dataset.bkact,id=b.dataset.id;
-    if(a==='confirm'){ const n=document.getElementById('dn-'+id); bkUpdate(id,{status:'confirmed',admin_note:n?n.value.trim():''},'Подтверждено'); }
+    if(a==='confirm'){ const n=document.getElementById('dn-'+id); confirmBk(id,n?n.value.trim():''); }
     else if(a==='decline'){ const n=document.getElementById('dn-'+id); bkUpdate(id,{status:'declined',admin_note:n?n.value.trim():''},'Отклонено'); }
     else if(a==='done') bkUpdate(id,{status:'done'},'Отмечено');
     else if(a==='no_show') bkUpdate(id,{status:'no_show'},'Отмечено');
@@ -709,9 +740,21 @@ function bindBook(){
     else if(a==='clearfee') bkUpdate(id,{fee:0},'Штраф снят');
     else if(a==='delblock'){ const {error}=await sb.from('blocks').delete().eq('id',id); if(error){ toast('Не удалось'); return; } S.blocks=S.blocks.filter(x=>x.id!==id); render(); } });
   on('#manForm','submit',addManual); on('#blkForm','submit',addBlock);
-  on('#schedForm','submit',saveSchedule); on('#genToken','click',genToken);
-  on('#copyFeed','click',()=>{ const u=feedUrl(); if(navigator.clipboard) navigator.clipboard.writeText(u).then(()=>toast('Ссылка скопирована')); });
+  on('#schedForm','submit',saveSchedule);
+  document.querySelectorAll('[data-gen]').forEach(b=>b.onclick=()=>genToken(b.dataset.gen));
+  document.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>{ const u=feedUrl(b.dataset.copy); if(navigator.clipboard) navigator.clipboard.writeText(u).then(()=>toast('Ссылка скопирована')); });
+  document.querySelectorAll('[data-spadd]').forEach(b=>b.onclick=()=>{ const B=collectSched(), n=servicesOf()[+b.dataset.spadd]; B.svc[n].parts.push({master:'beauty',min:60,couch:false}); S.schedDraft=B; render(); });
+  document.querySelectorAll('[data-spdel]').forEach(b=>b.onclick=()=>{ const [si,pi]=b.dataset.spdel.split(':').map(Number), B=collectSched(), n=servicesOf()[si]; if(B.svc[n].parts.length>1) B.svc[n].parts.splice(pi,1); S.schedDraft=B; render(); });
+  document.querySelectorAll('[data-adm]').forEach(sel=>sel.onchange=()=>setAdminMaster(sel.dataset.adm,sel.value));
+  on('#admAdd','click',()=>{ const em=($('#admEmail').value||'').trim().toLowerCase(); if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ toast('Введите email'); return; } setAdminMaster(em,$('#admNewMaster').value); });
   on('#pinGen','click',()=>setPin(true)); on('#pinSet','click',()=>setPin(false));
+}
+async function setAdminMaster(email,master){
+  const m=master||null;
+  const {error}=await sb.from('admins').upsert({email,master:m},{onConflict:'email'}); if(error){ toast('Не удалось сохранить: '+error.message); return; }
+  const a=S.admins.find(x=>String(x.email).toLowerCase()===email.toLowerCase()); if(a) a.master=m; else S.admins.push({email,master:m});
+  if(S.me&&String(S.me.email).toLowerCase()===email.toLowerCase()) S.me.master=m;
+  toast('Сохранено'); render();
 }
 
 /* ---------- push-уведомления ---------- */
@@ -821,17 +864,32 @@ function bindPushAdmin(){
 }
 
 /* ---------- расписание и календарь ---------- */
-const feedUrl=()=>S.token?`${String(window.SUPABASE_URL).replace(/\/$/,'')}/functions/v1/calendar?token=${S.token}`:'';
-async function genToken(){
-  if(S.token&&!confirm('Старая ссылка перестанет работать, а календари мастеров нужно будет подключить заново. Продолжить?')) return;
+const FEEDS={all:['feed_token','Общий календарь (оба мастера)'],tattoo:['feed_tattoo',null],beauty:['feed_beauty',null]};
+const feedUrl=k=>S.tokens[k]?`${String(window.SUPABASE_URL).replace(/\/$/,'')}/functions/v1/calendar?token=${S.tokens[k]}`:'';
+async function genToken(k){
+  if(S.tokens[k]&&!confirm('Старая ссылка перестанет работать, а календарь нужно будет подключить заново. Продолжить?')) return;
   const a=new Uint8Array(24); crypto.getRandomValues(a); const tok=[...a].map(x=>x.toString(16).padStart(2,'0')).join('');
-  const {error}=await sb.from('admin_private').upsert({id:1,feed_token:tok}); if(error){ toast('Не удалось создать ссылку: '+error.message); return; }
-  S.token=tok; toast('Ссылка создана'); render();
+  const {error}=await sb.from('admin_private').upsert({id:1,[FEEDS[k][0]]:tok}); if(error){ toast('Не удалось создать ссылку: '+error.message); return; }
+  S.tokens[k]=tok; toast('Ссылка создана'); render();
 }
 function scheduleView(){
-  const B=BKC(), L=G().levels, wd=B.weekday, we=B.weekend;
+  const B=S.schedDraft||mergeBooking(BKC()), L=G().levels, wd=B.weekday, we=B.weekend, names=servicesOf();
   const win=(k,w,lab)=>`<div class="sub">${lab}</div><div class="grid"><label>Сразу подтверждается с<input type="time" data-w="${k}.autoFrom" value="${esc(w.autoFrom)}"></label><label>до<input type="time" data-w="${k}.autoTo" value="${esc(w.autoTo)}"></label><label>По подтверждению мастера с<input type="time" data-w="${k}.reqFrom" value="${esc(w.reqFrom)}"></label><label>до<input type="time" data-w="${k}.reqTo" value="${esc(w.reqTo)}"></label></div>`;
-  return `<div class="panel"><h2>Онлайн-запись</h2>
+  const svcRow=(n,si)=>{ const ps=svcParts(B,n), tot=ps.reduce((a,p)=>a+(+p.min||0),0);
+    return `<div class="bk"><div class="top"><b>${esc(n)}</b><span class="muted small">всего ${tot} мин</span></div>
+      ${ps.map((p,pi)=>`<div class="grid"><label>${ps.length>1?`Часть ${pi+1}: мастер`:'Мастер'}<select data-si="${si}" data-pi="${pi}" data-f="master"><option value="tattoo" ${p.master==='tattoo'?'selected':''}>${esc(B.masters.tattoo)}</option><option value="beauty" ${p.master!=='tattoo'?'selected':''}>${esc(B.masters.beauty)}</option></select></label>
+        <label>Минут<input type="number" min="15" step="15" data-si="${si}" data-pi="${pi}" data-f="min" value="${+p.min||60}"></label>
+        <label class="check"><input type="checkbox" data-si="${si}" data-pi="${pi}" data-f="couch" ${p.couch?'checked':''}><span>Нужна кушетка</span></label>
+        ${ps.length>1?`<button type="button" class="ghost" data-spdel="${si}:${pi}" style="align-self:end">Убрать часть</button>`:''}</div>`).join('')}
+      <button type="button" class="ghost" data-spadd="${si}" style="align-self:flex-start">+ Добавить часть</button></div>`; };
+  const admRows=S.admins.map(a=>`<div class="grid"><div style="align-self:center">${esc(a.email)}</div><label>Мастер<select data-adm="${esc(a.email)}"><option value="">не назначен</option><option value="tattoo" ${a.master==='tattoo'?'selected':''}>${esc(B.masters.tattoo)}</option><option value="beauty" ${a.master==='beauty'?'selected':''}>${esc(B.masters.beauty)}</option></select></label></div>`).join('');
+  const feedRow=k=>`<div class="bk"><b>${esc(k==='all'?FEEDS.all[1]:B.masters[k])}</b>${S.tokens[k]?`<div class="mono" data-feed="${k}">${esc(feedUrl(k))}</div><div class="actions"><button data-copy="${k}" class="primary">Скопировать ссылку</button><button data-gen="${k}">Создать новую ссылку</button></div>`:`<div class="actions"><button class="primary" data-gen="${k}">Создать ссылку</button></div>`}</div>`;
+  return `<div class="panel"><h2>Мастера и доступ</h2>
+    <p class="muted small">Каждый мастер по умолчанию видит свой календарь; чужой и общий открываются на вкладке «Записи».</p>
+    ${admRows||'<p class="muted">Администраторов пока нет.</p>'}
+    <div class="grid"><label>Добавить администратора (email)<input id="admEmail" type="email" autocomplete="off"></label><label>Мастер<select id="admNewMaster"><option value="beauty">${esc(B.masters.beauty)}</option><option value="tattoo">${esc(B.masters.tattoo)}</option><option value="">не назначен</option></select></label><button id="admAdd" type="button" style="align-self:end">Добавить</button></div>
+    <p class="muted small">Чтобы человек мог войти в админку, создайте ему пользователя в Supabase: Authentication → Users → Add user (email и пароль).</p></div>
+  <div class="panel"><h2>Онлайн-запись</h2>
    <form id="schedForm" style="display:flex;flex-direction:column;gap:14px">
     <label class="check"><input type="checkbox" id="sOn" ${B.enabled?'checked':''}><span>Запись открыта для клиенток</span></label>
     <div class="grid">
@@ -839,36 +897,48 @@ function scheduleView(){
       <label>Шаг времени, минут<input id="sStep" type="number" min="15" step="15" value="${B.stepMin}"></label>
       <label>Открыта вперёд, месяцев (1–12)<input id="sHor" type="number" min="1" max="12" value="${B.horizonMonths}"></label>
       <label>Минимум часов до записи<input id="sNotice" type="number" min="0" value="${B.minNoticeHours}"></label>
-      <label>Сколько клиенток одновременно<input id="sCap" type="number" min="1" value="${B.capacity}"></label></div>
+      <label>Название мастера: тату<input id="sMt" value="${esc(B.masters.tattoo)}"></label>
+      <label>Название мастера: бьюти<input id="sMb" value="${esc(B.masters.beauty)}"></label></div>
     ${win('weekday',wd,'Будни')}${win('weekend',we,'Выходные')}
-    <div class="sub">Длительность услуг, минут</div>
-    <div class="grid"><label>По умолчанию<input type="number" min="15" step="15" id="sDef" value="${B.defaultMinutes}"></label>${servicesOf().map(n=>`<label>${esc(n)}<input type="number" min="15" step="15" data-dur="${esc(n)}" value="${+B.durations[n]||B.defaultMinutes}"></label>`).join('')}</div>
+    <div class="sub">Услуги: кто делает, сколько длится, нужна ли кушетка</div>
+    <p class="muted small">Кушетка одна: две услуги с кушеткой не могут идти одновременно. Услуга из нескольких частей идёт подряд (например, «Комбо»: час на кушетке и час без неё). Каждый мастер занят только своими частями.</p>
+    ${names.map(svcRow).join('')}
+    <div class="grid"><label>Длительность по умолчанию, минут<input type="number" min="15" step="15" id="sDef" value="${B.defaultMinutes}"></label></div>
     <div class="sub">Отмена</div>
     <div class="grid"><label>Бесплатно за, часов<input id="sCh" type="number" min="0" value="${B.cancelHours}"></label><label>Штраф за позднюю отмену, €<input id="sFee" type="number" min="0" step="0.5" value="${B.lateFee}"></label></div>
     <div class="sub">Бесплатные поздние отмены в месяц, по уровням</div>
     <div class="grid">${L.map((l,i)=>`<label>${esc(l.name)}<input type="number" min="0" data-fl="${i}" value="${+B.freeLate[i]||0}"></label>`).join('')}</div>
     <button class="primary">Сохранить</button></form>
     <p class="muted small">Уровень клиентки для бесплатных отмен обновляется, когда вы открываете админку.</p></div>
-  <div class="panel"><h2>Календарь для мастеров</h2>
-    <p class="muted">Записи появляются в Google Calendar или iCloud автоматически по секретной ссылке. Неподтверждённые помечены «?».</p>
-    ${S.token?`<div class="mono">${esc(feedUrl())}</div><div class="actions"><button id="copyFeed" class="primary">Скопировать ссылку</button><button id="genToken">Создать новую ссылку</button></div>`:`<button class="primary" id="genToken">Создать ссылку</button>`}
-    <p class="muted small">Google Calendar: «Другие календари» → «Добавить» → «По URL». iPhone/Mac: «Календарь» → «Файл» → «Новая подписка на календарь». Google обновляет такие календари медленно, иногда до суток. Для мгновенного просмотра используйте вкладку «Записи». Ссылку не публикуйте: она открывает имена клиенток. Перед первым подключением разверните функцию calendar (инструкция в файле calendar-function.ts).</p></div>`;
+  <div class="panel"><h2>Календари для мастеров</h2>
+    <p class="muted">Записи и выходные появляются в Google Calendar или iCloud автоматически по секретной ссылке. Неподтверждённые помечены «?». Каждому мастеру нужна его ссылка; общая показывает всё.</p>
+    ${feedRow('tattoo')}${feedRow('beauty')}${feedRow('all')}
+    <p class="muted small">Google Calendar: «Другие календари» → «Добавить» → «По URL». iPhone/Mac: «Календарь» → «Файл» → «Новая подписка на календарь». Google обновляет такие календари медленно, иногда до суток. Для мгновенного просмотра используйте вкладку «Записи». Ссылки не публикуйте: они открывают имена клиенток. После обновления нужно заново вставить код функции calendar (файл calendar-function.ts) в Supabase.</p></div>`;
 }
-const tv=(k)=>{const [a,b]=k.split('.'); return document.querySelector(`[data-w="${k}"]`).value;};
-function saveSchedule(e){
-  e.preventDefault();
-  const B=mergeBooking(BKC());
+const tv=(k)=>document.querySelector(`[data-w="${k}"]`).value;
+function collectSched(){
+  const B=mergeBooking(S.schedDraft||BKC());
   B.enabled=$('#sOn').checked; B.tz=$('#sTz').value.trim()||'Europe/Tallinn';
-  try{ new Intl.DateTimeFormat('en',{timeZone:B.tz}); }catch(_){ toast('Неизвестный часовой пояс. Пример: Europe/Tallinn'); return; }
   B.stepMin=Math.max(15,+$('#sStep').value||60); B.horizonMonths=Math.min(12,Math.max(1,+$('#sHor').value||3));
-  B.minNoticeHours=Math.max(0,+$('#sNotice').value||0); B.capacity=Math.max(1,+$('#sCap').value||1);
+  B.minNoticeHours=Math.max(0,+$('#sNotice').value||0);
+  B.masters={tattoo:$('#sMt').value.trim()||BK_DEF.masters.tattoo,beauty:$('#sMb').value.trim()||BK_DEF.masters.beauty};
   ['weekday','weekend'].forEach(k=>['autoFrom','autoTo','reqFrom','reqTo'].forEach(f=>{ B[k][f]=tv(k+'.'+f); }));
-  for(const k of ['weekday','weekend']){ const w=B[k]; if((w.autoFrom&&w.autoTo&&w.autoFrom>=w.autoTo)||(w.reqFrom&&w.reqTo&&w.reqFrom>=w.reqTo)){ toast('Время «с» должно быть раньше «до»'); return; } }
-  B.defaultMinutes=Math.max(15,+$('#sDef').value||60); B.durations={};
-  document.querySelectorAll('[data-dur]').forEach(el=>{ B.durations[el.dataset.dur]=Math.max(15,+el.value||B.defaultMinutes); });
+  B.defaultMinutes=Math.max(15,+$('#sDef').value||60);
+  const names=servicesOf(), svc={};
+  names.forEach((n,si)=>{ const ps=[]; document.querySelectorAll(`[data-si="${si}"][data-f="master"]`).forEach(el=>{ const pi=el.dataset.pi;
+    ps.push({master:el.value,min:Math.max(15,+document.querySelector(`[data-si="${si}"][data-pi="${pi}"][data-f="min"]`).value||60),couch:document.querySelector(`[data-si="${si}"][data-pi="${pi}"][data-f="couch"]`).checked}); });
+    svc[n]={parts:ps.length?ps:svcParts(B,n)}; });
+  B.svc=svc; B.durations={}; names.forEach(n=>{ B.durations[n]=svc[n].parts.reduce((a,p)=>a+p.min,0); });
   B.cancelHours=Math.max(0,+$('#sCh').value||0); B.lateFee=Math.max(0,+$('#sFee').value||0); B.freeLate={};
   document.querySelectorAll('[data-fl]').forEach(el=>{ const n=Math.max(0,Math.floor(+el.value||0)); if(n) B.freeLate[el.dataset.fl]=n; });
-  S.cfg={...S.cfg,booking:B}; persist(); toast(B.enabled?'Сохранено. Запись открыта':'Сохранено. Запись пока закрыта'); render();
+  return B;
+}
+function saveSchedule(e){
+  e.preventDefault();
+  const B=collectSched();
+  try{ new Intl.DateTimeFormat('en',{timeZone:B.tz}); }catch(_){ toast('Неизвестный часовой пояс. Пример: Europe/Tallinn'); return; }
+  for(const k of ['weekday','weekend']){ const w=B[k]; if((w.autoFrom&&w.autoTo&&w.autoFrom>=w.autoTo)||(w.reqFrom&&w.reqTo&&w.reqFrom>=w.reqTo)){ toast('Время «с» должно быть раньше «до»'); return; } }
+  S.cfg={...S.cfg,booking:B}; S.schedDraft=null; persist(); toast(B.enabled?'Сохранено. Запись открыта':'Сохранено. Запись пока закрыта'); render();
 }
 
 /* ---------- доступ клиентки ---------- */
@@ -944,9 +1014,11 @@ async function load(){
   showMsg('Загрузка…','');
   const [s,c]=await Promise.all([sb.from('settings').select('cfg').eq('id',1).single(), sb.from('clients').select('id,name,login,phone,birthday,balance,spent,disc,ref_by,ref_paid,last_earn,created_at,history,email,marketing')]);
   if(s.error||c.error){ showMsg('Не удалось загрузить данные','Если вы только что обновили файлы, сначала выполните в Supabase скрипт migration-glam.sql. Иначе проверьте config.js.'); return; }
-  const [bk,bl,pr]=await Promise.all([sb.from('bookings').select('*').order('start_at'),sb.from('blocks').select('*').order('start_at'),sb.from('admin_private').select('feed_token').eq('id',1).single()]);
+  const [bk,bl,pr]=await Promise.all([sb.from('bookings').select('*').order('start_at'),sb.from('blocks').select('*').order('start_at'),sb.from('admin_private').select('feed_token,feed_tattoo,feed_beauty').eq('id',1).single()]);
   if(bk.error||bl.error){ showMsg('Не удалось загрузить записи','Сначала выполните в Supabase скрипт migration-booking.sql (SQL Editor), затем обновите страницу.'); return; }
-  S.bookings=bk.data||[]; S.blocks=bl.data||[]; S.token=(pr.data&&pr.data.feed_token)||'';
+  S.bookings=bk.data||[]; S.blocks=bl.data||[]; S.tokens={all:(pr.data&&pr.data.feed_token)||'',tattoo:(pr.data&&pr.data.feed_tattoo)||'',beauty:(pr.data&&pr.data.feed_beauty)||''};
+  try{ const ss=await sb.auth.getSession(); const em=String((ss.data&&ss.data.session&&ss.data.session.user&&ss.data.session.user.email)||'').toLowerCase();
+    const ad=await sb.from('admins').select('email,master'); S.admins=ad.data||[]; S.me=S.admins.find(a=>String(a.email).toLowerCase()===em)||{email:em,master:null}; }catch(_){}
   S.cfg=s.data.cfg; cfgSnap=JSON.stringify(S.cfg); S.cfg.glam=mergeGlam(S.cfg.glam); S.cfg.booking=mergeBooking(S.cfg.booking); S.cfg.push=mergePush(S.cfg.push);
   const [ps,pl,pc]=await Promise.all([sb.from('push_subs').select('id,client_id,lang,enabled,last_ok,created_at,ua'),sb.from('push_log').select('*').order('created_at',{ascending:false}).limit(40),sb.rpc('push_config')]);
   S.pushReady=!(ps.error||pl.error); S.psubs=(ps.data)||[]; S.plog=(pl.data)||[]; S.pushKey=!!(pc.data&&pc.data.key);
