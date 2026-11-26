@@ -14,6 +14,11 @@
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,500;0,6..96,600;1,6..96,500;1,6..96,600&family=Manrope:wght@400;500;600;700&display=swap">
 <style>
+/* iOS/Android: шрифт полей >=16px, иначе Safari приближает страницу при вводе и не возвращает */
+input,select,textarea{font-size:16px!important;touch-action:manipulation}
+button,a,label,summary{touch-action:manipulation}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+
 :root{
   --bg:#F3EDE7; --surface:#FBF8F5; --fg:#3E2C29; --muted:#74655F; --line:#E2D6CC;
   --accent:#713E4B; --accent-fg:#F3EDE7; --pink:#F2B7CC; --soft:#F7E3EA; --taupe:#B7A79F;
@@ -920,6 +925,12 @@ function bindPush(){
   if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('sw.js'); }catch(e){} }
   render(); if(cfg&&cred&&cred.pin) await doLogin(cred.login,cred.pin,true);
 })();
+</script>
+<script>
+(function(){var m=document.querySelector('meta[name=viewport]');if(!m)return;var base=m.content;
+document.addEventListener('focusout',function(e){if(!/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return;
+setTimeout(function(){if(/^(INPUT|SELECT|TEXTAREA)$/.test((document.activeElement||{}).tagName))return;
+m.content=base+',maximum-scale=1';setTimeout(function(){m.content=base;},300);},50);});})();
 </script>
 </body>
 </html>
