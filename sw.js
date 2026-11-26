@@ -31,6 +31,7 @@ self.addEventListener('push', (e) => {
   try { d = e.data ? e.data.json() : {}; } catch (_) { d = { body: e.data ? e.data.text() : '' }; }
   const title = d.title || 'Glam Club';
   try { if (self.navigator && self.navigator.setAppBadge) self.navigator.setAppBadge(1); } catch (_) { /* ignore */ }
+  self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((l) => l.forEach((c) => c.postMessage({ type: 'push' }))).catch(() => {});
   e.waitUntil(self.registration.showNotification(title, {
     body: d.body || '',
     icon: 'icons/icon-192.png',

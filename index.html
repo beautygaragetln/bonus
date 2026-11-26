@@ -993,6 +993,29 @@ function noticePanel(){
     ${ns.map(({b,kind})=>`<div class="bk-row"><div><b>${esc(t(msg[kind],dayLabel(b.ld)+', '+b.lt))}</b><div class="muted small">${esc(svcName(b.service))}</div>${b.admin_note&&kind!=='confirmed'?`<div class="small">${esc(t('nComment'))} ${esc(b.admin_note)}</div>`:(b.admin_note?`<div class="small">${esc(b.admin_note)}</div>`:'')}</div>
       <div class="actions">${kind!=='confirmed'?`<button data-act="book">${esc(t('nAnother'))}</button>`:''}<button class="primary" data-act="seen" data-id="${b.id}">${esc(t('nOk'))}</button></div></div>`).join('')}</div>`;
 }
+/* ---------- обновление данных на открытой странице ---------- */
+let refreshing=false;
+async function refreshRec(){
+  if(refreshing||!rec||!cred||!cred.pin||busy) return;
+  if(sheet&&(sheet.type==='book'||sheet.type==='profile')) return;
+  const a=document.activeElement; if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)) return;
+  refreshing=true;
+  try{
+    const data=await rpc('client_login',{p_login:cred.login,p_pin:cred.pin});
+    if(data&&!data.error){
+      const sig=r=>JSON.stringify((r.bookings||[]).map(b=>[b.id,b.status,b.start]))+r.b+'|'+r.level;
+      const changed=sig(data)!==sig(rec); rec=data;
+      if(changed){ updateBadge(); render(); }
+    }
+  }catch(e){}
+  refreshing=false;
+}
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) refreshRec(); });
+window.addEventListener('focus',refreshRec);
+window.addEventListener('pageshow',refreshRec);
+setInterval(()=>{ if(!document.hidden) refreshRec(); },60000);
+if('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message',e=>{ if(e.data&&e.data.type==='push') refreshRec(); });
+
 /* ---------- установка (PWA) и push ---------- */
 const isStandalone=()=>{ try{ return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true; }catch(e){ return false; } };
 const isIOS=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
