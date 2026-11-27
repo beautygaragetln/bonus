@@ -171,6 +171,10 @@ details.more[open]>summary{margin-bottom:10px}
 .perks div:first-child{border-top:0}
 .perks b{text-align:right}
 ul.plain{margin:6px 0 0;padding-left:18px}
+.rules-sec{margin-top:16px}.rules-sec h4{margin:0 0 8px;font:600 15px/1.2 var(--display);letter-spacing:.04em;text-transform:uppercase;color:var(--accent)}
+.rules-sec ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+.rules-sec li{position:relative;padding-left:18px;font-size:14px;line-height:1.45}
+.rules-sec li::before{content:'';position:absolute;left:2px;top:.6em;width:6px;height:6px;border-radius:50%;background:var(--pink)}
 @media (max-width:560px){.edit-row{grid-template-columns:1fr 1fr}.edit-row label:first-child{grid-column:1/-1}}
 @media (max-width:480px){.stats{gap:8px}.stat b{font-size:19px}.balance{font-size:46px}h1{font-size:26px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -438,6 +442,17 @@ const RWC=()=>{ const d={step:1,reward:1,rate:20,coupons:[5,10,15],maxVisit:15,m
 const RF=()=>{ const c=(cfg&&cfg.rewards)||{}; return {refGp:c.refGp!=null?+c.refGp:100,welcomeEur:c.welcomeEur!=null?+c.welcomeEur:5,welcomeMin:c.welcomeMin!=null?+c.welcomeMin:25}; };
 const msGift=m=>(lang==='en'?m.giftEn:lang==='et'?m.giftEt:m.gift)||m.gift||'';
 const msWhat=m=>m.gp>0?gp(m.gp):(msGift(m)||t('rwGift'));
+function rulesGroups(){
+  const L=rulesList(), R=RWC(), F=(rec&&rec.ref)||RF(), g=glamOn(), G=cfg.glam, out=[];
+  out.push([t('ruHPts'),[L[0],L[1],L[2],L[3]]]);
+  out.push([t('ruHMs'),[L[4]]]);
+  const rg=(F.refGp!=null?F.refGp:RF().refGp);
+  if(rg>0) out.push([t('ruHRef'),[t('ruRef',eur(F.welcomeEur!=null?F.welcomeEur:RF().welcomeEur),eur(F.welcomeMin!=null?F.welcomeMin:RF().welcomeMin),gp(rg))]]);
+  if(g) out.push([t('ruHLvl'),[L[5],t('gr1'),t('gr2',G.remindDays,G.warnDays,G.downDays,G.levels[0].name),t('gr3',G.recoverDays)]]);
+  const b=bookingRulesList(); if(b.length) out.push([t('ruHBk'),b]);
+  return out;
+}
+const rulesHtml=()=>rulesGroups().map(([h,items])=>`<div class="rules-sec"><h4>${esc(h)}</h4><ul>${items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`).join('');
 function rulesList(){
   const R=RWC(), ms=(rec&&rec.rw?rec.rw.ms:((cfg.rewards&&cfg.rewards.milestones)||[]).map(m=>({n:m.n,gp:m.gp||(m.eur||0)*R.rate,gift:m.gift,giftEn:m.giftEn,giftEt:m.giftEt})));
   return [t('rwR1',eur(R.step),gp(R.reward)),t('rwR2',R.saveMonths),t('rwR3',R.coupons.map(a=>gp(a*R.rate)+' = '+eur(a)).join('; '),R.couponDays,eur(R.maxVisit)),t('rwR4'),
@@ -591,7 +606,7 @@ function sheetHtml(){
     return wrap(`<h3>${esc(t('hTitle'))}</h3>${v.length?`<div class="visit-list">${v.map(e=>`<div><span>${esc(e.service||t('visit'))}<br><span class="muted small">${fmtDate(e.ts)}</span></span><b class="num">${eur(e.amount)}</b></div>`).join('')}</div>`:`<p class="muted">${esc(t('hEmpty'))}</p>`}${closeBtn}`);
   }
   if(sheet.type==='terms'){
-    return wrap(`<h3>${esc(t('tTitle'))}</h3>${rulesList().map(x=>`<p class="muted">${esc(x)}</p>`).join('')}${closeBtn}`);
+    return wrap(`<h3>${esc(t('tTitle'))}</h3>${rulesHtml()}${closeBtn}`);
   }
   return '';
 }
@@ -603,7 +618,6 @@ function render(){
   const g=glamOn(), G=cfg.glam;
   const act=cfg.actions.filter(a=>a.val>0).map(a=>`<div><span>${esc(actTitle(a))}</span><b>${rewardT(a)}</b></div>`).join('');
   const fr=RF().refGp>0?`<div><span>${esc(t('friendRow'))}</span><b>${esc(gp(RF().refGp))}</b></div>`:'';
-  const glamRules=g?`<p>${esc(t('gr1'))}</p><p>${esc(t('gr2',G.remindDays,G.warnDays,G.downDays,G.levels[0].name))}</p><p>${esc(t('gr3',G.recoverDays))}</p>`:'';
   const tagline=lang==='en'?(cfg.taglineEn||''):lang==='et'?(cfg.taglineEt||''):(cfg.tagline||'');
   document.title=cfg.studio;
   app.innerHTML=`
@@ -622,7 +636,7 @@ function render(){
     ${rec&&g?infoTiles():''}
     <div class="ways">${fr}${act}</div>${cfg.contact?`<p class="muted small">${esc(t('claim',cfg.contact))}</p>`:''}
     ${g?journey(rec):''}${rec&&g?giftsPanel(rec):''}
-    <h3 style="margin-top:14px">${esc(t('rules'))}</h3>${rulesList().map(x=>`<p>${esc(x)}</p>`).join('')}${glamRules}${bookingRulesHtml()}</details>
+    <h3 style="margin-top:14px">${esc(t('rules'))}</h3>${rulesHtml()}</details>
   ${sheetHtml()}`;
   bindAuth(); bindBooking(); bindPush(); bindRef();
   document.querySelectorAll('[data-cpn]').forEach(b=>b.onclick=()=>rwCoupon(+b.dataset.cpn));
@@ -791,8 +805,8 @@ function myBookingsPanel(){
     ${up.length?`<p class="muted small">${esc(t('bkCount',up.length,MAXA))}</p>${shown.map(row).join('')}${up.length>LIM?`<button class="ghost" data-act="bkall">${esc(showAllBk?t('bkShowLess'):t('bkShowAll',up.length))}</button>`:''}`:`<p class="muted">${esc(t('noBookings'))}</p>`}
     ${recent.length?`<div><div class="eyebrow">${esc(t('recent'))}</div>${recent.map(rc).join('')}</div>`:''}</div>`;
 }
-function bookingRulesHtml(){
-  if(!bookingOn()) return '';
+function bookingRulesList(){
+  if(!bookingOn()) return [];
   const B=BK(), wd=B.weekday||{}, we=B.weekend||{}, auto=[];
   if(wd.autoFrom) auto.push(`${t('wdays')} ${wd.autoFrom}–${wd.autoTo}`);
   if(we.autoFrom) auto.push(`${t('wends')} ${we.autoFrom}–${we.autoTo}`);
@@ -800,8 +814,9 @@ function bookingRulesHtml(){
   if(auto.length) L.push(t('bkAuto',auto.join(', ')));
   if(wd.reqFrom) L.push(t('bkReq',`${wd.reqFrom}–${wd.reqTo}`));
   L.push(t('bkHorizon',+B.horizonMonths||3,plw('fmMonth',+B.horizonMonths||3)), t('policy',+B.cancelHours||24,eur(+B.lateFee||0)));
-  return L.map(x=>`<p>${esc(x)}</p>`).join('');
+  return L;
 }
+const bookingRulesHtml=()=>bookingRulesList().map(x=>`<p>${esc(x)}</p>`).join('');
 
 /* --- мастер записи --- */
 function openBooking(id){
