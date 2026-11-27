@@ -590,7 +590,7 @@ async function loadClaims(){
   if(!cred) return;
   try{ const d=await rpc('task_claims_list',{p_login:cred.login,p_pin:cred.pin}); if(d&&d.ok){ claimsCache=d.claims||[]; if(sheet&&sheet.type==='claim'){ sheet.claims=claimsCache; render(); } } }catch(e){}
 }
-function openClaim(kind,from){ sheet={type:'claim',kind,from,claims:claimsCache||[],url:'',err:'',ok:''}; render(); loadClaims(); }
+function openClaim(kind){ sheet={type:'claim',kind,back:sheet,claims:claimsCache||[],url:'',err:'',ok:''}; render(); loadClaims(); }
 const CLAIM_RE=/^https?:\/\/[^\s]+\.[^\s]+$/i;
 async function submitClaim(){
   if(!cred||!sheet||sheet.type!=='claim'||sheet.busy) return;
@@ -715,7 +715,7 @@ function render(){
     const k=b.dataset.sheet;
     sheet= k==='perks'?{type:'level',i:gcOf(rec).level}:{type:k};
     render(); const c=document.getElementById('sheetClose'); if(c) c.focus(); });
-  document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',e=>{ if(e.target===b){ if(sheet&&sheet.type==='wheel'&&sheet.phase==='spinning') return; const np=b.dataset.newperks; sheet=np!==undefined?{type:'level',i:+np}:null; lvlup=null; if(!sheet) maybeAskPush(); render(); } }));
+  document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',e=>{ if(e.target===b){ if(sheet&&sheet.type==='wheel'&&sheet.phase==='spinning') return; const np=b.dataset.newperks; const bk0=sheet&&sheet.back; sheet=np!==undefined?{type:'level',i:+np}:(bk0||null); lvlup=null; if(!sheet) maybeAskPush(); render(); } }));
   const sh1=document.querySelector('.sheet'); if(sh1) sh1.scrollTop=sTop;
   /* пока открыто окно (sheet), страница под ним не прокручивается */
   const need=!!(sheet||lvlup!=null), locked=document.body.classList.contains('lock');
@@ -723,7 +723,7 @@ function render(){
   else if(!need&&locked){ document.body.classList.remove('lock'); document.body.style.top=''; window.scrollTo(0,lockY); }
   else if(!need&&!window.__keepScroll) window.scrollTo(0,y0);
 }
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&(sheet||lvlup!=null)&&!(sheet&&sheet.phase==='spinning')){ sheet=null; lvlup=null; render(); } });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&(sheet||lvlup!=null)&&!(sheet&&sheet.phase==='spinning')){ sheet=(sheet&&sheet.back)||null; lvlup=null; render(); } });
 
 function checkLevelUp(){
   if(!rec||!glamOn()) return;
@@ -807,10 +807,10 @@ function bindRef(){
   const pr=document.getElementById('pfRef');
   if(pr){ let tm=null; pr.addEventListener('input',()=>{ sheet.refErr=''; sheet.refOk=''; clearTimeout(tm); const v=pr.value.trim(); if(!v){ setMsg('pfRefMsg',null); return; } tm=setTimeout(()=>refCheck(v,s=>setMsg('pfRefMsg',s)),350); });
     const go=()=>applyRef(pr.value); document.getElementById('pfRefBtn').onclick=go; pr.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } }); }
-  document.querySelectorAll('[data-tkgo]').forEach(b=>b.onclick=()=>{ const id=b.dataset.tkgo; if(id==='ref') { sheet={type:'profile',tab:'ref',msg:'',err:''}; render(); } else openClaim(id,b.dataset.tkfrom); });
-  document.querySelectorAll('[data-tkback]').forEach(b=>b.onclick=()=>{ const f=sheet&&sheet.from; sheet={type:f==='miss'?'miss':'tasks'}; render(); });
+  document.querySelectorAll('[data-tkgo]').forEach(b=>b.onclick=()=>{ const id=b.dataset.tkgo; if(id==='ref') { sheet={type:'profile',tab:'ref',msg:'',err:'',back:sheet}; render(); } else openClaim(id); });
+  document.querySelectorAll('[data-tkback]').forEach(b=>b.onclick=()=>{ sheet=(sheet&&sheet.back)||null; render(); });
   const cf=document.getElementById('claimForm'); if(cf){ cf.addEventListener('submit',e=>{ e.preventDefault(); submitClaim(); }); const cu=document.getElementById('claimUrl'); cu.addEventListener('input',()=>{ sheet.url=cu.value; }); }
-  document.querySelectorAll('[data-pftab]').forEach(b=>b.onclick=()=>{ sheet={type:'profile',tab:b.dataset.pftab,msg:'',err:''}; render(); });
+  document.querySelectorAll('[data-pftab]').forEach(b=>b.onclick=()=>{ sheet={type:'profile',tab:b.dataset.pftab,msg:'',err:'',back:sheet&&sheet.back}; render(); });
   document.querySelectorAll('[data-refcopy]').forEach(b=>b.onclick=async()=>{ const link=refLink(rec.ref.code); let ok=false; try{ await navigator.clipboard.writeText(link); ok=true; }catch(e){ try{ const ta=document.createElement('textarea'); ta.value=link; document.body.append(ta); ta.select(); ok=document.execCommand('copy'); ta.remove(); }catch(e2){} }
     const el=document.getElementById('refCopied'); if(el) el.textContent=ok?t('refCopied'):link; });
   document.querySelectorAll('[data-refshare]').forEach(b=>b.onclick=()=>{ const F=RF(), R=rec.ref||{}; try{ navigator.share({title:cfg.studio,text:t('refShareText',eur(R.welcomeEur!=null?R.welcomeEur:F.welcomeEur),eur(R.welcomeMin!=null?R.welcomeMin:F.welcomeMin)),url:refLink(rec.ref.code)}); }catch(e){} });
@@ -1092,7 +1092,7 @@ async function saveProfile(){
   try{
     const data=await rpc('client_update',args);
     if(data.error){ sheet.err=errMsg(data.error); sheet.msg=''; }
-    else { rec=data; if(np){ cred.pin=np; saveCred(); } sheet={type:'profile',err:'',msg:tk('pfSaved')}; }
+    else { rec=data; if(np){ cred.pin=np; saveCred(); } sheet={type:'profile',err:'',msg:tk('pfSaved'),back:sheet&&sheet.back}; }
   }catch(e){ sheet.err=tk('e_net'); }
   render();
 }
