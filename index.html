@@ -637,6 +637,7 @@ function sheetHtml(){
 function render(){
   if(!configured){ app.innerHTML=`<div class="panel"><h2>${esc(t('setup'))}</h2><p class="muted">${esc(t('setupText'))}</p></div>`; return; }
   if(!cfg){ app.innerHTML=`<p class="muted">${esc(err||t('loading'))}</p>`; return; }
+  const mo0=document.querySelector('details.more'); if(mo0) window.__moreOpen=mo0.open;
   const sh0=document.querySelector('.sheet'), sTop=sh0?sh0.scrollTop:0, y0=document.body.classList.contains('lock')?lockY:window.scrollY;
   const g=glamOn(), G=cfg.glam;
   const act=cfg.actions.filter(a=>a.val>0).map(a=>`<div><span>${esc(actTitle(a))}</span><b>${rewardT(a)}</b></div>`).join('');
@@ -655,7 +656,7 @@ function render(){
   ${bookCtaBar()}
   ${installPanel()}
   ${notifyPanel()}
-  <details class="panel more" ${rec?'':'open'}><summary><h2>${esc(t('moreTitle'))}</h2></summary>
+  <details class="panel more" ${(rec?window.__moreOpen:true)?'open':''}><summary><h2>${esc(t('moreTitle'))}</h2></summary>
     ${rec&&g?infoTiles():''}
     <div class="ways">${fr}${act}</div>${cfg.contact?`<p class="muted small">${esc(t('claim',cfg.contact))}</p>`:''}
     ${g?journey(rec):''}${rec&&g?giftsPanel(rec):''}
