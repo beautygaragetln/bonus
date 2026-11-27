@@ -124,6 +124,16 @@ button.link{background:none;border:0;padding:2px 4px;color:var(--accent);font-we
 .cpn-tile b{font-size:18px}.cpn-tile small{font-size:11px;color:var(--muted)}
 .cpn-tile.locked{background:#E7DAD1;border-color:#E7DAD1;cursor:default;color:var(--muted)}
 .cpn-tile.on{background:var(--pink);border-color:var(--pink);color:#3E2C29}.cpn-tile.on small{color:#3E2C29}
+.wl-card{display:flex;align-items:center;gap:12px;background:var(--pink);border-radius:16px;padding:14px 16px;color:#3E2C29}
+.wl-card svg{width:24px;height:24px;flex:none;fill:none;stroke:#3E2C29;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.wl-card span{display:flex;flex-direction:column;gap:2px;min-width:0}.wl-card small{font-size:12px;opacity:.85}
+.ref-card{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;color:var(--fg);text-align:left;cursor:pointer;width:100%}
+.ref-card svg{width:24px;height:24px;flex:none;fill:none;stroke:var(--accent);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.ref-card span{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}.ref-card small{font-size:12px;color:var(--muted)}.ref-card .chev{flex:none;flex:0 0 auto;color:var(--muted)}
+.ref-code{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.ref-code b{font:600 26px/1.1 var(--display);letter-spacing:.06em;word-break:break-all}
+.ref-btns{display:flex;gap:8px;flex-wrap:wrap}.ref-enter{display:flex;gap:8px}.ref-enter input{flex:1;min-width:0;text-transform:uppercase}.ref-enter button{white-space:nowrap}
+.ref-steps{margin:6px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px}
 .cpn-note{display:flex;justify-content:space-between;gap:10px;align-items:center}.cpn-help{margin:-4px 0 0}
 .lvl-card{gap:10px}.lvl-top{display:flex;align-items:center;gap:12px;cursor:pointer}
 .lvl-ic{width:42px;height:42px;border-radius:50%;background:var(--pink);display:grid;place-items:center;flex:none}
@@ -253,6 +263,7 @@ h1,.it{font-style:normal}
 <script>
 const r2 = n => Math.round(n*100)/100;
 let LOCALE='ru-RU';
+const gp = n => r2(n).toLocaleString(LOCALE,{maximumFractionDigits:2})+' GP';
 const eur = n => r2(n).toLocaleString(LOCALE,{minimumFractionDigits:Number.isInteger(r2(n))?0:2,maximumFractionDigits:2})+' €';
 const tk=k=>'\u0001'+k; /* ошибка хранится как ключ и переводится при каждой отрисовке: язык можно менять, пока она на экране */
 const esc = s => String(s??'').replace(/\u0001(\w+)/g,(m0,k)=>t(k)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -418,15 +429,18 @@ const I={gift:'<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13
 const svg=(p)=>`<svg viewBox="0 0 24 24" aria-hidden="true">${p}</svg>`;
 const fromRange=(L,i)=>t('from',eur(L[i].from));
 function perkRows(G,i){
-  const l=G.levels[i], pc=v=>v?`${v}%`:'—', e=v=>v>0?eur(v):'—';
-  return [[t('pLvBonus'),e(l.levelBonus)],[t('pBday'),e(l.birthday)],[t('pTattoo'),pc(l.firstTattoo)],[t('pGifts'),l.giftsPerYear>0?String(l.giftsPerYear):'—']].concat(bookingOn()?[[t('pFreeCancel'),String(freeCancels(i)||'—')]]:[]);
+  const l=G.levels[i], pc=v=>v?`${v}%`:'—', e=v=>v>0?eur(v):'—', gE=v=>v>0?gp(v*RWC().rate):'—';
+  return [[t('pLvBonus'),gE(l.levelBonus)],[t('pBday'),gE(l.birthday)],[t('pTattoo'),pc(l.firstTattoo)],[t('pGifts'),l.giftsPerYear>0?String(l.giftsPerYear):'—']].concat(bookingOn()?[[t('pFreeCancel'),String(freeCancels(i)||'—')]]:[]);
 }
-const RWC=()=>(rec&&rec.rw)||Object.assign({step:100,reward:5,coupons:[5,10,15],maxVisit:15,minVisit:20,saveMonths:6,couponDays:60},cfg&&cfg.rewards?{step:cfg.rewards.step,reward:cfg.rewards.reward,coupons:cfg.rewards.coupons,maxVisit:cfg.rewards.maxPerVisit,minVisit:cfg.rewards.minVisit,saveMonths:cfg.rewards.saveMonths,couponDays:cfg.rewards.couponDays}:{});
+const RWC=()=>{ const d={step:1,reward:1,rate:20,coupons:[5,10,15],maxVisit:15,minVisit:20,saveMonths:12,couponDays:60}, c=(cfg&&cfg.rewards)||{};
+  const base=Object.assign(d,{step:c.step||1,reward:c.reward||1,rate:c.gpRate||20,coupons:c.coupons||d.coupons,maxVisit:c.maxPerVisit||15,minVisit:c.minVisit||20,saveMonths:c.saveMonths||12,couponDays:c.couponDays||60});
+  return (rec&&rec.rw)?Object.assign(base,rec.rw):base; };
+const RF=()=>{ const c=(cfg&&cfg.rewards)||{}; return {refGp:c.refGp!=null?+c.refGp:100,welcomeEur:c.welcomeEur!=null?+c.welcomeEur:5,welcomeMin:c.welcomeMin!=null?+c.welcomeMin:25}; };
 const msGift=m=>(lang==='en'?m.giftEn:lang==='et'?m.giftEt:m.gift)||m.gift||'';
-const msWhat=m=>m.eur>0?eur(m.eur):(msGift(m)||t('rwGift'));
+const msWhat=m=>m.gp>0?gp(m.gp):(msGift(m)||t('rwGift'));
 function rulesList(){
-  const R=RWC(), ms=(rec&&rec.rw?rec.rw.ms:((cfg.rewards&&cfg.rewards.milestones)||[]).map(m=>({n:m.n,eur:m.eur||0,gift:m.gift,giftEn:m.giftEn,giftEt:m.giftEt})));
-  return [t('rwR1',eur(R.step),eur(R.reward)),t('rwR2',R.saveMonths),t('rwR3',R.coupons.map(eur).join(' / '),R.couponDays,eur(R.maxVisit)),t('rwR4'),
+  const R=RWC(), ms=(rec&&rec.rw?rec.rw.ms:((cfg.rewards&&cfg.rewards.milestones)||[]).map(m=>({n:m.n,gp:m.gp||(m.eur||0)*R.rate,gift:m.gift,giftEn:m.giftEn,giftEt:m.giftEt})));
+  return [t('rwR1',eur(R.step),gp(R.reward)),t('rwR2',R.saveMonths),t('rwR3',R.coupons.map(a=>gp(a*R.rate)+' = '+eur(a)).join('; '),R.couponDays,eur(R.maxVisit)),t('rwR4'),
     t('rwR5',ms.map(m=>t('rwMsItem',m.n,msWhat(m))).join('; '),eur(R.minVisit)),t('rwR6')];
 }
 
@@ -447,20 +461,22 @@ const IC_CHECK='<path d="M6 12.5l4 4 8-9"/>', IC_LOCK='<rect x="5" y="11" width=
 function homeBlocks(r){
   const w=r.rw, g=glamOn(); let h=`<h1 class="hello">${esc(t('hi',r.n))} ♡</h1>`;
   if(w){
-    const act=w.coupon, soon=(w.lots||[])[0], left=r2(w.step-w.prog), pc=Math.min(100,Math.round(w.prog/w.step*100));
+    const rate=w.rate||20, act=w.coupon, soon=(w.lots||[])[0], unit=((w.coupons||[5])[0]||5)*rate, rem=w.bal%unit, pc=Math.min(100,Math.round(rem/unit*100)), leftEur=r2((unit-rem)*(RWC().step/(RWC().reward||1)));
     h+=`<div class="rw-hero"><button class="rw-more" data-sheet="rw">${esc(t('rwMore'))} ›</button>
       <div class="hc-top"><span>${esc(t('rwTitle'))}</span></div>
-      <div class="rw-big">${eur(w.bal)}</div><div class="rw-sub">${esc(t('rwHeroSub'))}</div><hr>
-      <div class="rowline"><span>${esc(t('rwNextShort',eur(w.reward)))}</span><span class="num">${r2(w.prog)} / ${r2(w.step)} €</span></div>
+      <div class="rw-big">${esc(gp(w.bal))}</div><div class="rw-sub">${esc(t('rwHeroSub'))}</div><hr>
+      <div class="rowline"><span>${esc(t('rwNextShort',eur((w.coupons||[5])[0]||5)))}</span><span class="num">${r2(rem)} / ${r2(unit)} GP</span></div>
       <div class="bar" role="progressbar" aria-valuenow="${pc}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pc}%"></i></div>
-      <div class="rw-left">${esc(t('rwLeft',eur(left)))}</div>
-      ${soon?`<div class="rw-left">${esc(t('rwSoon',eur(soon.a),fmtDate(soon.exp)))}</div>`:''}</div>`;
+      <div class="rw-left">${esc(t('rwLeft',eur(leftEur)))}</div>
+      ${soon?`<div class="rw-left">${esc(t('rwSoon',gp(soon.a),fmtDate(soon.exp)))}</div>`:''}</div>`;
+    const wl=r.wl, wlOn=wl&&!wl.used&&(!wl.until||wl.until>Date.now());
+    if(wlOn) h+=`<div class="wl-card">${svg(I.gift)}<span><b>${esc(t('wlTitle',eur(wl.min),eur(wl.eur)))}</b>${wl.until?`<small>${esc(t('wlUntil',fmtDate(wl.until)))}</small>`:''}</span></div>`;
     const cps=(w.coupons||[]).filter(a=>a<=w.maxVisit);
     h+=`<div class="cpn-grid">${cps.map(a=>{
-      const on=act&&act.a===a, can=!act&&w.bal>=a;
-      if(on) return `<div class="cpn-tile on">${svg(I.gift)}<b>${eur(a)}</b><small>${esc(t('cpnOn',fmtDate(act.exp)))}</small></div>`;
-      if(can) return `<button class="cpn-tile" data-cpn="${a}">${svg(I.gift)}<b>${eur(a)}</b><small>${esc(t('cpnActivate'))}</small></button>`;
-      return `<div class="cpn-tile locked" aria-disabled="true">${svg(IC_LOCK)}<b>${eur(a)}</b><small>${esc(t('cpnLocked'))}</small></div>`; }).join('')}</div>
+      const cost=a*rate, on=act&&act.a===a, can=!act&&w.bal>=cost;
+      if(on) return `<div class="cpn-tile on">${svg(I.gift)}<b>${eur(a)}</b><small>${esc(t('cpnCost',r2(cost)))}</small><small>${esc(t('cpnOn',fmtDate(act.exp)))}</small></div>`;
+      if(can) return `<button class="cpn-tile" data-cpn="${a}">${svg(I.gift)}<b>${eur(a)}</b><small>${esc(t('cpnCost',r2(cost)))}</small><small>${esc(t('cpnActivate'))}</small></button>`;
+      return `<div class="cpn-tile locked" aria-disabled="true">${svg(IC_LOCK)}<b>${eur(a)}</b><small>${esc(t('cpnCost',r2(cost)))}</small><small>${esc(t('cpnLocked'))}</small></div>`; }).join('')}</div>
     ${act?`<div class="cpn-note"><span class="small">${esc(t('rwCouponHint'))}</span><button class="link" data-cpncancel="1">${esc(t('rwCouponCancel'))}</button></div>`:`<p class="muted small cpn-help">${esc(t('rwOnlyOne',eur(w.maxVisit)))}</p>`}
     ${rwErr?`<div class="neg small">${esc(rwErr)}</div>`:''}`;
   }
@@ -486,6 +502,7 @@ function homeBlocks(r){
       h+=`<div class="panel ms-card" data-sheet="rw" role="button" tabindex="0"><h2 class="it">${esc(t('msTitle'))}</h2><div class="ms-dots">${dots}</div><div class="small"><b>${esc(t('msLeft',N-cnt,plw('msVisit',N-cnt),msWhat(nm)))}</b></div></div>`; }
     else if((w.ms||[]).length) h+=`<div class="panel ms-card" data-sheet="rw" role="button" tabindex="0"><h2 class="it">${esc(t('msTitle'))}</h2><div class="small"><b>${esc(t('msAllDone'))}</b></div></div>`;
   }
+  if(w&&r.ref){ const F=RF(); h+=`<button class="ref-card" data-act="referral">${svg(I.users)}<span><b>${esc(t('refTitle'))}</b><small>${esc(t('refCardSub',gp(r.ref.refGp!=null?r.ref.refGp:F.refGp),eur(r.ref.welcomeEur!=null?r.ref.welcomeEur:F.welcomeEur)))}</small></span><span class="chev">›</span></button>`; }
   h+=`<button class="miss-card" data-sheet="miss">${svg(I.gift)}<span><b>${esc(t('missTitle'))}</b><small>${esc(t('missSub'))}</small></span></button>`;
   return h;
 }
@@ -496,7 +513,7 @@ function bookCtaBar(){
 const infoTiles=()=>`<div class="tiles">
     <button class="tile" data-sheet="perks">${svg(I.gift)}<span>${esc(t('tPerks'))}</span></button>
     <button class="tile" data-sheet="history">${svg(I.clock)}<span>${esc(t('tHistory'))}</span></button>
-    <button class="tile" data-sheet="invite">${svg(I.users)}<span>${esc(t('tInvite'))}</span></button>
+    <button class="tile" data-act="referral">${svg(I.users)}<span>${esc(t('tInvite'))}</span></button>
     <button class="tile" data-sheet="terms">${svg(I.cal)}<span>${esc(t('tTerms'))}</span></button></div>`;
 function journey(r){
   const G=cfg.glam,L=G.levels,gc=r?gcOf(r):null;
@@ -529,7 +546,7 @@ function sheetHtml(){
     const i=lvlup,l=L[i];
     return wrap(`<div class="eyebrow">${esc(t('lvNew'))}</div>${lvIcon(i,'big')}<h3 class="confetti">${esc(t('welcome',l.name))}</h3><p>${esc(t('lvText'))}</p>
       <div class="perks" style="width:100%;text-align:left">${perkRows(G,i).filter(x=>x[1]!=='—').map(x=>`<div><span>${esc(x[0])}</span><b>${esc(x[1])}</b></div>`).join('')}</div>
-      ${l.levelBonus>0?`<p class="muted small">${esc(t('lvBonus',eur(l.levelBonus)))}</p>`:''}
+      ${l.levelBonus>0?`<p class="muted small">${esc(t('lvBonus',gp(l.levelBonus*RWC().rate)))}</p>`:''}
       <button class="primary" id="sheetClose" data-close="1" data-newperks="${i}" style="width:100%">${esc(t('lvBtn'))}</button>`,true);
   }
   if(!sheet) return '';
@@ -549,13 +566,13 @@ function sheetHtml(){
   if(sheet.type==='rw'&&rec.rw){
     const w=rec.rw, hist=(w.hist||[]).filter(e=>e.k!=='coupon_use'||true);
     return wrap(`<h3>${esc(t('rwTitle'))}</h3>
-      <div><div class="eyebrow">${esc(t('rwLots'))}</div>${(w.lots||[]).length?`<div class="visit-list">${w.lots.map(x=>`<div><span>${esc(t('rwLotLine',eur(x.a),fmtDate(x.exp)))}${x.src==='special'?` <span class="muted small">· ${esc(t('rwSpecial'))}</span>`:''}</span><b class="num">${eur(x.a)}</b></div>`).join('')}</div>`:`<p class="muted">${esc(t('rwNoLots'))}</p>`}</div>
+      <div><div class="eyebrow">${esc(t('rwLots'))}</div>${(w.lots||[]).length?`<div class="visit-list">${w.lots.map(x=>`<div><span>${esc(t('rwLotLine',gp(x.a),fmtDate(x.exp)))}${x.src==='special'?` <span class="muted small">· ${esc(t('rwSpecial'))}</span>`:''}</span><b class="num">${esc(gp(x.a))}</b></div>`).join('')}</div>`:`<p class="muted">${esc(t('rwNoLots'))}</p>`}</div>
       <div><div class="eyebrow">${esc(t('rwMs'))}</div><p class="muted small">${esc(t('rwMsMin',eur(w.minVisit)))}</p>
         <div class="visit-list">${(w.ms||[]).map(m=>`<div><span>${esc(t('rwMsItem',m.n,msWhat(m)))}</span><b class="num ${m.done?'pos':'muted'}">${m.done?esc(t('rwDone')):`${w.cnt||0} / ${m.n}`}</b></div>`).join('')}</div></div>
-      <div><div class="eyebrow">${esc(t('rwHist'))}</div>${hist.length?`<div class="visit-list">${hist.map(e=>`<div><span>${esc(t('rwK_'+e.k)||e.k)}${lang==='ru'&&e.note&&(e.k==='special'||e.k==='milestone')?': '+esc(e.note):''}<br><span class="muted small">${fmtDate(e.ts)}</span></span><b class="num ${e.a>0?'pos':e.a<0?'neg':'muted'}">${e.a>0?'+':''}${e.a===0?'—':eur(e.a)}</b></div>`).join('')}</div>`:`<p class="muted">${esc(t('rwHistEmpty'))}</p>`}</div>${closeBtn}`);
+      <div><div class="eyebrow">${esc(t('rwHist'))}</div>${hist.length?`<div class="visit-list">${hist.map(e=>`<div><span>${esc(t('rwK_'+e.k)||e.k)}${lang==='ru'&&e.note&&(e.k==='special'||e.k==='milestone')?': '+esc(e.note):''}<br><span class="muted small">${fmtDate(e.ts)}</span></span><b class="num ${e.a>0?'pos':e.a<0?'neg':'muted'}">${e.a>0?'+':''}${e.a===0?'—':esc(gp(e.a))}</b></div>`).join('')}</div>`:`<p class="muted">${esc(t('rwHistEmpty'))}</p>`}</div>${closeBtn}`);
   }
   if(sheet.type==='miss'){
-    const ways=[]; if(cfg.friend&&cfg.friend.val>0) ways.push([t('friendRow'),rewardT(cfg.friend)]);
+    const ways=[]; if(RF().refGp>0) ways.push([t('friendRow'),gp(RF().refGp)]);
     cfg.actions.filter(a=>a.val>0).forEach(a=>ways.push([actTitle(a),rewardT(a)]));
     let ch=''; if(glamOn()&&rec){ const ts=taskState(G,rec.tk), gc=gcOf(rec), k=gc.level>=3?'super':'baddie', x=ts[k], L2=G.levels[k==='baddie'?3:4];
       ch=`<div><div class="eyebrow">${esc(t('tkTitle',L2.name))}</div><p class="muted small">${esc(t('tkNeed',x.need,x.total))}</p><div class="visit-list">${x.items.map(it=>`<div><span>${esc(TKN(it.id))}${it.req?` <span class="muted small">· ${esc(t('tkReq'))}</span>`:''}</span><b class="num ${it.ok?'pos':'muted'}">${it.val} / ${it.target}</b></div>`).join('')}</div><p class="muted small">${esc(t('tkAuto'))}</p></div>`; }
@@ -573,10 +590,6 @@ function sheetHtml(){
     const v=(rec.h||[]).filter(e=>e.kind==='visit'&&e.amount>0&&!e.reversed).sort((a,b)=>b.ts-a.ts);
     return wrap(`<h3>${esc(t('hTitle'))}</h3>${v.length?`<div class="visit-list">${v.map(e=>`<div><span>${esc(e.service||t('visit'))}<br><span class="muted small">${fmtDate(e.ts)}</span></span><b class="num">${eur(e.amount)}</b></div>`).join('')}</div>`:`<p class="muted">${esc(t('hEmpty'))}</p>`}${closeBtn}`);
   }
-  if(sheet.type==='invite'){
-    const rw=cfg.friend&&cfg.friend.val>0?rewardT(cfg.friend):'';
-    return wrap(`<h3>${esc(t('iTitle'))}</h3><p>${esc(rw?t('iText',(rec.login||''),rw):t('iOff'))}</p>${closeBtn}`);
-  }
   if(sheet.type==='terms'){
     return wrap(`<h3>${esc(t('tTitle'))}</h3>${rulesList().map(x=>`<p class="muted">${esc(x)}</p>`).join('')}${closeBtn}`);
   }
@@ -589,7 +602,7 @@ function render(){
   const sh0=document.querySelector('.sheet'), sTop=sh0?sh0.scrollTop:0, y0=document.body.classList.contains('lock')?lockY:window.scrollY;
   const g=glamOn(), G=cfg.glam;
   const act=cfg.actions.filter(a=>a.val>0).map(a=>`<div><span>${esc(actTitle(a))}</span><b>${rewardT(a)}</b></div>`).join('');
-  const fr=cfg.friend&&cfg.friend.val>0?`<div><span>${esc(t('friendRow'))}</span><b>${rewardT(cfg.friend)}</b></div>`:'';
+  const fr=RF().refGp>0?`<div><span>${esc(t('friendRow'))}</span><b>${esc(gp(RF().refGp))}</b></div>`:'';
   const glamRules=g?`<p>${esc(t('gr1'))}</p><p>${esc(t('gr2',G.remindDays,G.warnDays,G.downDays,G.levels[0].name))}</p><p>${esc(t('gr3',G.recoverDays))}</p>`:'';
   const tagline=lang==='en'?(cfg.taglineEn||''):lang==='et'?(cfg.taglineEt||''):(cfg.tagline||'');
   document.title=cfg.studio;
@@ -611,7 +624,7 @@ function render(){
     ${g?journey(rec):''}${rec&&g?giftsPanel(rec):''}
     <h3 style="margin-top:14px">${esc(t('rules'))}</h3>${rulesList().map(x=>`<p>${esc(x)}</p>`).join('')}${glamRules}${bookingRulesHtml()}</details>
   ${sheetHtml()}`;
-  bindAuth(); bindBooking(); bindPush();
+  bindAuth(); bindBooking(); bindPush(); bindRef();
   document.querySelectorAll('[data-cpn]').forEach(b=>b.onclick=()=>rwCoupon(+b.dataset.cpn));
   document.querySelectorAll('[data-cpncancel]').forEach(b=>b.onclick=rwCancelCoupon);
   document.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{ setLang(b.dataset.lang); render(); });
@@ -659,7 +672,8 @@ const saveCred=()=>{try{ if(cred) localStorage.setItem('bgCred',JSON.stringify(c
 function accountBlock(){
   if(rec) return `<div class="acct-slim"><span class="muted small">@${esc(rec.login)}</span><span><button class="link" data-act="profile">${esc(t('profile'))}</button><span class="muted"> · </span><button class="link" data-act="logout">${esc(t('logout'))}</button></span></div>`;
   const reg=authTab==='register';
-  return `<div class="panel" id="acct"><div class="tabs"><button data-authtab="login" class="${!reg?'on':''}">${esc(t('tLogin'))}</button><button data-authtab="register" class="${reg?'on':''}">${esc(t('tRegister'))}</button></div>
+  const F=RF(), guest=(reg&&refStored)?`<div class="wl-card">${svg(I.gift)}<span><b>${esc(t('wlGuest',eur(F.welcomeMin),eur(F.welcomeEur)))}</b></span></div>`:'';
+  return `${guest}<div class="panel" id="acct"><div class="tabs"><button data-authtab="login" class="${!reg?'on':''}">${esc(t('tLogin'))}</button><button data-authtab="register" class="${reg?'on':''}">${esc(t('tRegister'))}</button></div>
     <form id="authForm" style="display:flex;flex-direction:column;gap:12px">
       <label for="aLogin">${esc(t('nickLabel'))}<input id="aLogin" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="anna_lash" value="${esc((cred&&cred.login)||'')}"></label>
       ${reg?`<label for="aName">${esc(t('nameLabel'))}<input id="aName" autocomplete="given-name"></label>`:''}
@@ -667,6 +681,8 @@ function accountBlock(){
       ${reg?`<label for="aEmail">${esc(t('emailLabel'))}<input id="aEmail" type="email" autocomplete="email" autocapitalize="none" spellcheck="false"></label>
         <div id="aEmailErr" class="neg small"></div>
         <label for="aPhone">${esc(t('phoneLabel'))}<input id="aPhone" type="tel" autocomplete="tel" inputmode="tel" maxlength="20" placeholder="+372 …"></label>
+        <label for="aRef">${esc(t('regRefLabel'))}<input id="aRef" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="24" value="${esc(refStored)}"></label>
+        <div id="aRefMsg" class="small muted"></div>
         <label class="check"><input type="checkbox" id="aMkt" disabled><span>${esc(t('marketing'))}</span></label>
         <div id="aMktHint" class="muted small"></div>
         <label class="check"><input type="checkbox" id="aConsent"><span>${esc(t('consent'))}</span></label>`:''}
@@ -682,17 +698,36 @@ function bindAuth(){
       if(!document.getElementById('aConsent').checked){ authErr=tk('e_consent'); render(); return; }
       const em0=val('aEmail'), mk0=document.getElementById('aMkt').checked, lg=val('aLogin'), nm=val('aName'), pw=document.getElementById('aPin').value, ph=val('aPhone');
       emReady(em0).then(st=>{ if(em0&&st!=='ok'){ const m=emMsg(st,em0); if(m){ document.getElementById('aEmailErr').textContent=m; } return; }
-        doRegister(lg,nm,pw,em0,mk0&&!!em0,ph); });
+        doRegister(lg,nm,pw,em0,mk0&&!!em0,ph,val('aRef')); });
     } else doLogin(val('aLogin'),document.getElementById('aPin').value); });
   if(f&&authTab==='register'){ ['aEmail','aConsent','aMkt'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.addEventListener('input',syncReg); el.addEventListener('change',syncReg); } }); syncReg(); }
   document.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{ const a=b.dataset.act;
     if(a==='logout') logout();
-    else if(a==='profile'){ sheet={type:'profile',msg:'',err:''}; render(); }
+    else if(a==='profile'){ sheet={type:'profile',tab:'data',msg:'',err:''}; render(); }
+    else if(a==='referral'){ sheet={type:'profile',tab:'ref',msg:'',err:''}; render(); }
     else if(a==='book') openBooking();
     else if(a==='resched') openBooking(b.dataset.id);
     else if(a==='cancel'){ sheet={type:'cancel',id:b.dataset.id,err:'',busy:false}; render(); }
     else if(a==='bkall'){ showAllBk=!showAllBk; render(); }
     else if(a==='ics') downloadIcs(b.dataset.id); });
+}
+/* живая проверка реферального кода: при регистрации, в профиле и по ссылке ?ref= */
+function bindRef(){
+  const setMsg=(id,s,okTxt)=>{ const el=document.getElementById(id); if(!el) return; const m=okTxt&&s&&s.st==='ok'?okTxt:refMsgOf(s); el.textContent=m; el.className='small '+(s&&s.st==='ok'?'pos':s&&s.st==='bad'?'neg':'muted'); };
+  const ar=document.getElementById('aRef');
+  if(ar){ let tm=null; const run=()=>refCheck(ar.value,s=>setMsg('aRefMsg',s)); ar.addEventListener('input',()=>{ clearTimeout(tm); const v=ar.value.trim(); if(!v){ setMsg('aRefMsg',null); return; } tm=setTimeout(run,350); }); if(ar.value.trim()) run(); }
+  const pr=document.getElementById('pfRef');
+  if(pr){ let tm=null; pr.addEventListener('input',()=>{ sheet.refErr=''; sheet.refOk=''; clearTimeout(tm); const v=pr.value.trim(); if(!v){ setMsg('pfRefMsg',null); return; } tm=setTimeout(()=>refCheck(v,s=>setMsg('pfRefMsg',s)),350); });
+    const go=()=>applyRef(pr.value); document.getElementById('pfRefBtn').onclick=go; pr.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } }); }
+  document.querySelectorAll('[data-pftab]').forEach(b=>b.onclick=()=>{ sheet={type:'profile',tab:b.dataset.pftab,msg:'',err:''}; render(); });
+  document.querySelectorAll('[data-refcopy]').forEach(b=>b.onclick=async()=>{ const link=refLink(rec.ref.code); let ok=false; try{ await navigator.clipboard.writeText(link); ok=true; }catch(e){ try{ const ta=document.createElement('textarea'); ta.value=link; document.body.append(ta); ta.select(); ok=document.execCommand('copy'); ta.remove(); }catch(e2){} }
+    const el=document.getElementById('refCopied'); if(el) el.textContent=ok?t('refCopied'):link; });
+  document.querySelectorAll('[data-refshare]').forEach(b=>b.onclick=()=>{ const F=RF(), R=rec.ref||{}; try{ navigator.share({title:cfg.studio,text:t('refShareText',eur(R.welcomeEur!=null?R.welcomeEur:F.welcomeEur),eur(R.welcomeMin!=null?R.welcomeMin:F.welcomeMin)),url:refLink(rec.ref.code)}); }catch(e){} });
+}
+async function applyRef(code){
+  const v=String(code||'').trim(); if(!v||busy||!cred) return; busy=true; sheet.refErr=''; sheet.refOk='';
+  try{ const d=await rpc('client_set_ref',{p_login:cred.login,p_pin:cred.pin,p_code:v}); if(d.error) sheet.refErr=errMsg(d.error); else { rec=d; sheet.refOk=tk('refApplied'); refClear(); } }catch(e){ sheet.refErr=tk('e_net'); }
+  busy=false; render();
 }
 function syncReg(){
   const em=val('aEmail'), st=emState(em,syncReg), ok=st==='ok', mk=document.getElementById('aMkt'), er=document.getElementById('aEmailErr'), btn=document.getElementById('aSubmit'), cs=document.getElementById('aConsent');
@@ -718,12 +753,12 @@ async function doLogin(login,pin,silent){
   }catch(e){ authErr=silent?'':tk('e_net'); }
   busy=false; render();
 }
-async function doRegister(login,name,pin,email,mkt,phone){
+async function doRegister(login,name,pin,email,mkt,phone,ref){
   busy=true; authErr=''; render();
   try{
-    const data=await rpc('register_client',{p_login:login,p_name:name,p_pin:pin,p_email:email,p_marketing:!!(mkt&&EMAIL_RE.test(email)),p_phone:phone||''});
+    const data=await rpc('register_client',{p_login:login,p_name:name,p_pin:pin,p_email:email,p_marketing:!!(mkt&&EMAIL_RE.test(email)),p_phone:phone||'',p_ref:(ref||'').trim()});
     if(data.error) authErr=errMsg(data.error);
-    else { rec=data; cred={login:data.login,pin}; saveCred(); seenSeed(); }
+    else { rec=data; cred={login:data.login,pin}; saveCred(); seenSeed(); refClear(); }
   }catch(e){ authErr=tk('e_net'); }
   busy=false; render();
 }
@@ -870,8 +905,35 @@ async function doCancel(){
   }catch(e){ sheet.err=tk('e_net'); sheet.busy=false; }
   render();
 }
+/* ---------- рефералка: ссылка, код, проверка ---------- */
+const refLink=code=>location.href.split(/[?#]/)[0]+'?ref='+encodeURIComponent(code);
+const refC={}; /* кэш проверки кодов */
+async function refCheck(code,cb){
+  const k=String(code||'').trim().toUpperCase(); if(!k){ cb(null); return; }
+  if(refC[k]&&refC[k].st!=='checking'){ cb(refC[k]); return; }
+  refC[k]={st:'checking'}; cb(refC[k]);
+  try{ const d=await rpc('ref_check',{p_code:k}); refC[k]=d&&d.ok?{st:'ok',name:d.name,eur:d.eur,min:d.min}:{st:'bad'}; }catch(e){ delete refC[k]; cb({st:'net'}); return; }
+  cb(refC[k]);
+}
+const refMsgOf=s=>!s?'':s.st==='checking'?t('regRefChecking'):s.st==='ok'?t('regRefOk',eur(s.eur),eur(s.min),s.name):s.st==='bad'?t('regRefBad'):'';
+let refStored=''; try{ const m=/[?&]ref=([^&#]+)/.exec(location.search); if(m){ refStored=decodeURIComponent(m[1]).trim().slice(0,24); localStorage.setItem('bgRef',refStored); try{ history.replaceState(null,'',location.href.split(/[?#]/)[0]); }catch(e){} } else refStored=localStorage.getItem('bgRef')||''; }catch(e){}
+const refClear=()=>{ refStored=''; try{ localStorage.removeItem('bgRef'); }catch(e){} };
+if(refStored) authTab='register';
+function refTabHtml(){
+  const R=rec.ref||{}, F=RF(), g=gp(R.refGp!=null?R.refGp:F.refGp), e=eur(R.welcomeEur!=null?R.welcomeEur:F.welcomeEur), m=eur(R.welcomeMin!=null?R.welcomeMin:F.welcomeMin);
+  const enter=R.by?`<p class="small"><b>${esc(t('refBy',R.by))}</b></p>`:R.canEnter?`<div><div class="eyebrow">${esc(t('refEnter'))}</div><div class="ref-enter"><input id="pfRef" autocapitalize="characters" spellcheck="false" placeholder="${esc(t('refEnterPh'))}"><button class="primary" id="pfRefBtn" type="button">${esc(t('refApply'))}</button></div><div id="pfRefMsg" class="small ${sheet.refErr?'neg':sheet.refOk?'pos':'muted'}">${esc(sheet.refErr||sheet.refOk||'')}</div></div>`:`<p class="muted small">${esc(t('refLockedNote'))}</p>`;
+  return `<p>${esc(t('refSub',e,g))}</p>
+    <div class="ref-code"><div class="eyebrow">${esc(t('refCode'))}</div><b>${esc(R.code||'')}</b>
+      <div class="ref-btns"><button class="primary" type="button" data-refcopy="1">${esc(t('refCopy'))}</button>${navigator.share?`<button class="ghost" type="button" data-refshare="1">${esc(t('refShare'))}</button>`:''}</div>
+      <div id="refCopied" class="pos small"></div></div>
+    <div><div class="eyebrow">${esc(t('refHowTitle'))}</div><ol class="plain ref-steps"><li>${esc(t('refHow1'))}</li><li>${esc(t('refHow2',e,m))}</li><li>${esc(t('refHow3',g))}</li></ol></div>
+    <p class="small muted">${esc(t('refStats',R.invited||0,R.joined||0,gp(R.gp||0)))}</p>${enter}`;
+}
 function profileSheet(){
-  return shell(`<h3>${esc(t('pfTitle'))}</h3><form id="pfForm" style="display:flex;flex-direction:column;gap:12px">
+  const tab=sheet.tab==='ref'?'ref':'data';
+  const tabs=`<div class="tabs"><button data-pftab="data" class="${tab==='data'?'on':''}" type="button">${esc(t('pfTab'))}</button><button data-pftab="ref" class="${tab==='ref'?'on':''}" type="button">${esc(t('refTab'))}</button></div>`;
+  if(tab==='ref') return shell(`${tabs}<h3>${esc(t('refTitle'))}</h3>${refTabHtml()}<button class="ghost" data-close="1">${esc(t('close'))}</button>`);
+  return shell(`${tabs}<h3>${esc(t('pfTitle'))}</h3><form id="pfForm" style="display:flex;flex-direction:column;gap:12px">
     <label>${esc(t('pfEmail'))}<input id="pfEmail" type="email" autocapitalize="none" spellcheck="false" value="${esc(rec.email||'')}"></label>
     <div id="pfEmailErr" class="neg small"></div>
     <label class="check"><input type="checkbox" id="pfMkt" ${(rec.marketing&&EMAIL_RE.test(rec.email||''))?'checked':''} ${EMAIL_RE.test(rec.email||'')?'':'disabled'}><span>${esc(t('pfMkt'))}</span></label>

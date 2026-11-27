@@ -194,6 +194,7 @@ h1,.it{font-style:normal}
 <script>
 const r2 = n => Math.round(n*100)/100;
 let LOCALE='ru-RU';
+const gp = n => r2(n).toLocaleString(LOCALE,{maximumFractionDigits:2})+' GP';
 const eur = n => r2(n).toLocaleString(LOCALE,{minimumFractionDigits:Number.isInteger(r2(n))?0:2,maximumFractionDigits:2})+' €';
 const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmtDate = ts => new Date(ts).toLocaleDateString(LOCALE,{day:'numeric',month:'long'});
@@ -374,7 +375,7 @@ function listView(){
     </form></div>
   <div class="panel">
     <input id="search" type="search" placeholder="Поиск по имени, нику или телефону" value="${esc(search)}">
-    <div>${list.length?list.map(c=>{const gc=gcOf(c);return `<button class="row" data-open="${esc(c.id)}">${lvIcon(gc.level,'sm')}<span class="nm"><b>${esc(c.name)}</b><br><span class="muted small">вход: ${esc(c.login)} · ${esc(gname(gc.level))}</span></span><span class="bal">${eur(effBal(c))}</span></button>`}).join(''):`<p class="muted">${S.clients.length?'Никого не найдено.':'Клиенток пока нет. Добавьте первую выше.'}</p>`}</div>
+    <div>${list.length?list.map(c=>{const gc=gcOf(c);return `<button class="row" data-open="${esc(c.id)}">${lvIcon(gc.level,'sm')}<span class="nm"><b>${esc(c.name)}</b><br><span class="muted small">вход: ${esc(c.login)} · ${esc(gname(gc.level))}</span></span><span class="bal">${gp(effBal(c))}</span></button>`}).join(''):`<p class="muted">${S.clients.length?'Никого не найдено.':'Клиенток пока нет. Добавьте первую выше.'}</p>`}</div>
   </div>`;
 }
 function histHtml(c){
@@ -382,10 +383,12 @@ function histHtml(c){
   if(!h.length) return '<p class="muted">Операций пока нет.</p>';
   return `<div class="hist">${h.map(e=>`<div><span>${esc(e.note)}<br><span class="muted small">${fmtDate(e.ts)}</span></span><b class="num ${e.delta>0?'pos':e.delta<0?'neg':'muted'}">${e.delta>0?'+':''}${e.delta===0?'—':eur(e.delta)}</b></div>`).join('')}</div>`;
 }
-const RW_DEF={step:100,reward:5,coupons:[5,10,15],maxPerVisit:15,saveMonths:6,couponDays:60,minVisit:20,settleSpecial:false,
-  milestones:[{n:3,gift:'Подарок от студии',giftEn:'A gift from the studio',giftEt:'Kingitus stuudiolt'},{n:6,eur:5},{n:10,eur:10}]};
-function mergeRewards(r){ r=r||{}; return {...RW_DEF,...r,coupons:(r.coupons&&r.coupons.length)?r.coupons:RW_DEF.coupons,milestones:(r.milestones&&r.milestones.length)?r.milestones:RW_DEF.milestones}; }
+const RW_DEF={step:1,reward:1,gpRate:20,coupons:[5,10,15],maxPerVisit:15,saveMonths:12,couponDays:60,minVisit:20,settleSpecial:false,refGp:100,welcomeEur:5,welcomeMin:25,welcomeDays:60,
+  milestones:[{n:3,gift:'Подарок от студии',giftEn:'A gift from the studio',giftEt:'Kingitus stuudiolt'},{n:6,gp:100},{n:10,gp:200}]};
+function mergeRewards(r){ r=r||{}; const ms=(r.milestones&&r.milestones.length)?r.milestones:RW_DEF.milestones, rate=r.gpRate||RW_DEF.gpRate;
+  return {...RW_DEF,...r,coupons:(r.coupons&&r.coupons.length)?r.coupons:RW_DEF.coupons,milestones:ms.map(m=>{ if(m.gp==null&&m.eur>0){ const x={...m,gp:m.eur*rate}; delete x.eur; return x; } return m; })}; }
 const RWC=()=>S.cfg.rewards||RW_DEF;
+const RATE=()=>+RWC().gpRate||20;
 S.rw={}; S.rwBal={};
 async function loadRwBal(){
   try{ const {data}=await sb.from('rw_lots').select('client_id,remaining,expires_at').gt('remaining',0).gt('expires_at',new Date().toISOString());
@@ -438,35 +441,51 @@ function tasksPanel(c,ts){
 }
 function rewardsPanel(c){
   const d=S.rw[c.id], R=RWC();
-  if(S.rwErr&&!d) return `<div class="panel"><h2>Beauty Rewards</h2><p class="neg small">Не удалось загрузить награды. Выполните в Supabase скрипт migration-rewards.sql и обновите страницу.</p></div>`;
-  if(!d) return `<div class="panel"><h2>Beauty Rewards</h2><p class="muted">Загрузка…</p></div>`;
+  if(S.rwErr&&!d) return `<div class="panel"><h2>Beauty Garage Points</h2><p class="neg small">Не удалось загрузить баллы. Выполните в Supabase скрипт migration-points.sql и обновите страницу.</p></div>`;
+  if(!d) return `<div class="panel"><h2>Beauty Garage Points</h2><p class="muted">Загрузка…</p></div>`;
   const w=d.rw, cnt=w.cnt;
-  const kindName={earn:'Награда',milestone:'Milestone',special:'Специальная',coupon_issue:'Купон выпущен',coupon_return:'Возврат в копилку',coupon_use:'Купон применён',expire:'Сгорело',reverse:'Корректировка'};
-  return `<div class="panel"><h2>Beauty Rewards</h2>
-    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:baseline"><div class="balance">${eur(w.bal)}</div><div class="muted small">в копилке · до следующих ${eur(w.reward)}: ещё ${eur(r2(w.step-w.prog))}</div></div>
-    ${w.lots.length?`<div class="hist">${w.lots.map(x=>`<div><span>${eur(x.a)}${x.src==='special'?' · специальная':x.src==='milestone'?' · Milestone':''}<br><span class="muted small">сгорит ${fmtDate(x.exp)}</span></span><b class="num">${eur(x.a)}</b></div>`).join('')}</div>`:'<p class="muted small">Накоплений нет.</p>'}
+  const kindName={earn:'Баллы за услуги',milestone:'Milestone',special:'Специальные баллы',coupon_issue:'Обмен на купон',coupon_return:'Возврат баллов',coupon_use:'Купон применён',expire:'Сгорело',reverse:'Корректировка'};
+  return `<div class="panel"><h2>Beauty Garage Points</h2>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:baseline"><div class="balance">${gp(w.bal)}</div><div class="muted small">≈ ${eur(w.bal/(w.rate||20))} · 1 € = 1 GP</div></div>
+    ${w.lots.length?`<div class="hist">${w.lots.map(x=>`<div><span>${gp(x.a)}${x.src==='special'?' · специальные':x.src==='milestone'?' · Milestone':''}<br><span class="muted small">сгорят ${fmtDate(x.exp)}</span></span><b class="num">${gp(x.a)}</b></div>`).join('')}</div>`:'<p class="muted small">Баллов нет.</p>'}
     ${w.coupon?`<div class="hint"><b>Активный купон ${eur(w.coupon.a)}</b> до ${fmtDate(w.coupon.exp)}. Отметьте «Применить купон» при записи визита.</div>`:'<p class="muted small">Активного купона нет.</p>'}
     <div class="eyebrow">Milestones (оплаченных визитов от ${eur(w.minVisit)}: ${cnt})</div>
     <div class="hist">${w.ms.map(m=>{ const led=(d.ledger||[]).find(l=>l.kind==='milestone'&&l.meta&&+l.meta.n===m.n);
-      return `<div><span>${m.n} визита: ${m.eur>0?eur(m.eur):esc(m.gift||'подарок')}${m.done&&!m.eur&&led?` <button class="ghost" style="padding:2px 10px" data-gift="${esc(led.id)}" data-issued="${led.meta.issued?0:1}">${led.meta.issued?'выдан ✓':'отметить выданным'}</button>`:''}</span><b class="num ${m.done?'pos':'muted'}">${m.done?'получено':`${cnt} / ${m.n}`}</b></div>`; }).join('')}</div>
+      return `<div><span>${m.n} визита: ${m.gp>0?gp(m.gp):esc(m.gift||'подарок')}${m.done&&!(m.gp>0)&&led?` <button class="ghost" style="padding:2px 10px" data-gift="${esc(led.id)}" data-issued="${led.meta.issued?0:1}">${led.meta.issued?'выдан ✓':'отметить выданным'}</button>`:''}</span><b class="num ${m.done?'pos':'muted'}">${m.done?'получено':`${cnt} / ${m.n}`}</b></div>`; }).join('')}</div>
     <div class="eyebrow">Визиты</div>
-    ${d.visits.length?`<div class="hist">${d.visits.map(v=>`<div><span>${fmtTs(v.ts)} · ${esc(v.service||'Визит')} · ${mName(v.master)}<br><span class="muted small">${eur(v.amount)}${+v.coupon>0?`, купон −${eur(v.coupon)}`:''}, оплачено ${eur(v.paid)}${v.counted?'':' · не засчитан в Milestones'}${v.status==='reversed'?` · ОТМЕНЁН${v.reverse_note?': '+esc(v.reverse_note):''}`:''}</span></span>${v.status==='ok'?`<button class="ghost" data-revisit="${esc(v.id)}">Отменить</button>`:'<span class="muted small">—</span>'}</div>`).join('')}</div>
+    ${d.visits.length?`<div class="hist">${d.visits.map(v=>`<div><span>${fmtTs(v.ts)} · ${esc(v.service||'Визит')} · ${mName(v.master)}<br><span class="muted small">${eur(v.amount)}${+v.coupon>0?`, купон −${eur(v.coupon)}`:''}${+v.welcome>0?`, приветственная скидка −${eur(v.welcome)}`:''}, оплачено ${eur(v.paid)}${v.counted?'':' · не засчитан в Milestones'}${v.status==='reversed'?` · ОТМЕНЁН${v.reverse_note?': '+esc(v.reverse_note):''}`:''}</span></span>${v.status==='ok'?`<button class="ghost" data-revisit="${esc(v.id)}">Отменить</button>`:'<span class="muted small">—</span>'}</div>`).join('')}</div>
       <div class="grid"><label>Причина отмены (по желанию)<input id="rvNote" autocomplete="off"></label><label class="check" style="align-self:end"><input type="checkbox" id="rvRev"> отозвать неиспользованные Milestones</label></div>
       <p class="muted small">Отмена визита убирает его начисление и возвращает купон в копилку. Если награда уже потрачена на купон, отмена не пройдёт. Уровень пересчитается сам.</p>`:'<p class="muted small">Визитов в новой системе пока нет.</p>'}
     <div class="eyebrow">История наград</div>
-    ${d.ledger.length?`<div class="hist">${d.ledger.map(l=>`<div><span>${esc(kindName[l.kind]||l.kind)}: ${esc(l.note)}<br><span class="muted small">${fmtTs(l.ts)}</span></span><b class="num ${+l.amount>0?'pos':+l.amount<0?'neg':'muted'}">${+l.amount>0?'+':''}${+l.amount===0?'—':eur(+l.amount)}</b></div>`).join('')}</div>`:'<p class="muted small">Операций пока нет.</p>'}</div>`;
+    ${d.ledger.length?`<div class="hist">${d.ledger.map(l=>`<div><span>${esc(kindName[l.kind]||l.kind)}: ${esc(l.note)}<br><span class="muted small">${fmtTs(l.ts)}</span></span><b class="num ${+l.amount>0?'pos':+l.amount<0?'neg':'muted'}">${+l.amount>0?'+':''}${+l.amount===0?'—':gp(+l.amount)}</b></div>`).join('')}</div>`:'<p class="muted small">Операций пока нет.</p>'}</div>`;
+}
+function referralPanel(c,d){
+  const r=d&&d.ref, by=S.clients.find(x=>x.id===c.refBy), friends=S.clients.filter(x=>x.refBy===c.id);
+  const can=r?r.canEnter:!c.refBy;
+  return `<div class="panel"><h2>Реферальная программа</h2>
+    <div class="muted small">Код: <b>${esc((r&&r.code)||'—')}</b> · приглашено: ${friends.length}, пришли на визит: ${friends.filter(x=>x.refPaid).length}</div>
+    ${by?`<div class="small">Пришла от: <b>${esc(by.name)}</b>${d&&d.wl?` · приветственная скидка ${eur(d.wl.eur)} ${d.wl.used?'(использована)':'(ждёт первого визита от '+eur(d.wl.min)+')'}`:''}</div>`:''}
+    ${friends.length?`<div class="hist">${friends.map(x=>`<div><span>${esc(x.name)}</span><b class="num ${x.refPaid?'pos':'muted'}">${x.refPaid?'пришла':'ещё не была'}</b></div>`).join('')}</div>`:''}
+    ${can&&!by?`<form id="refForm" class="grid"><label>Пришла от<select id="refBySel"><option value="">— выберите —</option>${byName(S.clients.filter(x=>x.id!==c.id)).map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select></label><button style="align-self:end">Назначить</button></form>
+      <p class="muted small">Назначить можно до первого визита. Клиентка получит приветственную скидку, пригласившая получит ${gp(RWC().refGp)} после первого визита.</p>`:''}</div>`;
+}
+async function setReferrer(e){
+  e.preventDefault(); const c=cur(), v=$('#refBySel').value; if(!c||!v) return;
+  const {data,error}=await sb.rpc('admin_set_referrer',{p_client:c.id,p_referrer:v});
+  if(error||!data||data.error){ toast(data&&data.error==='ref_locked'?'Уже есть визиты или пригласившая':'Не удалось назначить'); return; }
+  await reloadClient(c.id); await loadRw(c.id,true); toast('Назначено'); render();
 }
 function detailView(c){
   const cfg=cfgOf(), ref=S.clients.find(x=>x.id===c.refBy), R=RWC(), d=S.rw[c.id], bal=effBal(c);
   const friends=S.clients.filter(x=>x.refBy===c.id).length;
-  const master0=S.me&&S.me.master||'beauty', cp=d&&d.rw.coupon;
+  const master0=S.me&&S.me.master||'beauty', cp=d&&d.rw.coupon, wlOn=!!(d&&d.wl&&!d.wl.used&&(!d.wl.until||d.wl.until>Date.now()));
   return `
   <button class="ghost" id="back" style="align-self:flex-start">← Все клиентки</button>
   <div class="panel">
     <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
       <div><h2>${esc(c.name)}</h2><div class="muted small">${esc(c.phone||'без телефона')}</div>
         ${ref?`<div class="muted small">Пришла от: ${esc(ref.name)}</div>`:''}${friends?`<div class="muted small">Привела подруг: ${friends}</div>`:''}</div>
-      <div style="text-align:right"><div class="balance">${eur(bal)}</div><div class="muted small">в копилке Rewards${cp?` · купон ${eur(cp.a)}`:''}</div></div>
+      <div style="text-align:right"><div class="balance">${gp(bal)}</div><div class="muted small">Beauty Garage Points${cp?` · купон ${eur(cp.a)}`:''}</div></div>
     </div>
   </div>
   <div class="panel"><h2>Записать визит</h2>
@@ -476,20 +495,22 @@ function detailView(c){
       <label>Мастер<select id="vMaster"><option value="tattoo" ${master0==='tattoo'?'selected':''}>${esc(cfg.booking?cfg.booking.masters.tattoo:'Тату')}</option><option value="beauty" ${master0!=='tattoo'?'selected':''}>${esc(cfg.booking?cfg.booking.masters.beauty:'Бьюти')}</option></select></label>
       <label>Комментарий<input id="vNote" autocomplete="off"></label>
       ${cp?`<label class="check"><input type="checkbox" id="vCoupon" checked> Применить купон ${eur(cp.a)} (до ${fmtDate(cp.exp)})</label>`:''}
+      ${wlOn?`<label class="check"><input type="checkbox" id="vWelcome" checked> Приветственная скидка ${eur(d.wl.eur)} (чек от ${eur(d.wl.min)}${d.wl.until?`, до ${fmtDate(d.wl.until)}`:''})</label>`:''}
       <button class="primary" style="align-self:end">Записать</button>
     </form>
     <div class="hint" id="preview">Введите сумму, чтобы увидеть расчёт.</div>
-    <p class="muted small">Каждые ${eur(R.step)} фактически оплаченных услуг дают ${eur(R.reward)} в копилку. Купон не оплачивает уже оплаченные деньгами услуги, а только уменьшает чек.</p></div>
+    <p class="muted small">Каждые ${eur(R.step)} фактически оплаченных услуг дают ${gp(R.reward)}. Купон и приветственная скидка не оплачивают уже оплаченные деньгами услуги, а только уменьшают чек.</p></div>
   ${rewardsPanel(c)}
   ${glamPanel(c)}
   ${accessPanel(c)}
-  <div class="panel"><h2>Специальная награда</h2>
+  ${referralPanel(c,d)}
+  <div class="panel"><h2>Специальные баллы</h2>
     <form id="awardForm" class="grid">
-      <label>Действие<select id="aAct">${cfg.actions.filter(a=>a.type!=='pct').map(a=>`<option value="${esc(a.id)}">${esc(a.title)} (+${r2(a.val)} €)</option>`).join('')}</select></label>
+      <label>Действие<select id="aAct">${cfg.actions.filter(a=>a.type!=='pct').map(a=>`<option value="${esc(a.id)}">${esc(a.title)} (+${gp(a.val*RATE())})</option>`).join('')}</select></label>
       <button style="align-self:end">Начислить</button>
     </form>
     <form id="adjForm" class="grid">
-      <label>Другая награда, €<input id="mAmt" type="number" min="0.01" step="0.01" required inputmode="decimal"></label>
+      <label>Другая награда, GP<input id="mAmt" type="number" min="1" step="1" required inputmode="decimal"></label>
       <label>Причина<input id="mNote" required autocomplete="off"></label>
       <button style="align-self:end">Начислить</button>
     </form>
@@ -528,8 +549,13 @@ function settingsView(){
     <p class="muted small">Услуга со словом «тату» в названии считается татуировкой, для неё действует скидка на первую татуировку.</p></div>
   <div class="panel"><h2>Beauty Rewards: условия</h2>
     <div class="grid">
-      <label>Шаг начисления: каждые, € оплаченных<input id="rStep" type="number" min="1" step="1" value="${cfg.rewards.step}"></label>
-      <label>Награда за шаг, €<input id="rReward" type="number" min="0.5" step="0.5" value="${cfg.rewards.reward}"></label>
+      <label>Начисление: каждые, € оплаченных услуг<input id="rStep" type="number" min="0.01" step="any" value="${cfg.rewards.step}"></label>
+      <label>даёт баллов, GP (1 € = 1 GP)<input id="rReward" type="number" min="0.01" step="any" value="${cfg.rewards.reward}"></label>
+      <label>Курс обмена: GP за 1 € купона (100 GP = 5 € → 20)<input id="rRate" type="number" min="1" step="1" value="${cfg.rewards.gpRate}"></label>
+      <label>Пригласившей после первого визита подруги, GP<input id="rRefGp" type="number" min="0" step="1" value="${cfg.rewards.refGp}"></label>
+      <label>Приветственная скидка подруге, €<input id="rWelEur" type="number" min="0" step="0.5" value="${cfg.rewards.welcomeEur}"></label>
+      <label>Чек первого визита от, €<input id="rWelMin" type="number" min="0" step="1" value="${cfg.rewards.welcomeMin}"></label>
+      <label>Срок приветственной скидки, дней<input id="rWelDays" type="number" min="1" step="1" value="${cfg.rewards.welcomeDays}"></label>
       <label>Номиналы купонов, € (через запятую)<input id="rCoupons" value="${esc(cfg.rewards.coupons.join(', '))}"></label>
       <label>Максимум купона за визит, €<input id="rMax" type="number" min="1" step="1" value="${cfg.rewards.maxPerVisit}"></label>
       <label>Срок накоплений, месяцев<input id="rSave" type="number" min="1" step="1" value="${cfg.rewards.saveMonths}"></label>
@@ -541,16 +567,15 @@ function settingsView(){
     <div class="eyebrow">Milestones (оплаченных визитов)</div>
     ${cfg.rewards.milestones.map((m,i)=>`<div class="grid">
       <label>Визитов<input data-ms="${i}" data-f="n" type="number" min="1" value="${m.n}"></label>
-      <label>Награда, € (0 — физический подарок)<input data-ms="${i}" data-f="eur" type="number" min="0" step="0.5" value="${m.eur||0}"></label>
+      <label>Награда, GP (0 — физический подарок)<input data-ms="${i}" data-f="gp" type="number" min="0" step="1" value="${m.gp||0}"></label>
       <label>Подарок (RU)<input data-ms="${i}" data-f="gift" value="${esc(m.gift||'')}"></label>
       <label>Gift (EN)<input data-ms="${i}" data-f="giftEn" value="${esc(m.giftEn||'')}"></label>
       <label>Kingitus (ET)<input data-ms="${i}" data-f="giftEt" value="${esc(m.giftEt||'')}"></label></div>`).join('')}
     <p class="muted small">Награды Milestones одноразовые, счётчик визитов не обнуляется.</p></div>
   <div class="panel"><h2>За что начисляем</h2>
     <div class="edit-row">
-      <label>Приведи подругу<input value="Приведи подругу" disabled></label>
-      <label>Тип<input value="Награда, €" disabled></label>
-      <label>Размер<input id="fVal" type="number" min="0" step="0.5" value="${cfg.friend.val}"></label><span></span></div>
+      <label>Приведи подругу<input value="См. «Реферальная программа» в условиях выше" disabled></label>
+      <span></span><span></span><span></span></div>
     ${cfg.actions.map(rewardRow).join('')}
     <button type="button" id="addAct" style="align-self:flex-start">+ Добавить действие</button></div>
   </form>`;
@@ -559,11 +584,11 @@ function collectCfg(){
   const d=draft; if(!d||!$('#cfgForm')) return;
   d.studio=$('#cStudio').value; d.tagline=$('#cTag').value; d.taglineEn=$('#cTagEn').value; d.taglineEt=$('#cTagEt').value; d.contact=$('#cContact').value;
   d.services=$('#cServices').value.split('\n').map(x=>x.trim()).filter(Boolean);
-  d.friend={type:'eur',val:+$('#fVal').value||0};
+  d.friend={type:'eur',val:0};
   const cps=$('#rCoupons').value.split(/[,;\s]+/).map(x=>+x).filter(x=>x>0).sort((a,b)=>a-b);
-  d.rewards={...d.rewards,step:Math.max(1,+$('#rStep').value||100),reward:Math.max(0.5,+$('#rReward').value||5),coupons:cps.length?[...new Set(cps)]:[5,10,15],maxPerVisit:Math.max(1,+$('#rMax').value||15),saveMonths:Math.max(1,Math.floor(+$('#rSave').value||6)),couponDays:Math.max(1,Math.floor(+$('#rCoupon').value||60)),minVisit:Math.max(0,+$('#rMin').value||0),settleSpecial:$('#rSettleSp').checked,
+  d.rewards={...d.rewards,step:Math.max(0.01,+$('#rStep').value||1),reward:Math.max(0.01,+$('#rReward').value||1),gpRate:Math.max(1,Math.floor(+$('#rRate').value||20)),refGp:Math.max(0,+$('#rRefGp').value||0),welcomeEur:Math.max(0,+$('#rWelEur').value||0),welcomeMin:Math.max(0,+$('#rWelMin').value||0),welcomeDays:Math.max(1,Math.floor(+$('#rWelDays').value||60)),coupons:cps.length?[...new Set(cps)]:[5,10,15],maxPerVisit:Math.max(1,+$('#rMax').value||15),saveMonths:Math.max(1,Math.floor(+$('#rSave').value||6)),couponDays:Math.max(1,Math.floor(+$('#rCoupon').value||60)),minVisit:Math.max(0,+$('#rMin').value||0),settleSpecial:$('#rSettleSp').checked,
     milestones:d.rewards.milestones.map(m=>({...m}))};
-  document.querySelectorAll('[data-ms]').forEach(el=>{ const m=d.rewards.milestones[+el.dataset.ms]; if(!m) return; const f=el.dataset.f; m[f]=(f==='n'||f==='eur')?(+el.value||0):el.value.trim(); if(f==='eur'&&!m.eur) delete m.eur; });
+  document.querySelectorAll('[data-ms]').forEach(el=>{ const m=d.rewards.milestones[+el.dataset.ms]; if(!m) return; const f=el.dataset.f; m[f]=(f==='n'||f==='gp')?(+el.value||0):el.value.trim(); if(f==='gp'&&!m.gp) delete m.gp; delete m.eur; });
   document.querySelectorAll('[data-k="act"]').forEach(el=>{ const a=d.actions[+el.dataset.i]; if(a) a[el.dataset.f]= el.dataset.f==='val'? (+el.value||0) : el.value; });
   d.actions.forEach(a=>{ a.type='eur'; });
 }
@@ -592,8 +617,8 @@ function glamView(){
     <div class="grid">
       <label>Название<input data-l="${i}" data-f="name" value="${esc(l.name)}"></label>
       <label>Порог трат, € (от)<input data-l="${i}" data-f="from" type="number" min="0" step="any" value="${l.from}" ${i===0?'readonly':''}></label>
-      <label>Бонус при открытии, €<input data-l="${i}" data-f="levelBonus" type="number" min="0" step="any" value="${l.levelBonus}"></label>
-      <label>Бонус на день рождения, €<input data-l="${i}" data-f="birthday" type="number" min="0" step="any" value="${l.birthday}"></label>
+      <label>Бонус при открытии, € (выдаётся в GP по курсу)<input data-l="${i}" data-f="levelBonus" type="number" min="0" step="any" value="${l.levelBonus}"></label>
+      <label>Бонус на день рождения, € (выдаётся в GP по курсу)<input data-l="${i}" data-f="birthday" type="number" min="0" step="any" value="${l.birthday}"></label>
       <label>Скидка на первую татуировку, %<input data-l="${i}" data-f="firstTattoo" type="number" min="0" step="any" value="${l.firstTattoo}"></label>
       <label>Подарков в год<input data-l="${i}" data-f="giftsPerYear" type="number" min="0" step="1" value="${l.giftsPerYear}"></label>
       <label>Вернуть уровень, потратив, €<input data-l="${i}" data-f="recoverAmount" type="number" min="0" step="any" value="${l.recoverAmount}" ${i===0?'readonly':''}></label>
@@ -632,7 +657,7 @@ function bind(){
   on('#stMonth','change',e=>{ if(e.target.value){ S.settle.period=e.target.value; loadSettle(); render(); } }); on('#stDone','click',settleDone); on('#stUndo','click',settleUndo);
   on('#addForm','submit',addClient); on('#visitForm','submit',recordVisit);
   on('#vAmt','input',previewVisit); on('#vUse','input',previewVisit); on('#vCat','change',previewVisit);
-  on('#awardForm','submit',award); on('#adjForm','submit',adjust); on('#editForm','submit',editClient);
+  on('#refForm','submit',setReferrer); on('#vWelcome','change',previewVisit); on('#awardForm','submit',award); on('#adjForm','submit',adjust); on('#editForm','submit',editClient);
   on('#giftForm','submit',giveGift); on('#bdayBtn','click',giveBirthday); on('#tkForm','submit',saveTasks); on('#vCoupon','change',previewVisit); on('#vMaster','change',previewVisit);
   document.querySelectorAll('[data-revisit]').forEach(b=>b.onclick=()=>reverseVisit(b.dataset.revisit,b));
   document.querySelectorAll('[data-gift]').forEach(b=>b.onclick=()=>markGift(b.dataset.gift,b.dataset.issued==='1'));
@@ -650,17 +675,20 @@ function addClient(e){
   const name=$('#nName').value.trim(); if(!name) return;
   const login=($('#nLogin').value.trim()||name);
   if(loginTaken(login)){ toast('Такой ник или имя для входа уже есть. Добавьте отличие.'); return; }
-  const c={id:uid(),name,login,phone:$('#nPhone').value.trim(),birthday:'',balance:0,spent:0,disc:0,refBy:$('#nRef').value||'',refPaid:false,lastEarn:0,createdAt:Date.now(),history:[]};
+  const refSel=$('#nRef').value||'';
+  const c={id:uid(),name,login,phone:$('#nPhone').value.trim(),birthday:'',balance:0,spent:0,disc:0,refBy:'',refPaid:false,lastEarn:0,createdAt:Date.now(),history:[]};
   S.clients.push(c); persist(); openId=c.id; view='detail'; toast('Добавлено'); render();
+  if(refSel) saveQ.then(()=>sb.rpc('admin_set_referrer',{p_client:c.id,p_referrer:refSel})).then(()=>reloadClient(c.id)).then(()=>{ loadRw(c.id,true); render(); }).catch(()=>{});
 }
 function previewVisit(){
   const c=cur(), el=$('#preview'); if(!c||!el) return;
   const d=S.rw[c.id], R=RWC(), amt=r2(parseFloat($('#vAmt').value)||0);
   if(!amt){ el.textContent='Введите сумму, чтобы увидеть расчёт.'; return; }
-  const cp=d&&d.rw.coupon, use=cp&&$('#vCoupon')&&$('#vCoupon').checked, ap=use?r2(Math.min(cp.a,R.maxPerVisit,amt)):0, paid=r2(amt-ap);
+  const wlU=d&&d.wl&&$('#vWelcome')&&$('#vWelcome').checked&&amt>=d.wl.min, wl=wlU?r2(Math.min(d.wl.eur,amt)):0;
+  const cp=d&&d.rw.coupon, use=cp&&$('#vCoupon')&&$('#vCoupon').checked, ap=use?r2(Math.min(cp.a,R.maxPerVisit,amt-wl)):0, paid=r2(amt-wl-ap);
   const tot=d?d.rw.paidTotal:0, gain=Math.floor((tot+paid)/R.step)-Math.floor(tot/R.step), cnt=d?d.rw.cnt:0;
-  el.textContent=[ap?`Купон −${eur(ap)}${cp.a>ap?` (остаток ${eur(r2(cp.a-ap))} вернётся в копилку)`:''}.`:'', `К оплате деньгами: ${eur(paid)}.`,
-    gain>0?`В копилку: +${eur(gain*R.reward)}.`:`До следующих ${eur(R.reward)}: ещё ${eur(r2(R.step-((tot+paid)%R.step)))}.`,
+  el.textContent=[wl?`Приветственная скидка −${eur(wl)}.`:'',ap?`Купон −${eur(ap)}${cp.a>ap?` (остаток ${eur(r2(cp.a-ap))} вернётся в баллы)`:''}.`:'', `К оплате деньгами: ${eur(paid)}.`,
+    `Начислится: +${gp(gain*R.reward)}.`,
     paid>=R.minVisit?`Визит засчитается в Milestones (будет ${cnt+1}).`:`Меньше ${eur(R.minVisit)} деньгами: в Milestones не засчитается.`].filter(Boolean).join(' ');
 }
 async function recordVisit(e){
@@ -670,21 +698,21 @@ async function recordVisit(e){
   const service=$('#vCat').value, master=$('#vMaster').value, useCp=!!($('#vCoupon')&&$('#vCoupon').checked), btn=e.target.querySelector('button.primary');
   if(btn) btn.disabled=true;
   S.vIdem=S.vIdem||uid();
-  const {data,error}=await sb.rpc('admin_record_visit',{p_client:c.id,p_service:service,p_master:master,p_amount:amt,p_use_coupon:useCp,p_note:$('#vNote').value.trim(),p_tattoo:isTattoo(service),p_idem:S.vIdem});
+  const {data,error}=await sb.rpc('admin_record_visit',{p_client:c.id,p_service:service,p_master:master,p_amount:amt,p_use_coupon:useCp,p_note:$('#vNote').value.trim(),p_tattoo:isTattoo(service),p_idem:S.vIdem,p_use_welcome:!!($('#vWelcome')&&$('#vWelcome').checked)});
   if(error||!data||data.error){ if(btn) btn.disabled=false; toast(rwMsg(error,data)); return; }
   S.vIdem=null;
   await saveQ; await reloadClient(c.id); if(data.referrer) await reloadClient(data.referrer);
   await loadRw(c.id,true); if(data.referrer&&S.rw[data.referrer]) loadRw(data.referrer,true);
   await checkLevelBonuses(cur()); await loadRwBal();
-  const ms=(data.milestones||[]).map(m=>m.eur>0?`Milestone ${m.n}: +${eur(m.eur)}`:`Milestone ${m.n}: ${m.gift||'подарок'}`);
-  toast(['Записано.',data.earned>0?`В копилку +${eur(data.earned)}.`:'',...ms].filter(Boolean).join(' ')); render(); pushKick(); pushReward(c.id,data);
+  const ms=(data.milestones||[]).map(m=>m.gp>0?`Milestone ${m.n}: +${gp(m.gp)}`:`Milestone ${m.n}: ${m.gift||'подарок'}`);
+  toast(['Записано.',data.earned>0?`Начислено +${gp(data.earned)}.`:'',data.referral?`Пригласившей +${gp(data.refGp)}.`:'',...ms].filter(Boolean).join(' ')); render(); pushKick(); pushReward(c.id,data);
 }
 async function checkLevelBonuses(c){
   if(!c||!G().enabled) return;
   const gc=gcOf(c), L=G().levels; let any=false;
   for(let i=1;i<=gc.level;i++){
     if(!(L[i].levelBonus>0)||c.history.some(e=>e.kind==='lvlbonus'&&e.lvl===i)) continue;
-    const {data}=await sb.rpc('admin_grant_special',{p_client:c.id,p_amount:L[i].levelBonus,p_note:`Level Up: ${L[i].name}`,p_kind:'levelup',p_idem:`lvl:${c.id}:${i}`});
+    const {data}=await sb.rpc('admin_grant_special',{p_client:c.id,p_amount:L[i].levelBonus*RATE(),p_note:`Level Up: ${L[i].name}`,p_kind:'levelup',p_idem:`lvl:${c.id}:${i}`});
     if(data&&data.ok){ c.history.push({ts:Date.now(),delta:0,note:`Level Up: ${L[i].name}`,kind:'lvlbonus',lvl:i}); any=true; }
   }
   if(any){ persist(); await loadRw(c.id,true); await loadRwBal(); }
@@ -720,16 +748,16 @@ async function giveBirthday(){
   const c=cur(); if(!c) return;
   const l=G().levels[gcOf(c).level], yr=new Date().getFullYear();
   if(!(l.birthday>0)||c.history.some(e=>e.kind==='bday'&&e.year===yr)) return;
-  if(await grant(c,l.birthday,`Бонус на день рождения (${l.name})`,'birthday',`bday:${c.id}:${yr}`)){ c.history.push({ts:Date.now(),delta:0,note:`Бонус на день рождения (${l.name})`,kind:'bday',year:yr}); persist(); toast('Бонус начислен в копилку'); render(); }
+  if(await grant(c,l.birthday*RATE(),`Бонус на день рождения (${l.name})`,'birthday',`bday:${c.id}:${yr}`)){ c.history.push({ts:Date.now(),delta:0,note:`Бонус на день рождения (${l.name})`,kind:'bday',year:yr}); persist(); toast('Бонус начислен в копилку'); render(); }
 }
 async function award(e){
   e.preventDefault(); const c=cur(); if(!c) return;
   const a=cfgOf().actions.find(x=>x.id===$('#aAct').value); if(!a) return;
-  if(await grant(c,a.val,a.title,'action:'+a.id)){ toast('Начислено в копилку'); render(); }
+  if(await grant(c,a.val*RATE(),a.title,'action:'+a.id)){ toast('Баллы начислены'); render(); }
 }
 async function adjust(e){
   e.preventDefault(); const c=cur(), a=r2(parseFloat($('#mAmt').value)); if(!c||!(a>0)) return;
-  if(await grant(c,a,$('#mNote').value.trim(),'manual')){ toast('Начислено в копилку'); render(); }
+  if(await grant(c,a,$('#mNote').value.trim(),'manual')){ toast('Баллы начислены'); render(); }
 }
 function editClient(e){
   e.preventDefault(); const c=cur(); const login=$('#eLogin').value.trim();
@@ -878,7 +906,8 @@ async function confirmBk(id,note,force){
   if(data&&data.error){ toast('Не удалось подтвердить: '+data.error); return; }
   const b=S.bookings.find(x=>x.id===id); if(b){ b.status='confirmed'; b.admin_note=note; } toast('Подтверждено'); render(); pushBooking(id,'confirmed');
 }
-function pushReward(id,d){ if(S.pushKey&&typeof fn==='function'&&(d.earned>0||(d.milestones||[]).length)) fn({action:'reward',client:id,earned:d.earned,milestones:d.milestones}).catch(()=>{}); }
+function pushReward(id,d){ if(!(S.pushKey&&typeof fn==='function')) return; if(d.earned>0||(d.milestones||[]).length) fn({action:'reward',client:id,earned:d.earned,milestones:d.milestones}).catch(()=>{});
+  if(d.referral&&d.referrer&&d.refGp>0){ const c=S.clients.find(x=>x.id===id); fn({action:'reward',client:d.referrer,earned:0,referral:{name:(c&&c.name||'').split(' ')[0],amount:d.refGp}}).catch(()=>{}); } }
 function pushBooking(id,event){ if(S.pushKey&&typeof fn==='function') fn({action:'booking',id,event}).catch(()=>{}); }
 async function reloadBookings(){ const {data}=await sb.from('bookings').select('*').order('start_at'); if(data) S.bookings=data; }
 async function addManual(e,force){
@@ -942,7 +971,7 @@ async function fn(body){
   return data;
 }
 function pushKick(){ if(S.cfg.push&&S.cfg.push.auto&&S.pushKey){ fn({action:'cron'}).catch(()=>{}); } }
-const PKIND={test:'Тест',manual_urgent:'Срочное',manual_promo:'Новости',booking:'Запись',birthday:'День рождения',expiry7:'Накопления (7 дн.)',expiry1:'Накопления (1 дн.)',couponExp:'Купон истекает',reward:'Награда',milestone:'Milestone',levelUp:'Level Up',levelDown:'Level Down',remind:'60 дней без визита',warn:'Уровень под угрозой',midweek:'Midweek Glam'};
+const PKIND={test:'Тест',manual_urgent:'Срочное',manual_promo:'Новости',booking:'Запись',birthday:'День рождения',expiry7:'Баллы GP (7 дн.)',expiry1:'Баллы GP (1 дн.)',couponExp:'Купон истекает',reward:'Баллы GP',referral:'Подруга пришла',milestone:'Milestone',levelUp:'Level Up',levelDown:'Level Down',remind:'60 дней без визита',warn:'Уровень под угрозой',midweek:'Midweek Glam'};
 const cronSql=()=>`create extension if not exists pg_cron;
 create extension if not exists pg_net with schema extensions;
 select cron.unschedule(jobid) from cron.job where jobname = 'glam-push';
