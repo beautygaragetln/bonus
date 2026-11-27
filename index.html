@@ -586,6 +586,7 @@ function sheetHtml(){
       <button class="primary" id="sheetClose" data-close="1" data-newperks="${i}" style="width:100%">${esc(t('lvBtn'))}</button>`,true);
   }
   if(!sheet) return '';
+  if(sheet.type==='pushask') return shell(`<h3>${esc(t('pnAskTitle'))}</h3><p>${esc(t('pnAskText'))}</p><button class="primary" data-act="pushAskYes">${esc(t('pnAskYes'))}</button><button class="ghost" data-act="pushAskLater">${esc(t('pnAskLater'))}</button>`);
   if(sheet.type==='wheel'&&rec&&rec.wheel) return wheelSheet();
   if(sheet.type==='book') return bookSheet();
   if(sheet.type==='cancel') return cancelSheet();
@@ -670,7 +671,7 @@ function render(){
     const k=b.dataset.sheet;
     sheet= k==='perks'?{type:'level',i:gcOf(rec).level}:{type:k};
     render(); const c=document.getElementById('sheetClose'); if(c) c.focus(); });
-  document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',e=>{ if(e.target===b){ if(sheet&&sheet.type==='wheel'&&sheet.phase==='spinning') return; const np=b.dataset.newperks; sheet=np!==undefined?{type:'level',i:+np}:null; lvlup=null; render(); } }));
+  document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',e=>{ if(e.target===b){ if(sheet&&sheet.type==='wheel'&&sheet.phase==='spinning') return; const np=b.dataset.newperks; sheet=np!==undefined?{type:'level',i:+np}:null; lvlup=null; if(!sheet) maybeAskPush(); render(); } }));
   const sh1=document.querySelector('.sheet'); if(sh1) sh1.scrollTop=sTop;
   /* пока открыто окно (sheet), страница под ним не прокручивается */
   const need=!!(sheet||lvlup!=null), locked=document.body.classList.contains('lock');
@@ -1154,6 +1155,7 @@ async function pushRefresh(){
     } else pushSt.sub=false;
     pushSt.checked=true;
   }catch(e){}
+  maybeAskPush();
   render();
 }
 async function pushOn(){
@@ -1182,10 +1184,18 @@ function permWatch(){ if(typeof Notification==='undefined') return; if(Notificat
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) permWatch(); });
 window.addEventListener('focus',permWatch);
 try{ if(navigator.permissions&&navigator.permissions.query) navigator.permissions.query({name:'notifications'}).then(ps=>{ ps.onchange=permWatch; }).catch(()=>{}); }catch(e){}
+function maybeAskPush(){
+  if(!rec||sheet||lvlup!=null||!pushSt.checked||pushSt.sub||!pushVisible()||!pushSupported()||(isIOS()&&!isStandalone())) return false;
+  if(Notification.permission==='denied') return false;
+  let z=0,ss=false; try{ z=+localStorage.getItem('bgPushLater')||0; ss=sessionStorage.getItem('bgPushAsk')==='1'; }catch(e){}
+  if(ss||Date.now()-z<7*864e5) return false;
+  try{ sessionStorage.setItem('bgPushAsk','1'); }catch(e){}
+  sheet={type:'pushask'}; return true;
+}
 function pushDropDevice(){
   if(!pushSt.sub||!cred||!pushSupported()) return;
   const c={...cred};
-  navigator.serviceWorker.ready.then(reg=>reg.pushManager.getSubscription().then(sub=>{ if(sub){ rpc('push_unsubscribe',{p_login:c.login,p_pin:c.pin,p_endpoint:sub.endpoint}).catch(()=>{}); sub.unsubscribe(); } })).catch(()=>{});
+  navigator.serviceWorker.ready.then(reg=>reg.pushManager.getSubscription().then(sub=>{ if(sub){ rpc('push_unsubscribe',{p_login:c.login,p_pin:c.pin,p_endpoint:sub.endpoint}).catch(()=>{}); } })).catch(()=>{});
 }
 async function savePrefs(){
   const p={}; document.querySelectorAll('[data-pref]').forEach(el=>{ p[el.dataset.pref]=el.checked; }); document.querySelectorAll('[data-prefv]').forEach(el=>{ p[el.dataset.prefv]=el.value; });
@@ -1199,6 +1209,8 @@ function bindPush(){
     else if(a==='nativeInstall') b.onclick=async()=>{ if(installEvt){ installEvt.prompt(); try{ await installEvt.userChoice; }catch(e){} installEvt=null; sheet=null; render(); } };
     else if(a==='seen') b.onclick=()=>{ seenMark([b.dataset.id]); updateBadge(); render(); };
     else if(a==='pnRecheck') b.onclick=()=>{ pushSt.msg=''; render(); pushRefresh(); };
+    else if(a==='pushAskYes') b.onclick=()=>{ sheet=null; pushOn(); };
+    else if(a==='pushAskLater') b.onclick=()=>{ try{ localStorage.setItem('bgPushLater',String(Date.now())); }catch(e){} sheet=null; render(); };
     else if(a==='pushOn') b.onclick=pushOn;
     else if(a==='pushOff') b.onclick=pushOff; });
   document.querySelectorAll('[data-pref],[data-prefv]').forEach(el=>el.onchange=savePrefs);
