@@ -177,7 +177,7 @@ ul.plain{margin:6px 0 0;padding-left:18px}
 .wheel-card svg,.gift-card svg{width:26px;height:26px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .wheel-card span,.gift-card span{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}.wheel-card small,.gift-card small{font-size:12px;opacity:.85}.wheel-card .chev{flex:none}
 .wheel-box{display:flex;justify-content:center}.wheel-svg{width:100%;max-width:320px;height:auto}
-.wh-win{text-align:center;display:flex;flex-direction:column;gap:6px;background:var(--pink);color:#3E2C29;border-radius:16px;padding:16px}.wh-win b{font:600 20px/1.25 var(--display)}
+.wh-win{text-align:center;display:flex;flex-direction:column;gap:6px;background:var(--pink);color:#3E2C29;border-radius:16px;padding:16px}.wh-win b{font:600 20px/1.25 var(--display)}.wh-win p,.wh-win .eyebrow{color:#3E2C29;opacity:.85}
 .pref-sel{display:flex;flex-direction:column;gap:4px;margin-top:8px}
 .help-links{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
 .ig-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:4px;padding:16px 10px;border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--fg);text-decoration:none;min-width:0}
@@ -954,11 +954,11 @@ const TEST_PRIZES=[['SUPER GIFT','SUPER GIFT: 50 € на курс «Макия�
 const testWheel=()=>({on:true,spun:false,prizes:TEST_PRIZES.map(({id,short,label})=>({id,short,label})),win:null});
 function testSpin(){ const tot=TEST_PRIZES.reduce((a,p)=>a+p.w,0); let r=Math.random()*tot, i=0; for(;i<TEST_PRIZES.length;i++){ r-=TEST_PRIZES[i].w; if(r<0) break; } i=Math.min(i,TEST_PRIZES.length-1); const p=TEST_PRIZES[i];
   return Object.assign({},rec,{idx:i,wheel:{on:true,spun:true,prizes:testWheel().prizes,win:{label:p.label,short:p.short,exp:Date.now()+30*864e5,used:false,idx:i}}}); }
-function wheelSvg(prizes,rot){
+function wheelSvg(prizes,rot,anim){
   const n=prizes.length||1, sg=360/n, cx=160, cy=172, R=148, rad=a=>a*Math.PI/180, pt=(a,r)=>[(cx+r*Math.sin(rad(a))).toFixed(2),(cy-r*Math.cos(rad(a))).toFixed(2)];
   const seg=prizes.map((p,i)=>{ const [x0,y0]=pt(i*sg,R),[x1,y1]=pt((i+1)*sg,R), dark=(i%2===0&&!(n%2===1&&i===n-1)), col=(n%2===1&&i===n-1)?'#A5677B':dark?'#713E4B':'#F2B7CC', tc=dark||col==='#A5677B'?'#F3EDE7':'#3E2C29', mid=(i+0.5)*sg, [tx,ty]=pt(0,R*0.6), txt=lbl(p.short), fs=txt.length>6?11:txt.length>4?14:16;
     return `<path d="M${cx} ${cy} L${x0} ${y0} A${R} ${R} 0 0 1 ${x1} ${y1} Z" fill="${col}" stroke="#F3EDE7" stroke-width="2"/><g transform="rotate(${mid} ${cx} ${cy})"><text x="${tx}" y="${ty}" transform="rotate(-90 ${tx} ${ty})" text-anchor="middle" dominant-baseline="middle" fill="${tc}" font-size="${fs}" font-weight="700" font-family="inherit">${esc(txt)}</text></g>`; }).join('');
-  return `<svg class="wheel-svg" viewBox="0 0 320 330" role="img" aria-label="${esc(t('whTitle'))}"><g id="wheelG" style="transform-origin:${cx}px ${cy}px;transform:rotate(${rot||0}deg)">${seg}<circle cx="${cx}" cy="${cy}" r="14" fill="#F3EDE7" stroke="#713E4B" stroke-width="3"/></g><path d="M${cx-14} 4 L${cx+14} 4 L${cx} 34 Z" fill="#3E2C29" stroke="#F3EDE7" stroke-width="2"/></svg>`;
+  return `<svg class="wheel-svg" viewBox="0 0 320 330" role="img" aria-label="${esc(t('whTitle'))}"><g id="wheelG" style="transform-origin:${cx}px ${cy}px;transform:rotate(${rot||0}deg);${anim?'transition:transform 4.6s cubic-bezier(.17,.67,.12,1);will-change:transform':''}">${seg}<circle cx="${cx}" cy="${cy}" r="14" fill="#F3EDE7" stroke="#713E4B" stroke-width="3"/></g><path d="M${cx-14} 4 L${cx+14} 4 L${cx} 34 Z" fill="#3E2C29" stroke="#F3EDE7" stroke-width="2"/></svg>`;
 }
 function wheelSheet(){
   const W=rec.wheel||{prizes:[]}, spinning=sheet.phase==='spinning', done=!spinning&&(sheet.phase==='done'||W.spun), n=(W.prizes||[]).length||1;
@@ -966,7 +966,7 @@ function wheelSheet(){
   const win=W.win;
   const body=done&&win?`<div class="wh-win"><div class="eyebrow">${esc(t('whCongrats'))}</div><b>${esc(lbl(win.label))}</b><p class="muted small">${esc(t('whValid',fmtDate(win.exp)))}</p></div><button class="primary" data-close="1" id="sheetClose">${esc(t('close'))}</button>${WHEEL_TEST?`<button class="ghost" id="whAgain">${esc(t('whAgain'))}</button>`:''}`
     :`<button class="primary" id="whGo" ${spinning||busy?'disabled':''}>${esc(spinning?t('whSpinning'):t('whSpin'))}</button>${sheet.err?`<div class="neg small">${esc(sheet.err)}</div>`:''}${spinning?'':`<button class="ghost" data-close="1">${esc(t('whLater'))}</button>`}`;
-  return shell(`<h3>${esc(t('whTitle'))}</h3>${WHEEL_TEST?`<p class="neg small">${esc(t('whTest'))}</p>`:''}${done?'':`<p class="muted small">${esc(t('whSub'))}</p>`}<div class="wheel-box">${wheelSvg(W.prizes||[],rot)}</div>${body}`);
+  return shell(`<h3>${esc(t('whTitle'))}</h3>${WHEEL_TEST?`<p class="neg small">${esc(t('whTest'))}</p>`:''}${done?'':`<p class="muted small">${esc(t('whSub'))}</p>`}<div class="wheel-box">${wheelSvg(W.prizes||[],rot,spinning)}</div>${body}`);
 }
 function bindWheel(){
   const ag=document.getElementById('whAgain'); if(ag) ag.onclick=()=>{ rec.wheel=testWheel(); sheet={type:'wheel',phase:'idle',rot:0,err:''}; render(); };
@@ -979,7 +979,7 @@ function bindWheel(){
       const n=d.wheel.prizes.length, target=360*6-((d.idx+0.5)*360/n);
       rec.wheel=Object.assign({},rec.wheel,{prizes:d.wheel.prizes}); sheet={type:'wheel',phase:'spinning',rot:0,err:''}; render();
       const el=document.getElementById('wheelG');
-      requestAnimationFrame(()=>requestAnimationFrame(()=>{ if(el) el.style.transform='rotate('+target+'deg)'; }));
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{ if(el){ void el.getBoundingClientRect(); el.style.transform='rotate('+target+'deg)'; } }));
       setTimeout(()=>{ rec=d; sheet={type:'wheel',phase:'done',rot:target,err:''}; busy=false; render(); },window.__wheelMs||4800);
     }catch(e){ sheet.err=tk('e_net'); busy=false; render(); }
   };
