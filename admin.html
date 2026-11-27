@@ -368,6 +368,7 @@ function listView(){
   const list=byName(S.clients).filter(c=>!q||norm(c.name).includes(q)||norm(c.login).includes(q)||(c.phone||'').includes(q));
   const total=S.clients.reduce((s,c)=>s+effBal(c),0);
   return `
+  ${pwReqPanel()}
   <div class="stats panel" style="flex-direction:row">
     <div class="stat"><b>${S.clients.length}</b><span class="muted small">клиентов</span></div>
     <div class="stat"><b>${eur(total)}</b><span class="muted small">в копилках Rewards</span></div>
@@ -642,7 +643,7 @@ function collectGlam(){
 function render(){
   const y=scrollY, ae=document.activeElement, fid=ae&&ae.id, pos=ae&&ae.selectionStart;
   const inList=view==='list';
-  $app.innerHTML=`<header><h1>Beauty Garage: админка</h1><button class="ghost" id="logout">Выйти</button>${inList?`<div class="tabs" style="width:100%;order:3"><button data-tab="clients" class="${tab==='clients'?'on':''}">Клиентки</button><button data-tab="bookings" class="${tab==='bookings'?'on':''}">Записи${pendingCount()?`<span class="badge">${pendingCount()}</span>`:''}</button><button data-tab="schedule" class="${tab==='schedule'?'on':''}">Расписание</button><button data-tab="claims" class="${tab==='claims'?'on':''}">Задания${claimsPending()?`<span class="badge">${claimsPending()}</span>`:''}</button><button data-tab="push" class="${tab==='push'?'on':''}">Уведомления</button><button data-tab="wheel" class="${tab==='wheel'?'on':''}">Колесо</button><button data-tab="settings" class="${tab==='settings'?'on':''}">Условия</button><button data-tab="settle" class="${tab==='settle'?'on':''}">Взаиморасчёты</button><button data-tab="glam" class="${tab==='glam'?'on':''}">Glam Levels</button><button data-tab="texts" class="${tab==='texts'?'on':''}">Тексты</button><button data-tab="data" class="${tab==='data'?'on':''}">Данные</button></div>`:''}</header>`
+  $app.innerHTML=`<header><h1>Beauty Garage: админка</h1><button class="ghost" id="logout">Выйти</button>${inList?`<div class="tabs" style="width:100%;order:3"><button data-tab="clients" class="${tab==='clients'?'on':''}">Клиентки${S.pwReq&&S.pwReq.length?`<span class="badge">${S.pwReq.length}</span>`:''}</button><button data-tab="bookings" class="${tab==='bookings'?'on':''}">Записи${pendingCount()?`<span class="badge">${pendingCount()}</span>`:''}</button><button data-tab="schedule" class="${tab==='schedule'?'on':''}">Расписание</button><button data-tab="claims" class="${tab==='claims'?'on':''}">Задания${claimsPending()?`<span class="badge">${claimsPending()}</span>`:''}</button><button data-tab="push" class="${tab==='push'?'on':''}">Уведомления</button><button data-tab="wheel" class="${tab==='wheel'?'on':''}">Колесо</button><button data-tab="settings" class="${tab==='settings'?'on':''}">Условия</button><button data-tab="settle" class="${tab==='settle'?'on':''}">Взаиморасчёты</button><button data-tab="glam" class="${tab==='glam'?'on':''}">Glam Levels</button><button data-tab="texts" class="${tab==='texts'?'on':''}">Тексты</button><button data-tab="data" class="${tab==='data'?'on':''}">Данные</button></div>`:''}</header>`
    + (view==='detail'&&cur() ? detailView(cur()) : tab==='bookings' ? bookingsView() : tab==='schedule' ? scheduleView() : tab==='push' ? pushView() : tab==='wheel' ? wheelView() : tab==='claims' ? claimsView() : tab==='settings' ? settingsView() : tab==='glam' ? glamView() : tab==='settle' ? settleView() : tab==='texts' ? textsView() : tab==='data' ? dataView() : (view='list',listView()));
   accordionize(); bind(); scrollTo(0,y);
   if(fid){ const e=document.getElementById(fid); if(e){ e.focus(); try{e.setSelectionRange(pos,pos)}catch(_){} } }
@@ -656,7 +657,7 @@ function bind(){
   on('#stMonth','change',e=>{ if(e.target.value){ S.settle.period=e.target.value; loadSettle(); render(); } }); on('#stDone','click',settleDone); on('#stUndo','click',settleUndo);
   on('#addForm','submit',addClient); on('#visitForm','submit',recordVisit);
   on('#vAmt','input',previewVisit); on('#vUse','input',previewVisit); on('#vCat','change',previewVisit);
-  on('#refForm','submit',setReferrer); on('#vWelcome','change',previewVisit); on('#awardForm','submit',award); on('#adjForm','submit',adjust); on('#adjForm','input',updateAdj); on('#adjForm','change',e=>{ if(e.target.id==='aAct'){ const a=cfgOf().actions.find(x=>x.id===e.target.value); if(a){ $('#mAmt').value=a.val*RATE(); $('#mNote').value=a.title; } } updateAdj(); }); updateAdj(); document.querySelectorAll('[data-cdec]').forEach(b=>b.onclick=()=>decideClaim(b.dataset.cdec,b.dataset.ok==='1')); on('#editForm','submit',editClient);
+  on('#refForm','submit',setReferrer); on('#vWelcome','change',previewVisit); on('#awardForm','submit',award); on('#adjForm','submit',adjust); on('#adjForm','input',updateAdj); on('#adjForm','change',e=>{ if(e.target.id==='aAct'){ const a=cfgOf().actions.find(x=>x.id===e.target.value); if(a){ $('#mAmt').value=a.val*RATE(); $('#mNote').value=a.title; } } updateAdj(); }); updateAdj(); document.querySelectorAll('[data-pwissue]').forEach(b=>b.onclick=()=>issueTemp(b.dataset.pwissue,b.dataset.name)); document.querySelectorAll('[data-pwdismiss]').forEach(b=>b.onclick=async()=>{ await sb.rpc('admin_dismiss_pw_request',{p_id:b.dataset.pwdismiss}); await loadPwReq(); }); on('#pwHide','click',()=>{ S.pwIssued=null; render(); }); on('#pwCopy','click',async()=>{ try{ await navigator.clipboard.writeText(S.pwIssued.pin); toast('Скопировано'); }catch(_){ toast('Не удалось скопировать'); } }); document.querySelectorAll('[data-cdec]').forEach(b=>b.onclick=()=>decideClaim(b.dataset.cdec,b.dataset.ok==='1')); on('#editForm','submit',editClient);
   on('#giftForm','submit',giveGift); on('#bdayBtn','click',giveBirthday); on('#tkForm','submit',saveTasks); on('#vCoupon','change',previewVisit); on('#vMaster','change',previewVisit);
   document.querySelectorAll('[data-revisit]').forEach(b=>b.onclick=()=>reverseVisit(b.dataset.revisit,b));
   document.querySelectorAll('[data-gift]').forEach(b=>b.onclick=()=>markGift(b.dataset.gift,b.dataset.issued==='1'));
@@ -796,6 +797,31 @@ async function adjust(e){
   adjBusy=false;
   if(error||!data||data.error){ toast(rwMsg(error,data)); return; }
   await loadRw(c.id,true); await loadRwBal(); toast(sub?'Баллы списаны':'Баллы начислены'); render();
+}
+/* ---------- Запросы на сброс пароля ---------- */
+S.pwReq=null; S.pwIssued=null;
+async function loadPwReq(quiet){
+  if(!sb) return;
+  const {data,error}=await sb.rpc('admin_pw_requests');
+  if(error||!data||data.error||!Array.isArray(data.pending)) return;
+  const before=S.pwReq?S.pwReq.length:-1; S.pwReq=data.pending;
+  if(view==='list'&&tab==='clients'&&(!quiet||S.pwReq.length!==before)) render();
+}
+function pwReqPanel(){
+  const R=S.pwReq||[], I=S.pwIssued;
+  if(!R.length&&!I) return '';
+  return `<div class="panel"><h2>Запросы на сброс пароля${R.length?` <span class="badge">${R.length}</span>`:''}</h2>
+    ${I?`<div class="hint"><b>Временный пароль для ${esc(I.name)}:</b> <b class="mono" style="font-size:18px">${esc(I.pin)}</b>
+      <div class="actions" style="margin-top:8px"><button class="ghost" id="pwCopy">Скопировать</button><button class="ghost" id="pwHide">Скрыть</button></div>
+      <p class="muted small" style="margin:6px 0 0">Отправьте клиентке в Instagram-директе. При входе приложение попросит её придумать свой пароль. После обновления страницы пароль больше не виден.</p></div>`:''}
+    ${R.map(x=>`<div class="claim"><div><b>${esc(x.name)}</b> <span class="muted small">@${esc(x.login)} · ${fmtTs(new Date(x.created_at).getTime())}</span></div>
+      <div class="claim-act"><button data-pwissue="${esc(x.client_id)}" data-name="${esc(x.name)}">Выдать временный пароль</button><button class="ghost" data-pwdismiss="${esc(x.id)}">Скрыть запрос</button><button class="ghost" data-open="${esc(x.client_id)}">Клиентка</button></div></div>`).join('')}
+    ${R.length?'<p class="muted small">Перед выдачей пароля убедитесь в Instagram-директе, что пишет именно она (ответ с того же аккаунта, который указан в нике).</p>':''}</div>`;
+}
+async function issueTemp(id,name){
+  const {data,error}=await sb.rpc('admin_issue_temp_pin',{p_client:id});
+  if(error||!data||data.error){ toast('Не удалось выдать пароль'); return; }
+  S.pwIssued={id,name,pin:data.pin}; shownPin={id,pin:data.pin,temp:true}; await loadPwReq(true); toast('Временный пароль выдан'); render();
 }
 /* ---------- Заявки на задания ---------- */
 S.claims=null; S.claimsErr=false;
@@ -1025,7 +1051,7 @@ function bindBook(){
   document.querySelectorAll('[data-spdel]').forEach(b=>b.onclick=()=>{ const [si,pi]=b.dataset.spdel.split(':').map(Number), B=collectSched(), n=servicesOf()[si]; if(B.svc[n].parts.length>1) B.svc[n].parts.splice(pi,1); S.schedDraft=B; render(); });
   document.querySelectorAll('[data-adm]').forEach(sel=>sel.onchange=()=>setAdminMaster(sel.dataset.adm,sel.value));
   on('#admAdd','click',()=>{ const em=($('#admEmail').value||'').trim().toLowerCase(); if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ toast('Введите email'); return; } setAdminMaster(em,$('#admNewMaster').value); });
-  on('#pinGen','click',()=>setPin(true)); on('#pinSet','click',()=>setPin(false));
+  on('#pinGen','click',()=>{ const c=cur(); if(c) issueTemp(c.id,c.name); }); on('#pinSet','click',()=>setPin(false));
 }
 async function setAdminMaster(email,master){
   const m=master||null;
@@ -1488,10 +1514,10 @@ function accessPanel(c){
   return `<div class="panel"><h2>Доступ и запись</h2>
     <p class="muted small">Устройств с уведомлениями: ${S.psubs.filter(x=>x.client_id===c.id).length}${S.psubs.some(x=>x.client_id===c.id)?' <button class="ghost" id="pushTest" style="padding:2px 10px">Тест</button>':''}</p>
     <p class="muted small">Email: ${esc(c.email||'не указан')}${c.email?(c.marketing?' · согласна на рассылки':' · без рассылок'):''} · будущих записей: ${up}</p>
-    ${shownPin&&shownPin.id===c.id?`<div class="hint">PIN для ${esc(c.name)}: <b class="mono" style="font-size:18px">${esc(shownPin.pin)}</b><br>Передайте клиентке лично. После обновления страницы он больше не отображается.</div>`:''}
+    ${shownPin&&shownPin.id===c.id?`<div class="hint">${shownPin.temp?'Временный пароль':'PIN'} для ${esc(c.name)}: <b class="mono" style="font-size:18px">${esc(shownPin.pin)}</b><br>${shownPin.temp?'Отправьте клиентке в Instagram-директе: при входе она придумает свой пароль. ':'Передайте клиентке лично. '}После обновления страницы он больше не отображается.</div>`:''}
     <div class="grid"><label>Свой PIN (4–8 цифр)<input id="pinVal" inputmode="numeric" maxlength="8" autocomplete="off"></label>
-    <div class="actions" style="align-self:end"><button id="pinSet">Задать PIN</button><button id="pinGen">Выдать случайный</button></div></div>
-    <p class="muted small">PIN нужен клиентке для входа и записи. Новые клиентки задают его сами при регистрации.</p></div>`;
+    <div class="actions" style="align-self:end"><button id="pinSet">Задать PIN</button><button id="pinGen">Выдать временный пароль</button></div></div>
+    <p class="muted small">Если клиентка забыла пароль, нажмите «Выдать временный пароль»: она войдёт с ним и сразу придумает свой. Запросы на сброс приходят наверх списка клиенток.</p></div>`;
 }
 async function setPin(random){
   const c=cur(); if(!c) return; const pin=random?String(Math.floor(100000+crypto.getRandomValues(new Uint32Array(1))[0]%900000)):($('#pinVal').value.trim());
@@ -1566,7 +1592,7 @@ async function load(){
   S.pushReady=!(ps.error||pl.error); S.psubs=(ps.data)||[]; S.plog=(pl.data)||[]; S.pushKey=!!(pc.data&&pc.data.key);
   await loadRwBal(); S.clients=c.data.map(fromRow); S.clients.forEach(x=>snap.set(x.id,JSON.stringify(toRow(x))));
   persist(); render();
-  loadClaims(true); setInterval(refreshBookings,60000); setInterval(()=>{ const a=document.activeElement; if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)) return; loadClaims(true); },60000);
+  loadClaims(true); loadPwReq(true); setInterval(refreshBookings,60000); setInterval(()=>{ const a=document.activeElement; if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)) return; loadClaims(true); loadPwReq(true); },60000);
 }
 async function boot(){
   if(!sb){ showMsg('Нужна настройка','Откройте файл config.js и вставьте данные из Supabase.'); return; }

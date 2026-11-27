@@ -615,10 +615,45 @@ function claimSheet(){
     <button class="ghost" type="button" data-tkback="1">${esc(t('wzBack'))}</button>
     <button class="primary" data-close="1" id="sheetClose">${esc(t('close'))}</button>`);
 }
+async function sendForgot(){
+  const el=document.getElementById('fgLogin'); if(!sheet||sheet.type!=='forgot'||sheet.busy) return;
+  const v=(el?el.value:'').trim(); sheet.login=v;
+  if(!norm(v)){ sheet.err=errMsg('bad_login'); render(); return; }
+  sheet.busy=true; sheet.err=''; render();
+  try{ const d=await rpc('pw_forgot',{p_login:v}); if(sheet&&sheet.type==='forgot'){ sheet.busy=false; if(d&&d.ok) sheet.done=true; else sheet.err=errMsg((d&&d.error)||'other'); } }
+  catch(e){ if(sheet&&sheet.type==='forgot'){ sheet.busy=false; sheet.err=tk('e_net'); } }
+  render();
+}
+async function saveNewPw(){
+  if(!sheet||sheet.type!=='newpw'||sheet.busy||!cred) return;
+  const v=(document.getElementById('npPin')||{value:''}).value;
+  if(!pwOk(v)){ sheet.err=tk('e_bad_pin'); render(); return; }
+  sheet.busy=true; sheet.err=''; render();
+  try{ const d=await rpc('client_set_password',{p_login:cred.login,p_pin:cred.pin,p_new:v});
+    if(d&&!d.error){ rec=d; cred={login:d.login,pin:v}; saveCred(); sheet=null; checkLevelUp(); autoWheel(); }
+    else { sheet.busy=false; sheet.err=errMsg((d&&d.error)||'other'); } }
+  catch(e){ sheet.busy=false; sheet.err=tk('e_net'); }
+  render();
+}
 function sheetHtml(){
   const G=cfg.glam,L=G.levels;
   const wrap=shell;
   const closeBtn=`<button class="primary" data-close="1" id="sheetClose">${esc(t('close'))}</button>`;
+  if(sheet&&sheet.type==='forgot'){
+    if(sheet.done) return shell(`<h3>${esc(t('fgDoneTitle'))}</h3><p>${esc(t('fgDone'))}</p>${helpLinks()}<button class="primary" data-close="1" id="sheetClose">${esc(t('close'))}</button>`);
+    return shell(`<h3>${esc(t('fgTitle'))}</h3><p class="muted small">${esc(t('fgText'))}</p>
+      <form id="fgForm" style="display:flex;flex-direction:column;gap:10px"><label>${esc(t('nickLabel'))}<input id="fgLogin" autocomplete="username" autocapitalize="none" spellcheck="false" value="${esc(sheet.login||'')}"></label>
+      ${sheet.err?`<div class="neg small">${esc(sheet.err)}</div>`:''}
+      <button class="primary" type="submit" ${sheet.busy?'disabled':''}>${esc(sheet.busy?t('wait'):t('fgSend'))}</button></form>
+      <button class="ghost" data-close="1" id="sheetClose">${esc(t('close'))}</button>`);
+  }
+  if(sheet&&sheet.type==='newpw'){
+    return shell(`<h3>${esc(t('npTitle'))}</h3><p class="muted small">${esc(t('npText'))}</p>
+      <form id="npForm" style="display:flex;flex-direction:column;gap:10px"><label>${esc(t('pinNew'))}<input id="npPin" type="password" autocomplete="new-password" maxlength="40" placeholder="••••••••"></label>
+      ${sheet.err?`<div class="neg small">${esc(sheet.err)}</div>`:''}
+      <button class="primary" type="submit" ${sheet.busy?'disabled':''}>${esc(sheet.busy?t('wait'):t('npSave'))}</button></form>
+      <button class="ghost" type="button" id="npOut">${esc(t('logout'))}</button>`);
+  }
   if(lvlup!=null){
     const i=lvlup,l=L[i];
     return wrap(`<div class="eyebrow">${esc(t('lvNew'))}</div>${lvIcon(i,'big')}<h3 class="confetti">${esc(t('welcome',l.name))}</h3><p>${esc(t('lvText'))}</p>
@@ -680,6 +715,7 @@ function sheetHtml(){
 function render(){
   if(!configured){ app.innerHTML=`<div class="panel"><h2>${esc(t('setup'))}</h2><p class="muted">${esc(t('setupText'))}</p></div>`; return; }
   if(!cfg){ app.innerHTML=`<p class="muted">${esc(err||t('loading'))}</p>`; return; }
+  if(rec&&rec.mc&&!(sheet&&sheet.type==='newpw')){ sheet={type:'newpw',err:'',busy:false}; lvlup=null; }
   const mo0=document.querySelector('details.more'); if(mo0&&window.__prevRec) window.__moreOpen=mo0.open; window.__prevRec=!!rec; if(!rec) window.__moreOpen=undefined;
   const sh0=document.querySelector('.sheet'), sTop=sh0?sh0.scrollTop:0, y0=document.body.classList.contains('lock')?lockY:window.scrollY;
   const g=glamOn(), G=cfg.glam;
@@ -715,7 +751,7 @@ function render(){
     const k=b.dataset.sheet;
     sheet= k==='perks'?{type:'level',i:gcOf(rec).level}:{type:k};
     render(); const c=document.getElementById('sheetClose'); if(c) c.focus(); });
-  document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',e=>{ if(e.target===b){ if(sheet&&sheet.type==='wheel'&&sheet.phase==='spinning') return; const np=b.dataset.newperks; const bk0=sheet&&sheet.back; sheet=np!==undefined?{type:'level',i:+np}:(bk0||null); lvlup=null; if(!sheet) maybeAskPush(); render(); } }));
+  document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',e=>{ if(e.target===b){ if(sheet&&sheet.type==='newpw') return; if(sheet&&sheet.type==='wheel'&&sheet.phase==='spinning') return; const np=b.dataset.newperks; const bk0=sheet&&sheet.back; sheet=np!==undefined?{type:'level',i:+np}:(bk0||null); lvlup=null; if(!sheet) maybeAskPush(); render(); } }));
   const sh1=document.querySelector('.sheet'); if(sh1) sh1.scrollTop=sTop;
   /* пока открыто окно (sheet), страница под ним не прокручивается */
   const need=!!(sheet||lvlup!=null), locked=document.body.classList.contains('lock');
@@ -723,7 +759,7 @@ function render(){
   else if(!need&&locked){ document.body.classList.remove('lock'); document.body.style.top=''; window.scrollTo(0,lockY); }
   else if(!need&&!window.__keepScroll) window.scrollTo(0,y0);
 }
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&(sheet||lvlup!=null)&&!(sheet&&sheet.phase==='spinning')){ sheet=(sheet&&sheet.back)||null; lvlup=null; render(); } });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&(sheet||lvlup!=null)&&!(sheet&&(sheet.phase==='spinning'||sheet.type==='newpw'))){ sheet=(sheet&&sheet.back)||null; lvlup=null; render(); } });
 
 function checkLevelUp(){
   if(!rec||!glamOn()) return;
@@ -771,6 +807,7 @@ function accountBlock(){
         <label class="check"><input type="checkbox" id="aConsent"><span>${esc(t('consent'))}</span></label>`:''}
       <button class="primary" id="aSubmit" ${(busy||reg)?'disabled':''}>${esc(busy?t('wait'):(reg?t('btnRegister'):t('btnLogin')))}</button>
       ${authErr?`<div class="neg small">${esc(authErr)}</div>`:''}
+      ${reg?'':`<button class="link" type="button" id="fgOpen" style="align-self:flex-start">${esc(t('forgotLink'))}</button>`}
       <p class="muted small">${esc(reg?t('nickHintReg'):t('nickHint'))}</p>
       <p class="muted small">${esc(t('authHelp'))}</p>${helpLinks()}</form></div>`;
 }
@@ -807,6 +844,9 @@ function bindRef(){
   const pr=document.getElementById('pfRef');
   if(pr){ let tm=null; pr.addEventListener('input',()=>{ sheet.refErr=''; sheet.refOk=''; clearTimeout(tm); const v=pr.value.trim(); if(!v){ setMsg('pfRefMsg',null); return; } tm=setTimeout(()=>refCheck(v,s=>setMsg('pfRefMsg',s)),350); });
     const go=()=>applyRef(pr.value); document.getElementById('pfRefBtn').onclick=go; pr.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } }); }
+  const fo=document.getElementById('fgOpen'); if(fo) fo.onclick=()=>{ const l=document.getElementById('aLogin'); sheet={type:'forgot',login:l?l.value.trim():'',err:'',done:false}; render(); };
+  const ff=document.getElementById('fgForm'); if(ff) ff.addEventListener('submit',e=>{ e.preventDefault(); sendForgot(); });
+  const nf=document.getElementById('npForm'); if(nf){ nf.addEventListener('submit',e=>{ e.preventDefault(); saveNewPw(); }); const no=document.getElementById('npOut'); if(no) no.onclick=logout; }
   document.querySelectorAll('[data-tkgo]').forEach(b=>b.onclick=()=>{ const id=b.dataset.tkgo; if(id==='ref') { sheet={type:'profile',tab:'ref',msg:'',err:'',back:sheet}; render(); } else openClaim(id); });
   document.querySelectorAll('[data-tkback]').forEach(b=>b.onclick=()=>{ sheet=(sheet&&sheet.back)||null; render(); });
   const cf=document.getElementById('claimForm'); if(cf){ cf.addEventListener('submit',e=>{ e.preventDefault(); submitClaim(); }); const cu=document.getElementById('claimUrl'); cu.addEventListener('input',()=>{ sheet.url=cu.value; }); }
