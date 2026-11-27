@@ -171,8 +171,14 @@ details.more[open]>summary{margin-bottom:10px}
 .perks div:first-child{border-top:0}
 .perks b{text-align:right}
 ul.plain{margin:6px 0 0;padding-left:18px}
-.help-links{display:flex;flex-wrap:wrap;gap:8px}.ig-link{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border:1px solid var(--line);border-radius:99px;background:var(--surface);color:var(--accent);font-weight:600;font-size:14px;text-decoration:none}.ig-link svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.ig-link:hover{background:var(--pink);color:#3E2C29}
-.help-card{gap:10px}.help-card h2{margin:0}
+.help-links{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
+.ig-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:4px;padding:16px 10px;border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--fg);text-decoration:none;min-width:0}
+.ig-tile b{font-size:15px;overflow-wrap:anywhere}.ig-tile small{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.ig-ic{width:46px;height:46px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;margin-bottom:4px}
+.ig-ic svg{width:24px;height:24px;fill:none;stroke:#F3EDE7;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.ig-ic .dot{fill:#F3EDE7;stroke:none}
+.ig-cta{margin-top:8px;padding:6px 16px;border-radius:99px;background:var(--pink);color:#3E2C29;font-weight:700;font-size:13px}
+.ig-tile:hover .ig-cta{filter:brightness(.95)}
+.help-card{gap:10px;align-items:center;text-align:center}.help-card h2{margin:0}.help-card p{margin:0}
 .rules-sec{margin-top:16px}.rules-sec h4{margin:0 0 8px;font:600 15px/1.2 var(--display);letter-spacing:.04em;text-transform:uppercase;color:var(--accent)}
 .rules-sec ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
 .rules-sec li{position:relative;padding-left:18px;font-size:14px;line-height:1.45}
@@ -455,8 +461,9 @@ function rulesGroups(){
   return out;
 }
 const IG_STUDIO='https://www.instagram.com/beauty_garage_tln', IG_OLGA='https://www.instagram.com/olya.fren';
-const igLink=(u,l)=>`<a class="ig-link" href="${u}" target="_blank" rel="noopener noreferrer">${svg(I.ig)}<span>${esc(l)}</span></a>`;
-const helpLinks=()=>`<div class="help-links">${igLink(IG_STUDIO,t('helpStudio'))}${igLink(IG_OLGA,t('helpOlga'))}</div>`;
+const tx=(k,d)=>(T.ru[k]===undefined?d:t(k));
+const igLink=(u,name,handle)=>`<a class="ig-tile" href="${u}" target="_blank" rel="noopener noreferrer"><span class="ig-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" class="dot"/></svg></span><b>${esc(name)}</b><small>@${esc(handle)}</small><span class="ig-cta">${esc(tx('helpFollow','Подписаться'))}</span></a>`;
+const helpLinks=()=>`<div class="help-links">${igLink(IG_OLGA,tx('helpOlga','olya fren tattoo'),'olya.fren')}${igLink(IG_STUDIO,tx('helpStudio','Beauty Garage'),'beauty_garage_tln')}</div>`;
 const helpBlock=()=>`<div class="panel help-card"><h2>${esc(t('helpTitle'))}</h2><p class="muted small">${esc(t('helpText'))}</p>${helpLinks()}</div>`;
 const rulesHtml=()=>rulesGroups().map(([h,items])=>`<div class="rules-sec"><h4>${esc(h)}</h4><ul>${items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`).join('');
 function rulesList(){
