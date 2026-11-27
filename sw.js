@@ -30,7 +30,8 @@ self.addEventListener('push', (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (_) { d = { body: e.data ? e.data.text() : '' }; }
   const title = d.title || 'Beauty Garage';
-  try { if (self.navigator && self.navigator.setAppBadge) self.navigator.setAppBadge(1); } catch (_) { /* ignore */ }
+  // ежедневные послания приходят без красной точки (badge: 0)
+  try { if (d.badge !== 0 && self.navigator && self.navigator.setAppBadge) self.navigator.setAppBadge(1); } catch (_) { /* ignore */ }
   self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((l) => l.forEach((c) => c.postMessage({ type: 'push' }))).catch(() => {});
   e.waitUntil(self.registration.showNotification(title, {
     body: d.body || '',
