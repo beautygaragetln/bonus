@@ -986,14 +986,13 @@ function bindWheel(){
 }
 function autoWheel(){
   if(!rec||!rec.wheel||!rec.wheel.on||rec.wheel.spun||lvlup!=null||sheet) return;
-  let seen=false; try{ const k='bgWheel:'+rec.login; seen=sessionStorage.getItem(k)==='1'; sessionStorage.setItem(k,'1'); }catch(e){}
+  let seen=false; try{ const k='bgWheel:'+rec.login; seen=!WHEEL_TEST&&sessionStorage.getItem(k)==='1'; sessionStorage.setItem(k,'1'); }catch(e){}
   if(!seen) sheet={type:'wheel',phase:'idle',rot:0,err:''};
 }
 function wheelCards(r){
   const W=r.wheel; if(!W) return '';
   if(W.win){ if(W.win.exp<Date.now()&&!W.win.used) return '';
     return `<div class="gift-card${W.win.used?' used':''}">${svg(I.gift)}<span><small>${esc(t('whGiftTitle'))}</small><b>${esc(lbl(W.win.label))}</b><small>${esc(W.win.used?t('whUsed'):t('whValid',fmtDate(W.win.exp)))}</small></span></div>`; }
-  if(W.on) return `<button class="wheel-card" data-act="wheel">${svg(I.gift)}<span><b>${esc(t('whCardTitle'))}</b><small>${esc(t('whCardSub'))}</small></span><span class="chev">›</span></button>`;
   return '';
 }
 
