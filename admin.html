@@ -184,6 +184,13 @@ h1,.it{font-style:normal}
 .tx-row textarea{min-height:44px}
 .tx-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .mod{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-left:6px}
+.pick-box{flex-direction:column;gap:8px;border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--surface)}
+.pick-list{max-height:260px;overflow:auto;display:flex;flex-direction:column;gap:2px;border-top:1px solid var(--line);padding-top:6px}
+.pick-row{padding:6px 4px;border-radius:8px}.pick-row:hover{background:rgba(0,0,0,.04)}
+.emoji-bar{display:flex;flex-wrap:wrap;gap:4px}.emoji-bar button{padding:4px 8px;font-size:18px;line-height:1;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.daily-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;align-items:center}
+@media (max-width:640px){.daily-row{grid-template-columns:1fr}}
+.wrow{border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px}
 </style>
 </head>
 <body>
@@ -643,13 +650,13 @@ function collectGlam(){
 function render(){
   const y=scrollY, ae=document.activeElement, fid=ae&&ae.id, pos=ae&&ae.selectionStart;
   const inList=view==='list';
-  $app.innerHTML=`<header><h1>Beauty Garage: админка</h1><button class="ghost" id="logout">Выйти</button>${inList?`<div class="tabs" style="width:100%;order:3"><button data-tab="clients" class="${tab==='clients'?'on':''}">Клиентки</button><button data-tab="bookings" class="${tab==='bookings'?'on':''}">Записи${pendingCount()?`<span class="badge">${pendingCount()}</span>`:''}</button><button data-tab="schedule" class="${tab==='schedule'?'on':''}">Расписание</button><button data-tab="push" class="${tab==='push'?'on':''}">Уведомления</button><button data-tab="settings" class="${tab==='settings'?'on':''}">Условия</button><button data-tab="settle" class="${tab==='settle'?'on':''}">Взаиморасчёты</button><button data-tab="glam" class="${tab==='glam'?'on':''}">Glam Levels</button><button data-tab="texts" class="${tab==='texts'?'on':''}">Тексты</button><button data-tab="data" class="${tab==='data'?'on':''}">Данные</button></div>`:''}</header>`
-   + (view==='detail'&&cur() ? detailView(cur()) : tab==='bookings' ? bookingsView() : tab==='schedule' ? scheduleView() : tab==='push' ? pushView() : tab==='settings' ? settingsView() : tab==='glam' ? glamView() : tab==='settle' ? settleView() : tab==='texts' ? textsView() : tab==='data' ? dataView() : (view='list',listView()));
+  $app.innerHTML=`<header><h1>Beauty Garage: админка</h1><button class="ghost" id="logout">Выйти</button>${inList?`<div class="tabs" style="width:100%;order:3"><button data-tab="clients" class="${tab==='clients'?'on':''}">Клиентки</button><button data-tab="bookings" class="${tab==='bookings'?'on':''}">Записи${pendingCount()?`<span class="badge">${pendingCount()}</span>`:''}</button><button data-tab="schedule" class="${tab==='schedule'?'on':''}">Расписание</button><button data-tab="push" class="${tab==='push'?'on':''}">Уведомления</button><button data-tab="wheel" class="${tab==='wheel'?'on':''}">Колесо</button><button data-tab="settings" class="${tab==='settings'?'on':''}">Условия</button><button data-tab="settle" class="${tab==='settle'?'on':''}">Взаиморасчёты</button><button data-tab="glam" class="${tab==='glam'?'on':''}">Glam Levels</button><button data-tab="texts" class="${tab==='texts'?'on':''}">Тексты</button><button data-tab="data" class="${tab==='data'?'on':''}">Данные</button></div>`:''}</header>`
+   + (view==='detail'&&cur() ? detailView(cur()) : tab==='bookings' ? bookingsView() : tab==='schedule' ? scheduleView() : tab==='push' ? pushView() : tab==='wheel' ? wheelView() : tab==='settings' ? settingsView() : tab==='glam' ? glamView() : tab==='settle' ? settleView() : tab==='texts' ? textsView() : tab==='data' ? dataView() : (view='list',listView()));
   accordionize(); bind(); scrollTo(0,y);
   if(fid){ const e=document.getElementById(fid); if(e){ e.focus(); try{e.setSelectionRange(pos,pos)}catch(_){} } }
 }
 function bind(){
-  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab; if(tab!=='settings') draft=null; if(tab!=='glam') gdraft=null; if(tab!=='schedule') S.schedDraft=null; if(tab==='bookings'||tab==='schedule') view='list'; if(tab==='settle') loadSettle(); render();});
+  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab; if(tab!=='settings') draft=null; if(tab!=='glam') gdraft=null; if(tab!=='schedule') S.schedDraft=null; if(tab==='bookings'||tab==='schedule') view='list'; if(tab==='settle') loadSettle(); if(tab==='wheel') loadWheel(); render();});
   document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{openId=b.dataset.open;view='detail';S.vIdem=null;render();scrollTo(0,0);loadRw(openId).then(()=>{ const c=cur(); if(c) checkLevelBonuses(c); });});
   document.querySelectorAll('[data-delact]').forEach(b=>b.onclick=()=>{collectCfg();draft.actions.splice(+b.dataset.delact,1);render();});
   on('#back','click',()=>{view='list';render();});
@@ -664,7 +671,7 @@ function bind(){
   on('#cfgForm','submit',saveCfg); on('#bakJson','click',backupJson); on('#bakCsv','click',backupCsv); on('#expClient','click',()=>{const c=cur(); if(c) exportClient(c);}); on('#glamForm','submit',saveGlam);
   on('#addAct','click',()=>{collectCfg();draft.actions.push({id:uid(),title:'Новое действие',type:'eur',val:2});render();});
   on('#del','click',e=>{ if(e.target.dataset.sure){ del(); } else { e.target.dataset.sure=1; e.target.textContent='Нажмите ещё раз, чтобы удалить'; e.target.style.color='var(--bad)'; } });
-  bindBook(); bindPushAdmin(); bindTexts();
+  bindBook(); bindPushAdmin(); bindWheelAdmin(); bindTexts();
   on('#logout','click',async()=>{ await sb.auth.signOut(); location.reload(); });
 }
 
@@ -769,7 +776,7 @@ function saveCfg(e){
   const ms=draft.rewards.milestones; if(ms.some(m=>!(m.n>=1))||new Set(ms.map(m=>m.n)).size!==ms.length){ toast('Milestones: число визитов должно быть уникальным'); return; }
   if(draft.rewards.coupons.some(x=>x>draft.rewards.maxPerVisit)){ toast('Купон не может быть больше максимума за визит'); return; }
   draft.rewards.milestones=ms.slice().sort((a,b)=>a.n-b.n);
-  S.cfg={...draft,glam:S.cfg.glam,booking:S.cfg.booking,push:S.cfg.push,texts:S.cfg.texts,svcNames:S.cfg.svcNames}; draft=null; persist(); toast('Условия сохранены'); render();
+  S.cfg={...draft,wheel:S.cfg.wheel,glam:S.cfg.glam,booking:S.cfg.booking,push:S.cfg.push,texts:S.cfg.texts,svcNames:S.cfg.svcNames}; draft=null; persist(); toast('Условия сохранены'); render();
 }
 function saveGlam(e){
   e.preventDefault(); collectGlam();
@@ -959,11 +966,88 @@ async function setAdminMaster(email,master){
   toast('Сохранено'); render();
 }
 
+/* ---------- Колесо фортуны ---------- */
+S.wPrizes=null; S.wSpins=[]; S.wDraft=null;
+const DEF_WHEEL={enabled:true,from:'2026-12-01',to:'2027-01-06',validDays:30};
+const WL=o=>(o&&(o.ru||''))||'';
+async function loadWheel(){
+  const [p,sp]=await Promise.all([sb.from('wheel_prizes').select('*').order('sort').order('id'),sb.from('wheel_spins').select('*').order('ts',{ascending:false})]);
+  if(p.error){ S.wErr=true; render(); return; }
+  S.wErr=false; S.wPrizes=p.data||[]; S.wSpins=sp.data||[]; S.wDraft=null; if(tab==='wheel') render();
+}
+function wheelView(){
+  if(S.wErr) return `<div class="panel"><h2>Колесо фортуны</h2><p class="neg">Таблицы колеса ещё не созданы.</p><p class="muted">Выполните в Supabase (SQL Editor) скрипт migration-engage.sql и обновите страницу.</p></div>`;
+  if(!S.wPrizes) return '<div class="panel"><h2>Колесо фортуны</h2><p class="muted">Загрузка…</p></div>';
+  const W={...DEF_WHEEL,...(S.cfg.wheel||{})}, rows=S.wDraft||S.wPrizes, total=rows.reduce((a,r)=>a+(r.active!==false&&+r.weight>0&&(r.stock==null||r.won<r.stock)?+r.weight:0),0);
+  const used=S.wSpins.filter(x=>x.used).length;
+  return `<div class="panel"><h2>Колесо фортуны: настройки</h2>
+    <form id="wcfgForm" class="grid">
+      <label class="check" style="align-self:end"><input type="checkbox" id="wOn" ${W.enabled?'checked':''}><span>Колесо включено</span></label>
+      <label>Работает с<input id="wFrom" type="date" value="${esc(W.from||'')}"></label>
+      <label>Работает по (включительно)<input id="wTo" type="date" value="${esc(W.to||'')}"></label>
+      <label>Подарок действует, дней<input id="wDays" type="number" min="1" max="365" value="${+W.validDays||30}"></label>
+      <button class="primary" style="align-self:end">Сохранить</button></form>
+    <p class="muted small">Каждая клиентка может крутить колесо один раз. Когда она открывает приложение в эти даты, колесо предлагается само. Выигрыш появляется у неё на главной с датой окончания, а у вас здесь в списке: после использования нажмите «Отметить использованным». Результат выбирает сервер, подделать его на телефоне нельзя.</p></div>
+  <div class="panel"><h2>Призы колеса</h2>
+    <p class="muted small">Шанс приза = его вес относительно суммы весов (сейчас сумма доступных: ${total}). «Лимит» — сколько раз приз можно выиграть всего, пусто = без ограничений. Крупные призы с лимитом 1 выпадут только один раз.</p>
+    <form id="wprForm" style="display:flex;flex-direction:column;gap:10px">
+      ${rows.map((r,i)=>`<div class="wrow">
+        <div class="grid"><label>На секторе (RU)<input data-w="short" data-i="${i}" value="${esc(WL(r.short))}" maxlength="14"></label>
+          <label>Приз RU<input data-w="ru" data-i="${i}" value="${esc(WL(r.label))}" maxlength="120"></label>
+          <label>Prize EN<input data-w="en" data-i="${i}" value="${esc((r.label||{}).en||'')}" maxlength="120"></label>
+          <label>Auhind ET<input data-w="et" data-i="${i}" value="${esc((r.label||{}).et||'')}" maxlength="120"></label>
+          <label>Вес<input data-w="weight" data-i="${i}" type="number" min="0" step="1" value="${+r.weight||0}"></label>
+          <label>Лимит<input data-w="stock" data-i="${i}" type="number" min="1" step="1" value="${r.stock==null?'':r.stock}" placeholder="∞"></label></div>
+        <div class="actions"><span class="muted small">Выпало: ${+r.won||0}${r.stock!=null?' из '+r.stock:''}</span><label class="check"><input type="checkbox" data-w="active" data-i="${i}" ${r.active!==false?'checked':''}><span>на колесе</span></label>${(+r.won||0)===0?`<button type="button" class="ghost" data-delw="${i}">Удалить</button>`:''}</div></div>`).join('')}
+      <div class="actions"><button type="button" id="wAdd">+ Добавить приз</button><button class="primary">Сохранить призы</button></div>
+      <div class="hint" id="wRes" style="display:none"></div></form></div>
+  <div class="panel"><h2>Кто выиграл (${S.wSpins.length}, использовано ${used})</h2>
+    ${S.wSpins.length?S.wSpins.map(x=>`<div class="bk"><div class="top"><span><b>${esc(cname(x.client_id))}</b></span><span class="pill ${x.used?'solid':''}">${x.used?'использован':(new Date(x.expires_at)<new Date()?'истёк':'ждёт')}</span></div>
+      <div class="muted small">${esc(WL(x.label))} · выпал ${new Date(x.ts).toLocaleDateString(LOCALE)} · до ${new Date(x.expires_at).toLocaleDateString(LOCALE)}</div>
+      <div class="actions"><button class="ghost" data-wuse="${esc(x.client_id)}" data-v="${x.used?0:1}">${x.used?'Вернуть в «ждёт»':'Отметить использованным'}</button></div></div>`).join(''):'<p class="muted">Пока никто не крутил.</p>'}</div>`;
+}
+function collectWheelRows(){
+  const rows=(S.wDraft||S.wPrizes||[]).map(r=>({...r,label:{...(r.label||{})},short:{...(r.short||{})}}));
+  document.querySelectorAll('[data-w]').forEach(el=>{ const r=rows[+el.dataset.i]; if(!r) return; const f=el.dataset.w;
+    if(f==='short'){ r.short={ru:el.value.trim(),en:el.value.trim(),et:el.value.trim()}; }
+    else if(f==='ru'||f==='en'||f==='et') r.label[f]=el.value.trim();
+    else if(f==='weight') r.weight=Math.max(0,Math.floor(+el.value||0));
+    else if(f==='stock') r.stock=el.value===''?null:Math.max(1,Math.floor(+el.value));
+    else if(f==='active') r.active=el.checked; });
+  return rows;
+}
+function bindWheelAdmin(){
+  on('#wcfgForm','submit',e=>{ e.preventDefault(); S.cfg={...S.cfg,wheel:{enabled:$('#wOn').checked,from:$('#wFrom').value,to:$('#wTo').value,validDays:Math.min(365,Math.max(1,Math.floor(+$('#wDays').value||30)))}}; persist(); toast('Настройки колеса сохранены'); render(); });
+  on('#wAdd','click',()=>{ const rows=collectWheelRows(); rows.push({id:null,label:{ru:'',en:'',et:''},short:{ru:'',en:'',et:''},weight:1,stock:null,won:0,active:true}); S.wDraft=rows; render(); });
+  document.querySelectorAll('[data-delw]').forEach(b=>b.onclick=()=>{ const rows=collectWheelRows(); rows.splice(+b.dataset.delw,1); S.wDraft=rows; render(); });
+  on('#wprForm','submit',async e=>{ e.preventDefault(); const rows=collectWheelRows();
+    if(rows.some(r=>!r.label.ru||!r.short.ru)){ showRes('wRes','У каждого приза нужны подпись на секторе и русский текст.'); return; }
+    if(!rows.some(r=>r.active&&r.weight>0)){ showRes('wRes','На колесе должен быть хотя бы один приз с весом больше нуля.'); return; }
+    const keep=new Set(rows.filter(r=>r.id).map(r=>r.id)), del=(S.wPrizes||[]).filter(r=>!keep.has(r.id)).map(r=>r.id);
+    try{
+      if(del.length){ const d=await sb.from('wheel_prizes').delete().in('id',del); if(d.error) throw d.error; }
+      for(let i=0;i<rows.length;i++){ const r=rows[i], row={sort:i+1,label:{ru:r.label.ru,en:r.label.en||r.label.ru,et:r.label.et||r.label.ru},short:r.short,weight:r.weight,stock:r.stock,active:r.active};
+        const q=r.id?await sb.from('wheel_prizes').update(row).eq('id',r.id):await sb.from('wheel_prizes').insert(row); if(q.error) throw q.error; }
+      toast('Призы сохранены'); await loadWheel();
+    }catch(err){ showRes('wRes','Не удалось сохранить: '+(err.message||err)); } });
+  document.querySelectorAll('[data-wuse]').forEach(b=>b.onclick=async()=>{ const {data,error}=await sb.rpc('admin_wheel_use',{p_client:b.dataset.wuse,p_used:b.dataset.v==='1'}); if(error||!data||data.error){ toast('Не удалось'); return; } await loadWheel(); });
+}
+
 /* ---------- push-уведомления ---------- */
-const DEF_PUSH={clientUI:false,auto:false,dry:true,quietFrom:'21:00',quietTo:'09:00',remindHours:24,bdayHour:10,midweekDay:1,midweekHour:11,
+const DEF_DAILY={enabled:true,slots:['11:11','12:12','13:13','14:14','15:15','16:16','17:17','18:18','19:19','20:02','20:20'],msgs:[
+  {ru:'Ты всегда найдёшь выход',en:'You will always find a way out',et:'Sa leiad alati väljapääsu'},
+  {ru:'Как может быть ещё лучше?',en:'How could it be even better?',et:'Kuidas võiks veel paremini olla?'},
+  {ru:'Цени свои маленькие победы',en:'Celebrate your small wins',et:'Hinda oma väikeseid võite'},
+  {ru:'Каждый день я создаю жизнь своей мечты',en:'Every day I create the life of my dreams',et:'Iga päev loon oma unistuste elu'},
+  {ru:'Всё имеет смысл',en:'Everything has a meaning',et:'Kõigel on mõte'},
+  {ru:'Ты есть любовь',en:'You are love',et:'Sa oled armastus'},
+  {ru:'Всё точно сложится',en:'Everything will definitely work out',et:'Kõik laabub kindlasti'},
+  {ru:'Освободи место для нового',en:'Make room for the new',et:'Tee ruumi uuele'},
+  {ru:'Украшай свою жизнь самостоятельно',en:'Decorate your life yourself',et:'Kaunista oma elu ise'}]};
+const DEF_PUSH={clientUI:false,auto:false,dry:true,daily:DEF_DAILY,quietFrom:'21:00',quietTo:'09:00',remindHours:24,bdayHour:10,midweekDay:1,midweekHour:11,
   rules:{booking:true,birthday:true,expiry:true,level:true,midweek:true},
   midweekText:{ru:'Midweek Glam: на этой неделе есть свободные окошки в будни ({n}). Выберите время в приложении.',en:'Midweek Glam: there are free weekday slots this week ({n}). Pick a time in the app.',et:'Midweek Glam: sel nädalal on tööpäevadel vabu aegu ({n}). Vali aeg rakenduses.'}};
-function mergePush(p){ p=p||{}; return {...DEF_PUSH,...p,rules:{...DEF_PUSH.rules,...(p.rules||{})},midweekText:{...DEF_PUSH.midweekText,...(p.midweekText||{})}}; }
+function mergePush(p){ p=p||{}; const d=p.daily||{}; return {...DEF_PUSH,...p,daily:{...DEF_DAILY,...d,msgs:(d.msgs&&d.msgs.length)?d.msgs:DEF_DAILY.msgs},rules:{...DEF_PUSH.rules,...(p.rules||{})},midweekText:{...DEF_PUSH.midweekText,...(p.midweekText||{})}}; }
 async function fn(body){
   const {data,error}=await sb.functions.invoke('push',{body});
   if(error){ let m=error.message||'ошибка'; try{ const j=await error.context.json(); m=j.error||m; }catch(_){} throw new Error(m); }
@@ -971,7 +1055,7 @@ async function fn(body){
   return data;
 }
 function pushKick(){ if(S.cfg.push&&S.cfg.push.auto&&S.pushKey){ fn({action:'cron'}).catch(()=>{}); } }
-const PKIND={test:'Тест',manual_urgent:'Срочное',manual_promo:'Новости',booking:'Запись',birthday:'День рождения',expiry7:'Баллы GP (7 дн.)',expiry1:'Баллы GP (1 дн.)',couponExp:'Купон истекает',reward:'Баллы GP',referral:'Подруга пришла',milestone:'Milestone',levelUp:'Level Up',levelDown:'Level Down',remind:'60 дней без визита',warn:'Уровень под угрозой',midweek:'Midweek Glam'};
+const PKIND={daily:'Послание дня',test:'Тест',manual_urgent:'Срочное',manual_promo:'Новости',booking:'Запись',birthday:'День рождения',expiry7:'Баллы GP (7 дн.)',expiry1:'Баллы GP (1 дн.)',couponExp:'Купон истекает',reward:'Баллы GP',referral:'Подруга пришла',milestone:'Milestone',levelUp:'Level Up',levelDown:'Level Down',remind:'60 дней без визита',warn:'Уровень под угрозой',midweek:'Midweek Glam'};
 const cronSql=()=>`create extension if not exists pg_cron;
 create extension if not exists pg_net with schema extensions;
 select cron.unschedule(jobid) from cron.job where jobname = 'glam-push';
@@ -980,6 +1064,14 @@ select cron.schedule('glam-push', '5 * * * *', $$
     url := '${String(window.SUPABASE_URL).replace(/\/$/,'')}/functions/v1/push',
     headers := jsonb_build_object('Content-Type', 'application/json', 'x-cron-secret', (select cron_secret from public.push_private where id = 1)),
     body := '{"action":"cron"}'::jsonb
+  );
+$$);
+select cron.unschedule(jobid) from cron.job where jobname = 'glam-push-daily';
+select cron.schedule('glam-push-daily', '* 7-19 * * *', $$
+  select net.http_post(
+    url := '${String(window.SUPABASE_URL).replace(/\/$/,'')}/functions/v1/push',
+    headers := jsonb_build_object('Content-Type', 'application/json', 'x-cron-secret', (select cron_secret from public.push_private where id = 1)),
+    body := '{"action":"daily"}'::jsonb
   );
 $$);`;
 function pushView(){
@@ -993,17 +1085,21 @@ function pushView(){
     <p class="muted small">Клиентки включают уведомления сами: в приложении Beauty Garage, после установки на телефон.</p></div>
   <div class="panel"><h2>Отправить сейчас</h2>
     <form id="pushForm" style="display:flex;flex-direction:column;gap:12px">
-      <div class="grid"><label>Кому<select id="pAud"><option value="all">Всем подписанным</option>${L.map((l,i)=>i?`<option value="lvl${i}">Уровень ${esc(l.name)} и выше</option>`:'').join('')}<option value="one">Одной клиентке</option></select></label>
-      <label>Клиентка<select id="pOne">${byName(S.clients).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></label>
+      <div class="grid"><label>Кому<select id="pAud"><option value="all">Всем подписанным</option>${L.map((l,i)=>i?`<option value="lvl${i}">Уровень ${esc(l.name)} и выше</option>`:'').join('')}<option value="pick" ${S.pAudPick?'selected':''}>Выбрать клиенток…</option></select></label>
       <label>Тип<select id="pCat"><option value="urgent">Срочное (получат все подписанные)</option><option value="promo">Новости и акции (только согласившиеся)</option></select></label></div>
-      <label>Заголовок<input id="pTitle" maxlength="80" required autocomplete="off" placeholder="Например: Студия закрыта сегодня"></label>
-      <label>Текст<textarea id="pText" maxlength="220" required rows="3" placeholder="Коротко и без личных данных"></textarea></label>
+      <div id="pPickBox" class="pick-box" style="display:${S.pAudPick?'flex':'none'}">
+        <input id="pPickQ" type="search" placeholder="Поиск по имени, нику или телефону" autocomplete="off">
+        <div class="actions"><button type="button" id="pPickAll">Выбрать всех (с push)</button><button type="button" id="pPickNone">Снять выбор</button><span id="pPickCnt" class="muted small"></span></div>
+        <div id="pPickList" class="pick-list"></div></div>
+      <div class="emoji-bar" aria-label="Эмодзи">${EMOJIS.map(e=>`<button type="button" data-emoji="${e}">${e}</button>`).join('')}</div>
+      <label>Заголовок<input id="pTitle" data-emo="1" maxlength="80" required autocomplete="off" placeholder="Например: Студия закрыта сегодня"></label>
+      <label>Текст<textarea id="pText" data-emo="1" maxlength="220" required rows="3" placeholder="Коротко и без личных данных. Можно добавить эмодзи ✨"></textarea></label>
       <details><summary class="muted small">Перевод на английский и эстонский (необязательно)</summary>
-        <div class="grid"><label>Title EN<input id="pTitleEn" maxlength="80"></label><label>Text EN<textarea id="pTextEn" maxlength="220" rows="2"></textarea></label>
-        <label>Pealkiri ET<input id="pTitleEt" maxlength="80"></label><label>Tekst ET<textarea id="pTextEt" maxlength="220" rows="2"></textarea></label></div></details>
+        <div class="grid"><label>Title EN<input id="pTitleEn" data-emo="1" maxlength="80"></label><label>Text EN<textarea id="pTextEn" data-emo="1" maxlength="220" rows="2"></textarea></label>
+        <label>Pealkiri ET<input id="pTitleEt" data-emo="1" maxlength="80"></label><label>Tekst ET<textarea id="pTextEt" data-emo="1" maxlength="220" rows="2"></textarea></label></div></details>
       <div class="actions"><button type="button" id="pPreview">Проверить охват</button><button class="primary">Отправить</button></div>
       <div class="hint" id="pRes" style="display:none"></div></form>
-    <p class="muted small">Не указывайте суммы и личные данные: текст виден на заблокированном экране. Если перевода нет, отправится русский текст.</p></div>
+    <p class="muted small">Не указывайте суммы и личные данные: текст виден на заблокированном экране. Каждая клиентка получит уведомление на языке, который она выбрала в приложении. Если перевода нет, отправится русский текст.</p></div>
   <div class="panel"><h2>Автоматические уведомления</h2>
     <form id="pcfgForm" style="display:flex;flex-direction:column;gap:12px">
       ${chk('qUI',P.clientUI,'Показывать клиенткам блок «Уведомления» в приложении')}
@@ -1021,8 +1117,21 @@ function pushView(){
       <div class="actions"><button class="primary">Сохранить</button><button type="button" id="pDryRun">Пробный прогон сейчас</button></div>
       <div class="hint" id="pCronRes" style="display:none"></div></form>
     <p class="muted small">Не более 2 автоматических уведомлений в сутки на клиентку. Уведомления об изменении уровня и бонусах отправляются только если включён Glam Levels и срок бонусов.</p></div>
+  <div class="panel"><h2>Ежедневные послания</h2>
+    <form id="dailyForm" style="display:flex;flex-direction:column;gap:12px">
+      ${chk('dEnabled',P.daily.enabled,'Отправлять ежедневные послания')}
+      <label>Время отправки (зеркальное), через запятую<input id="dSlots" value="${esc(P.daily.slots.join(', '))}" autocomplete="off"></label>
+      <p class="muted small">Каждый день случайно выбирается одно из этих времён (по Таллину), и в это время всем подписанным уходит послание дня. Клиентка сама выбирает в приложении: каждый день, 3 раза в неделю (пн, ср, пт) или не присылать. Послания идут по очереди и повторяются по кругу.</p>
+      <div class="emoji-bar">${EMOJIS.map(e=>`<button type="button" data-emoji="${e}">${e}</button>`).join('')}</div>
+      <div class="sub">Фразы: RU / EN / ET (если перевода нет, отправится русский)</div>
+      ${P.daily.msgs.map((m,i)=>`<div class="daily-row"><input data-dm="ru" data-i="${i}" data-emo="1" maxlength="200" value="${esc(m.ru||'')}" placeholder="RU"><input data-dm="en" data-i="${i}" data-emo="1" maxlength="200" value="${esc(m.en||'')}" placeholder="EN"><input data-dm="et" data-i="${i}" data-emo="1" maxlength="200" value="${esc(m.et||'')}" placeholder="ET"><button type="button" class="ghost" data-deldm="${i}" aria-label="Удалить">✕</button></div>`).join('')}
+      <div class="actions"><button type="button" id="dAdd">+ Добавить фразу</button><button class="primary">Сохранить</button></div>
+      <div class="grid"><label>Пробное послание клиентке<select id="dTestClient">${byName(S.clients.filter(c=>S.psubs.some(x=>x.client_id===c.id))).map(c=>`<option value="${esc(c.id)}">${esc(c.name)} (@${esc(c.login)})</option>`).join('')||'<option value="">нет подписанных</option>'}</select></label>
+        <label>Какое${''}<select id="dTestMsg">${P.daily.msgs.map((m,i)=>`<option value="${i}">${esc((m.ru||'').slice(0,40))}</option>`).join('')}</select></label>
+        <button type="button" id="dTest" style="align-self:end">Отправить пробное</button></div>
+      <div class="hint" id="dRes" style="display:none"></div></form></div>
   <div class="panel"><h2>Расписание запуска</h2>
-    <p class="muted">Чтобы автоматика работала сама, один раз выполните этот запрос в Supabase (SQL Editor): он запускает проверку каждый час.</p>
+    <p class="muted">Чтобы автоматика и ежедневные послания работали сами, один раз выполните этот запрос в Supabase (SQL Editor): он запускает проверку каждый час и каждую минуту днём для посланий.</p>
     <div class="mono" style="white-space:pre-wrap">${esc(cronSql())}</div><div class="actions"><button id="copyCron">Скопировать запрос</button></div></div>
   <div class="panel"><h2>Журнал</h2>${S.plog.length?S.plog.map(l=>`<div class="bk"><div class="top"><span><b>${esc(PKIND[l.kind]||l.kind)}</b> · ${esc(cname(l.client_id))}</span><span class="pill ${l.status==='dry'?'dash':''}">${esc(l.status==='dry'?'пробно':l.status==='failed'?'не доставлено':'отправлено')}</span></div><div class="muted small">${esc(l.title)}: ${esc(l.body)} · ${new Date(l.created_at).toLocaleString(LOCALE)}</div></div>`).join(''):'<p class="muted">Пока пусто.</p>'}</div>`;
 }
@@ -1030,9 +1139,31 @@ async function refreshPush(){
   const [ps,pl,pc]=await Promise.all([sb.from('push_subs').select('id,client_id,lang,enabled,last_ok,created_at,ua'),sb.from('push_log').select('*').order('created_at',{ascending:false}).limit(40),sb.rpc('push_config')]);
   if(!ps.error) S.psubs=ps.data||[]; if(!pl.error) S.plog=pl.data||[]; S.pushKey=!!(pc.data&&pc.data.key);
 }
+const EMOJIS=['✨','💖','🌸','🎄','🎁','❄️','🔥','🥰','💅','💄','🌟','🎉','🤍','🎀','☀️','🙌','💋','🫶','⭐','🌷'];
+S.pPick=S.pPick||new Set(); S.pQ='';
+function pickRows(){ const q=(S.pQ||'').toLowerCase().trim(), has=new Set(S.psubs.map(x=>x.client_id));
+  return byName(S.clients).filter(c=>!q||(c.name+' '+c.login+' '+(c.phone||'')).toLowerCase().includes(q)).map(c=>({c,has:has.has(c.id)})); }
+function drawPick(){
+  const box=$('#pPickList'); if(!box) return; const rows=pickRows();
+  box.innerHTML=rows.length?rows.map(({c,has})=>`<label class="check pick-row"><input type="checkbox" data-pk="${esc(c.id)}" ${S.pPick.has(c.id)?'checked':''}><span>${esc(c.name)} <span class="muted small">@${esc(c.login)}${has?'':' · нет push'}</span></span></label>`).join(''):'<p class="muted small">Никого не найдено.</p>';
+  const n=[...S.pPick].filter(id=>S.clients.some(c=>c.id===id)).length; const e=$('#pPickCnt'); if(e) e.textContent='Выбрано: '+n;
+}
+function insertEmoji(em){
+  let el=S.lastEmo&&document.body.contains(S.lastEmo)?S.lastEmo:$('#pText'); if(!el) return;
+  const a=el.selectionStart==null?el.value.length:el.selectionStart, b=el.selectionEnd==null?a:el.selectionEnd;
+  el.value=el.value.slice(0,a)+em+el.value.slice(b); const p=a+em.length; try{ el.setSelectionRange(p,p); }catch(_){} el.focus(); el.dispatchEvent(new Event('input',{bubbles:true}));
+}
+function collectDaily(){
+  const P=mergePush(S.cfg.push), D={...P.daily};
+  D.enabled=!!($('#dEnabled')&&$('#dEnabled').checked);
+  if($('#dSlots')) D.slots=$('#dSlots').value.split(/[\s,;]+/).map(x=>x.trim()).filter(Boolean);
+  const rows={}; document.querySelectorAll('[data-dm]').forEach(el=>{ (rows[el.dataset.i]=rows[el.dataset.i]||{})[el.dataset.dm]=el.value.trim(); });
+  if(Object.keys(rows).length) D.msgs=Object.keys(rows).sort((a,b)=>a-b).map(k=>rows[k]);
+  return D;
+}
 function pushPayload(){
   const v=id=>($('#'+id)?$('#'+id).value.trim():''), a=$('#pAud').value;
-  const aud=a==='all'?{type:'all'}:a==='one'?{type:'client',client_id:$('#pOne').value}:{type:'level',level:+a.slice(3)};
+  const aud=a==='all'?{type:'all'}:a==='pick'?{type:'clients',ids:[...S.pPick].filter(id=>S.clients.some(c=>c.id===id))}:{type:'level',level:+a.slice(3)};
   return {action:'send',audience:aud,category:$('#pCat').value,title:{ru:v('pTitle'),en:v('pTitleEn'),et:v('pTitleEt')},text:{ru:v('pText'),en:v('pTextEn'),et:v('pTextEt')}};
 }
 function collectPush(){
@@ -1046,10 +1177,26 @@ function collectPush(){
 }
 function showRes(id,t){ const e=$('#'+id); if(e){ e.style.display='block'; e.textContent=t; } }
 function bindPushAdmin(){
+  document.addEventListener('focusin',function f(e){ if(e.target&&e.target.dataset&&e.target.dataset.emo) S.lastEmo=e.target; },{once:false});
+  document.querySelectorAll('[data-emoji]').forEach(b=>{ b.onmousedown=e=>e.preventDefault(); b.onclick=()=>insertEmoji(b.dataset.emoji); });
+  const pa=$('#pAud'); if(pa){ const sync=()=>{ S.pAudPick=pa.value==='pick'; const bx=$('#pPickBox'); if(bx) bx.style.display=S.pAudPick?'flex':'none'; if(S.pAudPick) drawPick(); }; pa.onchange=sync; sync();
+    on('#pPickQ','input',e=>{ S.pQ=e.target.value; drawPick(); });
+    on('#pPickAll','click',()=>{ const has=new Set(S.psubs.map(x=>x.client_id)); pickRows().forEach(({c})=>{ if(has.has(c.id)) S.pPick.add(c.id); }); drawPick(); });
+    on('#pPickNone','click',()=>{ S.pPick.clear(); drawPick(); });
+    const pl=$('#pPickList'); if(pl) pl.onchange=e=>{ const id=e.target.dataset&&e.target.dataset.pk; if(!id) return; if(e.target.checked) S.pPick.add(id); else S.pPick.delete(id); drawPick(); }; }
+  on('#dAdd','click',()=>{ const D=collectDaily(); D.msgs.push({ru:'',en:'',et:''}); S.cfg={...S.cfg,push:{...mergePush(S.cfg.push),daily:D}}; render(); });
+  document.querySelectorAll('[data-deldm]').forEach(b=>b.onclick=()=>{ const D=collectDaily(); D.msgs.splice(+b.dataset.deldm,1); S.cfg={...S.cfg,push:{...mergePush(S.cfg.push),daily:D}}; render(); });
+  on('#dailyForm','submit',e=>{ e.preventDefault(); const D=collectDaily();
+    const slots=[...new Set(D.slots.map(x=>{ const m=/^(\d{1,2}):(\d{2})$/.exec(x); if(!m||+m[1]>23||+m[2]>59) return null; return String(+m[1]).padStart(2,'0')+':'+m[2]; }).filter(Boolean))].sort();
+    const msgs=D.msgs.filter(m=>m.ru); if(!slots.length){ showRes('dRes','Укажите хотя бы одно время, например 11:11'); return; } if(!msgs.length){ showRes('dRes','Добавьте хотя бы одну фразу'); return; }
+    S.cfg={...S.cfg,push:{...mergePush(S.cfg.push),daily:{...D,slots,msgs}}}; persist(); toast('Ежедневные послания сохранены'); render(); });
+  on('#dTest','click',async()=>{ const cid=$('#dTestClient').value; if(!cid){ showRes('dRes','Нет подписанных клиенток'); return; } const D=collectDaily(); S.cfg={...S.cfg,push:{...mergePush(S.cfg.push),daily:{...D,msgs:D.msgs.filter(m=>m.ru)}}}; persist(); await saveQ;
+    try{ const r=await fn({action:'daily_test',client_id:cid,idx:+$('#dTestMsg').value||0}); showRes('dRes',r.sent?'Пробное послание отправлено.':'Не доставлено: у клиентки нет рабочих устройств.'); }catch(err){ showRes('dRes','Ошибка: '+err.message); } });
   on('#pushInit','click',async()=>{ try{ await fn({action:'init'}); S.pushKey=true; toast('Отправка подготовлена'); render(); }catch(e){ toast('Не удалось: '+e.message+'. Проверьте, что функция push развёрнута.'); } });
   on('#pPreview','click',async()=>{ try{ const r=await fn({...pushPayload(),preview:true}); showRes('pRes',`Получат: ${r.recipients} клиенток, устройств: ${r.devices}.`); }catch(e){ showRes('pRes','Ошибка: '+e.message); } });
   on('#pushForm','submit',async e=>{ e.preventDefault();
     const b=pushPayload();
+    if(b.audience.type==='clients'&&!b.audience.ids.length){ showRes('pRes','Выберите хотя бы одну клиентку или поставьте «Всем подписанным».'); return; }
     try{ const pr=await fn({...b,preview:true});
       if(!pr.recipients){ showRes('pRes','Некому отправлять: нет подписанных клиенток для этого выбора.'); return; }
       if(!confirm(`Отправить ${pr.recipients} клиенткам (устройств: ${pr.devices})?\n\n${b.title.ru}\n${b.text.ru}`)) return;

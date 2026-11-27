@@ -171,11 +171,19 @@ details.more[open]>summary{margin-bottom:10px}
 .perks div:first-child{border-top:0}
 .perks b{text-align:right}
 ul.plain{margin:6px 0 0;padding-left:18px}
+.wheel-card,.gift-card{display:flex;align-items:center;gap:12px;border-radius:16px;padding:14px 16px;text-align:left;width:100%}
+.wheel-card{background:linear-gradient(135deg,#713E4B,#A5677B);color:#F3EDE7;border:0;cursor:pointer}
+.gift-card{background:var(--pink);color:#3E2C29}.gift-card.used{opacity:.6}
+.wheel-card svg,.gift-card svg{width:26px;height:26px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.wheel-card span,.gift-card span{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}.wheel-card small,.gift-card small{font-size:12px;opacity:.85}.wheel-card .chev{flex:none}
+.wheel-box{display:flex;justify-content:center}.wheel-svg{width:100%;max-width:320px;height:auto}
+.wh-win{text-align:center;display:flex;flex-direction:column;gap:6px;background:var(--pink);color:#3E2C29;border-radius:16px;padding:16px}.wh-win b{font:600 20px/1.25 var(--display)}
+.pref-sel{display:flex;flex-direction:column;gap:4px;margin-top:8px}
 .help-links{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
 .ig-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:4px;padding:16px 10px;border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--fg);text-decoration:none;min-width:0}
 .ig-tile b{font-size:15px;overflow-wrap:anywhere}.ig-tile small{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
 .ig-ic{width:46px;height:46px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;margin-bottom:4px}
-.ig-ic svg{width:24px;height:24px;fill:none;stroke:#F3EDE7;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.ig-ic .dot{fill:#F3EDE7;stroke:none}
+.ig-ic svg{width:24px;height:24px;fill:none;stroke:#F3EDE7;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.ig-ic .ig-dot{fill:#F3EDE7;stroke:none}
 .ig-cta{margin-top:8px;padding:6px 16px;border-radius:99px;background:var(--pink);color:#3E2C29;font-weight:700;font-size:13px}
 .ig-tile:hover .ig-cta{filter:brightness(.95)}
 .help-card{gap:10px;align-items:center;text-align:center}.help-card h2{margin:0}.help-card p{margin:0}
@@ -462,7 +470,7 @@ function rulesGroups(){
 }
 const IG_STUDIO='https://www.instagram.com/beauty_garage_tln', IG_OLGA='https://www.instagram.com/olya.fren';
 const tx=(k,d)=>(T.ru[k]===undefined?d:t(k));
-const igLink=(u,name,handle)=>`<a class="ig-tile" href="${u}" target="_blank" rel="noopener noreferrer"><span class="ig-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" class="dot"/></svg></span><b>${esc(name)}</b><small>@${esc(handle)}</small><span class="ig-cta">${esc(tx('helpFollow','Подписаться'))}</span></a>`;
+const igLink=(u,name,handle)=>`<a class="ig-tile" href="${u}" target="_blank" rel="noopener noreferrer"><span class="ig-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" class="ig-dot"/></svg></span><b>${esc(name)}</b><small>@${esc(handle)}</small><span class="ig-cta">${esc(tx('helpFollow','Подписаться'))}</span></a>`;
 const helpLinks=()=>`<div class="help-links">${igLink(IG_OLGA,tx('helpOlga','olya fren tattoo'),'olya.fren')}${igLink(IG_STUDIO,tx('helpStudio','Beauty Garage'),'beauty_garage_tln')}</div>`;
 const helpBlock=()=>`<div class="panel help-card"><h2>${esc(t('helpTitle'))}</h2><p class="muted small">${esc(t('helpText'))}</p>${helpLinks()}</div>`;
 const rulesHtml=()=>rulesGroups().map(([h,items])=>`<div class="rules-sec"><h4>${esc(h)}</h4><ul>${items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`).join('');
@@ -487,7 +495,7 @@ async function rwCancelCoupon(){
 const IC_CHECK='<path d="M6 12.5l4 4 8-9"/>', IC_LOCK='<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>';
 /* Главная: приветствие, копилка Rewards, купоны, уровень, Milestones, задания */
 function homeBlocks(r){
-  const w=r.rw, g=glamOn(); let h=`<h1 class="hello">${esc(t('hi',r.n))} ♡</h1>`;
+  const w=r.rw, g=glamOn(); let h=`<h1 class="hello">${esc(t('hi',r.n))} ♡</h1>`+wheelCards(r);
   if(w){
     const rate=w.rate||20, act=w.coupon, soon=(w.lots||[])[0], unit=((w.coupons||[5])[0]||5)*rate, rem=w.bal%unit, pc=Math.min(100,Math.round(rem/unit*100)), leftEur=r2((unit-rem)*(RWC().step/(RWC().reward||1)));
     h+=`<div class="rw-hero"><button class="rw-more" data-sheet="rw">${esc(t('rwMore'))} ›</button>
@@ -578,6 +586,7 @@ function sheetHtml(){
       <button class="primary" id="sheetClose" data-close="1" data-newperks="${i}" style="width:100%">${esc(t('lvBtn'))}</button>`,true);
   }
   if(!sheet) return '';
+  if(sheet.type==='wheel'&&rec&&rec.wheel) return wheelSheet();
   if(sheet.type==='book') return bookSheet();
   if(sheet.type==='cancel') return cancelSheet();
   if(sheet.type==='cxdone') return shell(`<h3>${esc(t('cxTitle').replace('?',''))}</h3><p>${esc(sheet.msg)}</p><button class="primary" data-close="1" id="sheetClose">${esc(t('close'))}</button>`);
@@ -652,16 +661,16 @@ function render(){
     <h3 style="margin-top:14px">${esc(t('rules'))}</h3>${rulesHtml()}</details>
   ${helpBlock()}
   ${sheetHtml()}`;
-  bindAuth(); bindBooking(); bindPush(); bindRef();
+  bindAuth(); bindBooking(); bindPush(); bindRef(); bindWheel();
   document.querySelectorAll('[data-cpn]').forEach(b=>b.onclick=()=>rwCoupon(+b.dataset.cpn));
   document.querySelectorAll('[data-cpncancel]').forEach(b=>b.onclick=rwCancelCoupon);
-  document.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{ setLang(b.dataset.lang); render(); });
+  document.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{ setLang(b.dataset.lang); render(); if(pushSt.sub) pushRefresh(); });
   document.querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>{ sheet={type:'level',i:+b.dataset.lv}; render(); const c=document.getElementById('sheetClose'); if(c) c.focus(); });
   document.querySelectorAll('[data-sheet]').forEach(b=>b.onclick=()=>{
     const k=b.dataset.sheet;
     sheet= k==='perks'?{type:'level',i:gcOf(rec).level}:{type:k};
     render(); const c=document.getElementById('sheetClose'); if(c) c.focus(); });
-  document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',e=>{ if(e.target===b){ const np=b.dataset.newperks; sheet=np!==undefined?{type:'level',i:+np}:null; lvlup=null; render(); } }));
+  document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',e=>{ if(e.target===b){ if(sheet&&sheet.type==='wheel'&&sheet.phase==='spinning') return; const np=b.dataset.newperks; sheet=np!==undefined?{type:'level',i:+np}:null; lvlup=null; render(); } }));
   const sh1=document.querySelector('.sheet'); if(sh1) sh1.scrollTop=sTop;
   /* пока открыто окно (sheet), страница под ним не прокручивается */
   const need=!!(sheet||lvlup!=null), locked=document.body.classList.contains('lock');
@@ -669,7 +678,7 @@ function render(){
   else if(!need&&locked){ document.body.classList.remove('lock'); document.body.style.top=''; window.scrollTo(0,lockY); }
   else if(!need&&!window.__keepScroll) window.scrollTo(0,y0);
 }
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&(sheet||lvlup!=null)){ sheet=null; lvlup=null; render(); } });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&(sheet||lvlup!=null)&&!(sheet&&sheet.phase==='spinning')){ sheet=null; lvlup=null; render(); } });
 
 function checkLevelUp(){
   if(!rec||!glamOn()) return;
@@ -733,6 +742,7 @@ function bindAuth(){
   document.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{ const a=b.dataset.act;
     if(a==='logout') logout();
     else if(a==='profile'){ sheet={type:'profile',tab:'data',msg:'',err:''}; render(); }
+    else if(a==='wheel'){ sheet={type:'wheel',phase:'idle',rot:0,err:''}; render(); }
     else if(a==='referral'){ sheet={type:'profile',tab:'ref',msg:'',err:''}; render(); }
     else if(a==='book') openBooking();
     else if(a==='resched') openBooking(b.dataset.id);
@@ -778,7 +788,7 @@ async function doLogin(login,pin,silent){
   try{
     const data=await rpc('client_login',{p_login:login,p_pin:pin});
     if(data.error){ authErr=silent?'':errMsg(data.error); if(silent){ cred={login:cred?cred.login:login,pin:''}; } }
-    else { rec=data; cred={login:data.login,pin}; saveCred(); authErr=''; seenSeed(); checkLevelUp(); updateBadge(); setTimeout(pushRefresh,0); }
+    else { rec=data; cred={login:data.login,pin}; saveCred(); authErr=''; seenSeed(); if(WHEEL_TEST) rec.wheel=testWheel(); checkLevelUp(); autoWheel(); updateBadge(); setTimeout(pushRefresh,0); }
   }catch(e){ authErr=silent?'':tk('e_net'); }
   busy=false; render();
 }
@@ -787,7 +797,7 @@ async function doRegister(login,name,pin,email,mkt,phone,ref){
   try{
     const data=await rpc('register_client',{p_login:login,p_name:name,p_pin:pin,p_email:email,p_marketing:!!(mkt&&EMAIL_RE.test(email)),p_phone:phone||'',p_ref:(ref||'').trim()});
     if(data.error) authErr=errMsg(data.error);
-    else { rec=data; cred={login:data.login,pin}; saveCred(); seenSeed(); refClear(); }
+    else { rec=data; cred={login:data.login,pin}; saveCred(); seenSeed(); refClear(); if(WHEEL_TEST) rec.wheel=testWheel(); autoWheel(); }
   }catch(e){ authErr=tk('e_net'); }
   busy=false; render();
 }
@@ -935,6 +945,57 @@ async function doCancel(){
   }catch(e){ sheet.err=tk('e_net'); sheet.busy=false; }
   render();
 }
+/* ---------- колесо фортуны ---------- */
+const lbl=o=>o?(o[lang]||o.ru||''):'';
+/* тестовый режим колеса: адрес с ?wheeltest=1, ничего не сохраняется, можно крутить сколько угодно */
+const WHEEL_TEST=/[?&]wheeltest=1/.test(location.search);
+const TEST_PRIZES=[['SUPER GIFT','SUPER GIFT: 50 € на курс «Макияж для себя». Твоя цена: 150 €','SUPER GIFT: 50 € off the “Makeup for Yourself” course. Your price: 150 €','SUPER GIFT: 50 € soodustust kursusele „Meik endale“. Sinu hind: 150 €',1],['20%','20% на полный образ','20% off a full look','20% soodustust täisilmele',3],['10 €','10 € на любую процедуру','10 € off any treatment','10 € soodustust igale protseduurile',6],['5 €','5 € на любую процедуру','5 € off any treatment','5 € soodustust igale protseduurile',12],['50%','50% скидка на татуировку','50% off a tattoo','50% soodustust tätoveeringule',1],['70 €','70 € скидка на татуировку','70 € off a tattoo','70 € soodustust tätoveeringule',1],['5%','5% на оформление бровей','5% off brow design','5% soodustust kulmude vormimisele',10],['15%','15% скидка на татуировку','15% off a tattoo','15% soodustust tätoveeringule',3],['5%','5% на макияж','5% off makeup','5% soodustust meigile',10],['5 €','5 € на ламинирование ресниц','5 € off lash lamination','5 € soodustust ripsmete lamineerimisele',12],['5 €','5 € на любую процедуру','5 € off any treatment','5 € soodustust igale protseduurile',12],['75 €','75 € на курс «Макияж для себя»','75 € off the “Makeup for Yourself” course','75 € soodustust kursusele „Meik endale“',1]].map((p,i)=>({id:i+1,short:{ru:p[0],en:p[0],et:p[0]},label:{ru:p[1],en:p[2],et:p[3]},w:p[4]}));
+const testWheel=()=>({on:true,spun:false,prizes:TEST_PRIZES.map(({id,short,label})=>({id,short,label})),win:null});
+function testSpin(){ const tot=TEST_PRIZES.reduce((a,p)=>a+p.w,0); let r=Math.random()*tot, i=0; for(;i<TEST_PRIZES.length;i++){ r-=TEST_PRIZES[i].w; if(r<0) break; } i=Math.min(i,TEST_PRIZES.length-1); const p=TEST_PRIZES[i];
+  return Object.assign({},rec,{idx:i,wheel:{on:true,spun:true,prizes:testWheel().prizes,win:{label:p.label,short:p.short,exp:Date.now()+30*864e5,used:false,idx:i}}}); }
+function wheelSvg(prizes,rot){
+  const n=prizes.length||1, sg=360/n, cx=160, cy=172, R=148, rad=a=>a*Math.PI/180, pt=(a,r)=>[(cx+r*Math.sin(rad(a))).toFixed(2),(cy-r*Math.cos(rad(a))).toFixed(2)];
+  const seg=prizes.map((p,i)=>{ const [x0,y0]=pt(i*sg,R),[x1,y1]=pt((i+1)*sg,R), dark=(i%2===0&&!(n%2===1&&i===n-1)), col=(n%2===1&&i===n-1)?'#A5677B':dark?'#713E4B':'#F2B7CC', tc=dark||col==='#A5677B'?'#F3EDE7':'#3E2C29', mid=(i+0.5)*sg, [tx,ty]=pt(0,R*0.6), txt=lbl(p.short), fs=txt.length>6?11:txt.length>4?14:16;
+    return `<path d="M${cx} ${cy} L${x0} ${y0} A${R} ${R} 0 0 1 ${x1} ${y1} Z" fill="${col}" stroke="#F3EDE7" stroke-width="2"/><g transform="rotate(${mid} ${cx} ${cy})"><text x="${tx}" y="${ty}" transform="rotate(-90 ${tx} ${ty})" text-anchor="middle" dominant-baseline="middle" fill="${tc}" font-size="${fs}" font-weight="700" font-family="inherit">${esc(txt)}</text></g>`; }).join('');
+  return `<svg class="wheel-svg" viewBox="0 0 320 330" role="img" aria-label="${esc(t('whTitle'))}"><g id="wheelG" style="transform-origin:${cx}px ${cy}px;transform:rotate(${rot||0}deg)">${seg}<circle cx="${cx}" cy="${cy}" r="14" fill="#F3EDE7" stroke="#713E4B" stroke-width="3"/></g><path d="M${cx-14} 4 L${cx+14} 4 L${cx} 34 Z" fill="#3E2C29" stroke="#F3EDE7" stroke-width="2"/></svg>`;
+}
+function wheelSheet(){
+  const W=rec.wheel||{prizes:[]}, spinning=sheet.phase==='spinning', done=!spinning&&(sheet.phase==='done'||W.spun), n=(W.prizes||[]).length||1;
+  const rot=sheet.rot!=null&&sheet.phase!=='idle'?sheet.rot:(W.spun&&W.win?360*6-((W.win.idx+0.5)*360/n):0);
+  const win=W.win;
+  const body=done&&win?`<div class="wh-win"><div class="eyebrow">${esc(t('whCongrats'))}</div><b>${esc(lbl(win.label))}</b><p class="muted small">${esc(t('whValid',fmtDate(win.exp)))}</p></div><button class="primary" data-close="1" id="sheetClose">${esc(t('close'))}</button>${WHEEL_TEST?`<button class="ghost" id="whAgain">${esc(t('whAgain'))}</button>`:''}`
+    :`<button class="primary" id="whGo" ${spinning||busy?'disabled':''}>${esc(spinning?t('whSpinning'):t('whSpin'))}</button>${sheet.err?`<div class="neg small">${esc(sheet.err)}</div>`:''}${spinning?'':`<button class="ghost" data-close="1">${esc(t('whLater'))}</button>`}`;
+  return shell(`<h3>${esc(t('whTitle'))}</h3>${WHEEL_TEST?`<p class="neg small">${esc(t('whTest'))}</p>`:''}${done?'':`<p class="muted small">${esc(t('whSub'))}</p>`}<div class="wheel-box">${wheelSvg(W.prizes||[],rot)}</div>${body}`);
+}
+function bindWheel(){
+  const ag=document.getElementById('whAgain'); if(ag) ag.onclick=()=>{ rec.wheel=testWheel(); sheet={type:'wheel',phase:'idle',rot:0,err:''}; render(); };
+  const g=document.getElementById('whGo'); if(!g) return;
+  g.onclick=async()=>{
+    if(busy||!cred) return; busy=true; sheet.err='';
+    try{
+      const d=WHEEL_TEST?testSpin():await rpc('wheel_spin',{p_login:cred.login,p_pin:cred.pin});
+      if(d.error){ sheet.err=errMsg(d.error); busy=false; render(); return; }
+      const n=d.wheel.prizes.length, target=360*6-((d.idx+0.5)*360/n);
+      rec.wheel=Object.assign({},rec.wheel,{prizes:d.wheel.prizes}); sheet={type:'wheel',phase:'spinning',rot:0,err:''}; render();
+      const el=document.getElementById('wheelG');
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{ if(el) el.style.transform='rotate('+target+'deg)'; }));
+      setTimeout(()=>{ rec=d; sheet={type:'wheel',phase:'done',rot:target,err:''}; busy=false; render(); },window.__wheelMs||4800);
+    }catch(e){ sheet.err=tk('e_net'); busy=false; render(); }
+  };
+}
+function autoWheel(){
+  if(!rec||!rec.wheel||!rec.wheel.on||rec.wheel.spun||lvlup!=null||sheet) return;
+  let seen=false; try{ const k='bgWheel:'+rec.login; seen=sessionStorage.getItem(k)==='1'; sessionStorage.setItem(k,'1'); }catch(e){}
+  if(!seen) sheet={type:'wheel',phase:'idle',rot:0,err:''};
+}
+function wheelCards(r){
+  const W=r.wheel; if(!W) return '';
+  if(W.win){ if(W.win.exp<Date.now()&&!W.win.used) return '';
+    return `<div class="gift-card${W.win.used?' used':''}">${svg(I.gift)}<span><small>${esc(t('whGiftTitle'))}</small><b>${esc(lbl(W.win.label))}</b><small>${esc(W.win.used?t('whUsed'):t('whValid',fmtDate(W.win.exp)))}</small></span></div>`; }
+  if(W.on) return `<button class="wheel-card" data-act="wheel">${svg(I.gift)}<span><b>${esc(t('whCardTitle'))}</b><small>${esc(t('whCardSub'))}</small></span><span class="chev">›</span></button>`;
+  return '';
+}
+
 /* ---------- рефералка: ссылка, код, проверка ---------- */
 const refLink=code=>location.href.split(/[?#]/)[0]+'?ref='+encodeURIComponent(code);
 const refC={}; /* кэш проверки кодов */
@@ -1076,6 +1137,7 @@ function notifyPanel(){
   const p=pushSt.prefs||{};
   const row=(k,lab)=>`<label class="check"><input type="checkbox" data-pref="${k}" ${p[k]?'checked':''}><span>${esc(t(lab))}</span></label>`;
   return wrap(`<p class="pos small">${esc(t('pnEnabled'))}</p><div class="prefs">${row('booking','pnBooking')}${row('bonus','pnBonus')}${row('level','pnLevel')}${row('birthday','pnBirthday')}${row('promo','pnPromo')}</div>
+    <label class="pref-sel"><span>${esc(t('pnDaily'))}</span><select data-prefv="daily">${[['daily','pnDailyDaily'],['3w','pnDaily3w'],['off','pnDailyOff']].map(([v,k])=>`<option value="${v}" ${(p.daily||'daily')===v?'selected':''}>${esc(t(k))}</option>`).join('')}</select></label>
     <button class="ghost" data-act="pushOff">${esc(t('pnOff'))}</button>`);
 }
 const b64u=k=>{ const p='='.repeat((4-k.length%4)%4), b=atob((k+p).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from([...b].map(c=>c.charCodeAt(0))); };
@@ -1126,7 +1188,7 @@ function pushDropDevice(){
   navigator.serviceWorker.ready.then(reg=>reg.pushManager.getSubscription().then(sub=>{ if(sub){ rpc('push_unsubscribe',{p_login:c.login,p_pin:c.pin,p_endpoint:sub.endpoint}).catch(()=>{}); sub.unsubscribe(); } })).catch(()=>{});
 }
 async function savePrefs(){
-  const p={}; document.querySelectorAll('[data-pref]').forEach(el=>{ p[el.dataset.pref]=el.checked; });
+  const p={}; document.querySelectorAll('[data-pref]').forEach(el=>{ p[el.dataset.pref]=el.checked; }); document.querySelectorAll('[data-prefv]').forEach(el=>{ p[el.dataset.prefv]=el.value; });
   try{ const r=await rpc('push_set_prefs',{p_login:cred.login,p_pin:cred.pin,p_prefs:p}); if(r.ok){ pushSt.prefs=r.prefs; pushSt.msg=tk('pnSaved'); pushSt.err=false; } }catch(e){ pushSt.msg=tk('e_net'); pushSt.err=true; }
   render();
 }
@@ -1139,7 +1201,7 @@ function bindPush(){
     else if(a==='pnRecheck') b.onclick=()=>{ pushSt.msg=''; render(); pushRefresh(); };
     else if(a==='pushOn') b.onclick=pushOn;
     else if(a==='pushOff') b.onclick=pushOff; });
-  document.querySelectorAll('[data-pref]').forEach(el=>el.onchange=savePrefs);
+  document.querySelectorAll('[data-pref],[data-prefv]').forEach(el=>el.onchange=savePrefs);
 }
 (async()=>{
   if(!window.GC_TEXTS){ document.getElementById('app').innerHTML='<div class="panel"><h2>Beauty Garage</h2><p>Не найден файл texts.js. Загрузите его в репозиторий рядом с index.html.</p></div>'; return; }
