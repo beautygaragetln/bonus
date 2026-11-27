@@ -448,11 +448,11 @@ function tasksPanel(c,ts){
 }
 function rewardsPanel(c){
   const d=S.rw[c.id], R=RWC();
-  if(S.rwErr&&!d) return `<div class="panel"><h2>Beauty Garage Points</h2><p class="neg small">Не удалось загрузить баллы. Выполните в Supabase скрипт migration-points.sql и обновите страницу.</p></div>`;
-  if(!d) return `<div class="panel"><h2>Beauty Garage Points</h2><p class="muted">Загрузка…</p></div>`;
+  if(S.rwErr&&!d) return `<div class="panel"><h2>Glam Points</h2><p class="neg small">Не удалось загрузить баллы. Выполните в Supabase скрипт migration-points.sql и обновите страницу.</p></div>`;
+  if(!d) return `<div class="panel"><h2>Glam Points</h2><p class="muted">Загрузка…</p></div>`;
   const w=d.rw, cnt=w.cnt;
   const kindName={earn:'Баллы за услуги',milestone:'Milestone',special:'Специальные баллы',coupon_issue:'Обмен на купон',coupon_return:'Возврат баллов',coupon_use:'Купон применён',expire:'Сгорело',reverse:'Корректировка'};
-  return `<div class="panel"><h2>Beauty Garage Points</h2>
+  return `<div class="panel"><h2>Glam Points</h2>
     <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:baseline"><div class="balance">${gp(w.bal)}</div><div class="muted small">≈ ${eur(w.bal/(w.rate||20))} · 1 € = 1 GP</div></div>
     ${w.lots.length?`<div class="hist">${w.lots.map(x=>`<div><span>${gp(x.a)}${x.src==='special'?' · специальные':x.src==='milestone'?' · Milestone':''}<br><span class="muted small">сгорят ${fmtDate(x.exp)}</span></span><b class="num">${gp(x.a)}</b></div>`).join('')}</div>`:'<p class="muted small">Баллов нет.</p>'}
     ${w.coupon?`<div class="hint"><b>Активный купон ${eur(w.coupon.a)}</b> до ${fmtDate(w.coupon.exp)}. Отметьте «Применить купон» при записи визита.</div>`:'<p class="muted small">Активного купона нет.</p>'}
@@ -492,7 +492,7 @@ function detailView(c){
     <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
       <div><h2>${esc(c.name)}</h2><div class="muted small">${esc(c.phone||'без телефона')}</div>
         ${ref?`<div class="muted small">Пришла от: ${esc(ref.name)}</div>`:''}${friends?`<div class="muted small">Привела подруг: ${friends}</div>`:''}</div>
-      <div style="text-align:right"><div class="balance">${gp(bal)}</div><div class="muted small">Beauty Garage Points${cp?` · купон ${eur(cp.a)}`:''}</div></div>
+      <div style="text-align:right"><div class="balance">${gp(bal)}</div><div class="muted small">Glam Points${cp?` · купон ${eur(cp.a)}`:''}</div></div>
     </div>
   </div>
   <div class="panel"><h2>Записать визит</h2>
