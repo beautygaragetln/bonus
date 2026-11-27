@@ -526,6 +526,7 @@ function detailView(c){
   <div class="panel"><h2>Старая история (до Beauty Rewards)</h2>${histHtml(c)}</div>
   <div class="actions"><button id="expClient">Выгрузить данные клиентки</button><button class="ghost" id="del">Удалить клиентку навсегда</button></div>`;
 }
+const GIRL_NAMES=['Beauty Garage','Olya Fren'];
 function settingsView(){
   const cfg=draft||(draft=JSON.parse(JSON.stringify(cfgOf())));
   const rewardRow=(a,i)=>`<div class="edit-row">
@@ -544,6 +545,13 @@ function settingsView(){
       <label>Подзаголовок (Eesti)<input id="cTagEt" value="${esc(cfg.taglineEt||'')}"></label>
       <label>Контакт для отметок<input id="cContact" value="${esc(cfg.contact)}"></label>
     </div></div>
+  <div class="panel"><h2>Beauty Girls: фотографии на главной</h2>
+    <div class="grid">${GIRL_NAMES.map((nm,i)=>{ const ph=(S.cfg.girls&&S.cfg.girls[i]&&S.cfg.girls[i].photo)||'';
+      return `<div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start"><b>${nm}</b>
+        <div style="width:84px;height:84px;border-radius:50%;overflow:hidden;background:var(--soft);border:2px solid var(--pink);display:grid;place-items:center">${ph?`<img src="${esc(ph)}" alt="" style="width:100%;height:100%;object-fit:cover">`:'<span class="muted small">нет фото</span>'}</div>
+        <input type="file" accept="image/*" data-gphoto="${i}" aria-label="Фото: ${nm}">
+        ${ph?`<button type="button" class="ghost" data-gdel="${i}">Убрать фото</button>`:''}</div>`; }).join('')}</div>
+    <p class="muted small">Фото обрезается по центру до квадрата и сжимается. Применяется сразу, кнопка «Сохранить» не нужна. Без фото клиентки видят аккуратную иконку.</p></div>
   <div class="panel"><h2>Услуги студии</h2>
     <label>Список для записи визита (каждая услуга с новой строки)<textarea id="cServices">${esc(((cfg.services&&cfg.services.length)?cfg.services:DEFAULT_SERVICES).join('\n'))}</textarea></label>
     <p class="muted small">Услуга со словом «тату» в названии считается татуировкой, для неё действует скидка на первую татуировку.</p></div>
@@ -649,6 +657,8 @@ function render(){
   if(fid){ const e=document.getElementById(fid); if(e){ e.focus(); try{e.setSelectionRange(pos,pos)}catch(_){} } }
 }
 function bind(){
+  document.querySelectorAll('[data-gphoto]').forEach(inp=>inp.onchange=()=>setGirlPhoto(+inp.dataset.gphoto,inp.files&&inp.files[0]));
+  document.querySelectorAll('[data-gdel]').forEach(b=>b.onclick=()=>{ const g=(S.cfg.girls||[]).map(x=>({...x})); while(g.length<2) g.push({photo:''}); g[+b.dataset.gdel]={photo:''}; saveGirls(g); toast('Фото убрано'); });
   document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab; if(tab!=='settings') draft=null; if(tab!=='glam') gdraft=null; if(tab!=='schedule') S.schedDraft=null; if(tab==='bookings'||tab==='schedule') view='list'; if(tab==='settle') loadSettle(); if(tab==='wheel') loadWheel(); if(tab==='claims') loadClaims(); render();});
   document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{openId=b.dataset.open;view='detail';S.vIdem=null;render();scrollTo(0,0);loadRw(openId).then(()=>{ const c=cur(); if(c) checkLevelBonuses(c); });});
   document.querySelectorAll('[data-delact]').forEach(b=>b.onclick=()=>{collectCfg();draft.actions.splice(+b.dataset.delact,1);render();});
@@ -866,12 +876,19 @@ function editClient(e){
   if(loginTaken(login,c.id)){ toast('Такой ник для входа уже есть'); return; }
   c.name=$('#eName').value.trim(); c.login=login; c.phone=$('#ePhone').value.trim(); c.birthday=$('#eBday').value; persist(); toast('Сохранено'); render();
 }
+function resizeImg(file,size){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onerror=rej; fr.onload=()=>{ const im=new Image(); im.onerror=rej; im.onload=()=>{ const c=document.createElement('canvas'); c.width=c.height=size; const x=c.getContext('2d'), s=Math.min(im.width,im.height), sx=(im.width-s)/2, sy=(im.height-s)/2; x.fillStyle='#F3EDE7'; x.fillRect(0,0,size,size); x.drawImage(im,sx,sy,s,s,0,0,size,size); res(c.toDataURL('image/jpeg',0.82)); }; im.src=fr.result; }; fr.readAsDataURL(file); }); }
+function saveGirls(g){ S.cfg={...S.cfg,girls:g}; if(draft) draft.girls=g; persist(); render(); }
+async function setGirlPhoto(i,file){
+  if(!file) return; if(!/^image\//.test(file.type)){ toast('Нужен файл-изображение'); return; }
+  try{ const url=await resizeImg(file,320); const g=(S.cfg.girls||[]).map(x=>({...x})); while(g.length<2) g.push({photo:''}); g[i]={photo:url}; saveGirls(g); toast('Фото сохранено'); }
+  catch(e){ toast('Не удалось обработать фото'); }
+}
 function saveCfg(e){
   e.preventDefault(); collectCfg();
   const ms=draft.rewards.milestones; if(ms.some(m=>!(m.n>=1))||new Set(ms.map(m=>m.n)).size!==ms.length){ toast('Milestones: число визитов должно быть уникальным'); return; }
   if(draft.rewards.coupons.some(x=>x>draft.rewards.maxPerVisit)){ toast('Купон не может быть больше максимума за визит'); return; }
   draft.rewards.milestones=ms.slice().sort((a,b)=>a.n-b.n);
-  S.cfg={...draft,wheel:S.cfg.wheel,glam:S.cfg.glam,booking:S.cfg.booking,push:S.cfg.push,texts:S.cfg.texts,svcNames:S.cfg.svcNames}; draft=null; persist(); toast('Условия сохранены'); render();
+  S.cfg={...draft,girls:S.cfg.girls,wheel:S.cfg.wheel,glam:S.cfg.glam,booking:S.cfg.booking,push:S.cfg.push,texts:S.cfg.texts,svcNames:S.cfg.svcNames}; draft=null; persist(); toast('Условия сохранены'); render();
 }
 function saveGlam(e){
   e.preventDefault(); collectGlam();
