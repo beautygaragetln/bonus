@@ -715,7 +715,8 @@ function accountBlock(){
     <form id="authForm" style="display:flex;flex-direction:column;gap:12px">
       <label for="aLogin">${esc(t('nickLabel'))}<input id="aLogin" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="anna_lash" value="${esc((cred&&cred.login)||'')}"></label>
       ${reg?`<label for="aName">${esc(t('nameLabel'))}<input id="aName" autocomplete="given-name"></label>`:''}
-      <label for="aPin">${esc(reg?t('pinNew'):t('pinLabel'))}<input id="aPin" type="password" autocomplete="${reg?'new-password':'current-password'}" maxlength="40" placeholder="••••••"></label>
+      <label for="aPin">${esc(reg?t('pinNew'):t('pinLabel'))}<input id="aPin" type="password" autocomplete="${reg?'new-password':'current-password'}" maxlength="40" placeholder="••••••••"></label>
+      ${reg?`<div id="aPinErr" class="neg small"></div>`:''}
       ${reg?`<label for="aEmail">${esc(t('emailLabel'))}<input id="aEmail" type="email" autocomplete="email" autocapitalize="none" spellcheck="false"></label>
         <div id="aEmailErr" class="neg small"></div>
         <label for="aPhone">${esc(t('phoneLabel'))}<input id="aPhone" type="tel" autocomplete="tel" inputmode="tel" maxlength="20" placeholder="+372 …"></label>
@@ -729,6 +730,8 @@ function accountBlock(){
       <p class="muted small">${esc(reg?t('nickHintReg'):t('nickHint'))}</p>
       <p class="muted small">${esc(t('authHelp'))}</p>${helpLinks()}</form></div>`;
 }
+const PW_BAD=new Set(['password1','password12','password123','qwerty123','qwerty1234','abcd1234','abc12345','12345678a','a1234567','1q2w3e4r','iloveyou1','parool123','пароль123','qwertyui1']);
+const pwOk=p=>typeof p==='string'&&p.length>=8&&p.length<=40&&/^[\x21-\x7E]+$/.test(p)&&/[A-Za-z]/.test(p)&&/\d/.test(p)&&!/^(.)\1*$/u.test(p)&&!PW_BAD.has(p.toLowerCase());
 function bindAuth(){
   document.querySelectorAll('[data-authtab]').forEach(b=>b.onclick=()=>{ authTab=b.dataset.authtab; authErr=''; render(); });
   const f=document.getElementById('authForm');
@@ -736,10 +739,11 @@ function bindAuth(){
     if(authTab==='register'){
       if(!document.getElementById('aConsent').checked){ authErr=tk('e_consent'); render(); return; }
       const em0=val('aEmail'), mk0=document.getElementById('aMkt').checked, lg=val('aLogin'), nm=val('aName'), pw=document.getElementById('aPin').value, ph=val('aPhone');
+      if(!pwOk(pw)){ const pe=document.getElementById('aPinErr'); if(pe) pe.textContent=t('e_bad_pin'); return; }
       emReady(em0).then(st=>{ if(em0&&st!=='ok'){ const m=emMsg(st,em0); if(m){ document.getElementById('aEmailErr').textContent=m; } return; }
         doRegister(lg,nm,pw,em0,mk0&&!!em0,ph,val('aRef')); });
     } else doLogin(val('aLogin'),document.getElementById('aPin').value); });
-  if(f&&authTab==='register'){ ['aEmail','aConsent','aMkt'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.addEventListener('input',syncReg); el.addEventListener('change',syncReg); } }); syncReg(); }
+  if(f&&authTab==='register'){ const ap=document.getElementById('aPin'); if(ap) ap.addEventListener('input',()=>{ const pe=document.getElementById('aPinErr'); if(pe) pe.textContent=(ap.value&&!pwOk(ap.value)&&ap.value.length>=8)?t('e_bad_pin'):''; }); ['aEmail','aConsent','aMkt'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.addEventListener('input',syncReg); el.addEventListener('change',syncReg); } }); syncReg(); }
   document.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{ const a=b.dataset.act;
     if(a==='logout') logout();
     else if(a==='profile'){ sheet={type:'profile',tab:'data',msg:'',err:''}; render(); }
@@ -1036,6 +1040,7 @@ function profileSheet(){
     <button class="primary" id="pfSubmit">${esc(t('pfSave'))}</button></form><button class="ghost" data-close="1">${esc(t('close'))}</button>`);
 }
 async function saveProfile(){
+  const np0=document.getElementById('pfPin').value; if(np0&&!pwOk(np0)){ sheet.err=tk('e_bad_pin'); sheet.msg=''; render(); return; }
   const np=document.getElementById('pfPin').value, args={p_login:cred.login,p_pin:cred.pin,p_email:val('pfEmail'),p_marketing:document.getElementById('pfMkt').checked,p_birthday:val('pfBday'),p_new_pin:np,p_phone:val('pfPhone')};
   try{
     const data=await rpc('client_update',args);
