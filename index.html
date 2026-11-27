@@ -132,6 +132,7 @@ button.link{background:none;border:0;padding:2px 4px;color:var(--accent);font-we
 .ref-card span{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}.ref-card small{font-size:12px;color:var(--muted)}.ref-card .chev{flex:none;flex:0 0 auto;color:var(--muted)}
 .ref-code{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
 .ref-code b{font:600 26px/1.1 var(--display);letter-spacing:.06em;word-break:break-all}
+.tk-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border:0;border-top:1px solid var(--line);background:none;width:100%;text-align:left;cursor:pointer}.tk-row:first-child{border-top:0}.tk-go{display:block;color:var(--accent);font-weight:600;font-size:13px}.tk-sub{display:block;color:var(--muted);font-size:13px}.claim-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:9px 0;border-top:1px solid var(--line)}.claim-row:first-child{border-top:0}.claim-row a{color:var(--accent);word-break:break-all;font-size:14px}.claim-st{white-space:nowrap;font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--soft)}.claim-st.ok{background:var(--pink);color:#3E2C29}
 .ref-btns{display:flex;gap:8px;flex-wrap:wrap}.ref-enter{display:flex;gap:8px}.ref-enter input{flex:1;min-width:0;text-transform:uppercase}.ref-enter button{white-space:nowrap}
 .ref-steps{margin:6px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px}
 .cpn-note{display:flex;justify-content:space-between;gap:10px;align-items:center}.cpn-help{margin:-4px 0 0}
@@ -574,6 +575,46 @@ function giftsPanel(r){
     <div><div class="eyebrow">${esc(t('gUsed'))}</div>${used}</div>
     <div><div class="eyebrow">${esc(t('gFuture'))}</div>${future.length?`<ul class="plain">${future.map(x=>`<li>${esc(t('gPerYear',x.l.name,x.l.giftsPerYear))}</li>`).join('')}</ul>`:`<p class="muted">${esc(t('gAllOpen'))}</p>`}</div></div>`;
 }
+
+const TK_GO={ref:'ref',mark:'claim',reels:'claim',repost:'claim'};
+function tkRows(x,from){
+  return `<div class="visit-list">${x.items.map(it=>{
+    const go=TK_GO[it.id];
+    const sub=go?`<span class="tk-go">${esc(t(it.id==='ref'?'tkGoRef':'tkGoSend'))} ›</span>`:`<span class="tk-sub">${esc(t(it.id==='supp'?'tkSubSupp':'tkSubAuto'))}</span>`;
+    const inner=`<span>${esc(TKN(it.id))}${it.req?` <span class="muted small">· ${esc(t('tkReq'))}</span>`:''}${sub}</span><b class="num ${it.ok?'pos':'muted'}">${it.val} / ${it.target}</b>`;
+    return go?`<button class="tk-row" type="button" data-tkgo="${it.id}" data-tkfrom="${from}">${inner}</button>`:`<div>${inner}</div>`;
+  }).join('')}</div>`;
+}
+let claimsCache=null;
+async function loadClaims(){
+  if(!cred) return;
+  try{ const d=await rpc('task_claims_list',{p_login:cred.login,p_pin:cred.pin}); if(d&&d.ok){ claimsCache=d.claims||[]; if(sheet&&sheet.type==='claim'){ sheet.claims=claimsCache; render(); } } }catch(e){}
+}
+function openClaim(kind,from){ sheet={type:'claim',kind,from,claims:claimsCache||[],url:'',err:'',ok:''}; render(); loadClaims(); }
+const CLAIM_RE=/^https?:\/\/[^\s]+\.[^\s]+$/i;
+async function submitClaim(){
+  if(!cred||!sheet||sheet.type!=='claim'||sheet.busy) return;
+  const u=(document.getElementById('claimUrl')||{value:''}).value.trim(); sheet.url=u;
+  if(!CLAIM_RE.test(u)||u.length>400){ sheet.err=errMsg('bad_url'); sheet.ok=''; render(); return; }
+  sheet.busy=true; sheet.err=''; sheet.ok=''; render();
+  try{ const d=await rpc('task_submit',{p_login:cred.login,p_pin:cred.pin,p_kind:sheet.kind,p_url:u});
+    if(sheet&&sheet.type==='claim'){ sheet.busy=false; if(d&&d.ok){ claimsCache=d.claims||[]; sheet.claims=claimsCache; sheet.url=''; sheet.ok=t('tkSent'); } else sheet.err=errMsg((d&&d.error)||'other'); }
+  }catch(e){ if(sheet&&sheet.type==='claim'){ sheet.busy=false; sheet.err=tk('e_net'); } }
+  render();
+}
+function claimSheet(){
+  const k=sheet.kind, list=(sheet.claims||[]).filter(c=>c.kind===k);
+  const shortU=u=>u.replace(/^https?:\/\/(www\.)?/i,'');
+  return shell(`<h3>${esc(TKN(k))}</h3><p class="muted small">${esc(t('tkHint_'+k))}</p>
+    <form id="claimForm" style="display:flex;flex-direction:column;gap:10px">
+      <label>${esc(t('tkLink'))}<input id="claimUrl" type="url" inputmode="url" autocapitalize="none" autocomplete="off" spellcheck="false" maxlength="400" placeholder="https://www.instagram.com/…" value="${esc(sheet.url||'')}"></label>
+      ${sheet.err?`<div class="neg small">${esc(sheet.err)}</div>`:''}${sheet.ok?`<div class="pos small">${esc(sheet.ok)}</div>`:''}
+      <button class="primary" type="submit" ${sheet.busy?'disabled':''}>${esc(t('tkSend'))}</button>
+    </form>
+    ${list.length?`<div><div class="eyebrow">${esc(t('tkMine'))}</div><div>${list.map(c=>`<div class="claim-row"><div><a href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">${esc(shortU(c.url).slice(0,60))}</a><div class="muted small">${fmtDate(c.ts)}${c.note&&c.status!=='pending'?' · '+esc(c.note):''}</div></div><span class="claim-st ${c.status==='approved'?'ok':''}">${esc(t('tkSt_'+c.status))}</span></div>`).join('')}</div></div>`:''}
+    <button class="ghost" type="button" data-tkback="1">${esc(t('wzBack'))}</button>
+    <button class="primary" data-close="1" id="sheetClose">${esc(t('close'))}</button>`);
+}
 function sheetHtml(){
   const G=cfg.glam,L=G.levels;
   const wrap=shell;
@@ -607,13 +648,13 @@ function sheetHtml(){
       <div><div class="eyebrow">${esc(t('rwLots'))}</div>${(w.lots||[]).length?`<div class="visit-list">${w.lots.map(x=>`<div><span>${esc(t('rwLotLine',gp(x.a),fmtDate(x.exp)))}${x.src==='special'?` <span class="muted small">· ${esc(t('rwSpecial'))}</span>`:''}</span><b class="num">${esc(gp(x.a))}</b></div>`).join('')}</div>`:`<p class="muted">${esc(t('rwNoLots'))}</p>`}</div>
       <div><div class="eyebrow">${esc(t('rwMs'))}</div><p class="muted small">${esc(t('rwMsMin',eur(w.minVisit)))}</p>
         <div class="visit-list">${(w.ms||[]).map(m=>`<div><span>${esc(t('rwMsItem',m.n,msWhat(m)))}</span><b class="num ${m.done?'pos':'muted'}">${m.done?esc(t('rwDone')):`${w.cnt||0} / ${m.n}`}</b></div>`).join('')}</div></div>
-      <div><div class="eyebrow">${esc(t('rwHist'))}</div>${hist.length?`<div class="visit-list">${hist.map(e=>`<div><span>${esc(t('rwK_'+e.k)||e.k)}${lang==='ru'&&e.note&&(e.k==='special'||e.k==='milestone')?': '+esc(e.note):''}<br><span class="muted small">${fmtDate(e.ts)}</span></span><b class="num ${e.a>0?'pos':e.a<0?'neg':'muted'}">${e.a>0?'+':''}${e.a===0?'—':esc(gp(e.a))}</b></div>`).join('')}</div>`:`<p class="muted">${esc(t('rwHistEmpty'))}</p>`}</div>${closeBtn}`);
+      <div><div class="eyebrow">${esc(t('rwHist'))}</div>${hist.length?`<div class="visit-list">${hist.map(e=>`<div><span>${esc(t('rwK_'+e.k)||e.k)}${lang==='ru'&&e.note&&(e.k==='special'||e.k==='milestone'||e.k==='reverse')?': '+esc(e.note):''}<br><span class="muted small">${fmtDate(e.ts)}</span></span><b class="num ${e.a>0?'pos':e.a<0?'neg':'muted'}">${e.a>0?'+':''}${e.a===0?'—':esc(gp(e.a))}</b></div>`).join('')}</div>`:`<p class="muted">${esc(t('rwHistEmpty'))}</p>`}</div>${closeBtn}`);
   }
   if(sheet.type==='miss'){
     const ways=[]; if(RF().refGp>0) ways.push([t('friendRow'),gp(RF().refGp)]);
     cfg.actions.filter(a=>a.val>0).forEach(a=>ways.push([actTitle(a),rewardT(a)]));
     let ch=''; if(glamOn()&&rec){ const ts=taskState(G,rec.tk), gc=gcOf(rec), k=gc.level>=3?'super':'baddie', x=ts[k], L2=G.levels[k==='baddie'?3:4];
-      ch=`<div><div class="eyebrow">${esc(t('tkTitle',L2.name))}</div><p class="muted small">${esc(t('tkNeed',x.need,x.total))}</p><div class="visit-list">${x.items.map(it=>`<div><span>${esc(TKN(it.id))}${it.req?` <span class="muted small">· ${esc(t('tkReq'))}</span>`:''}</span><b class="num ${it.ok?'pos':'muted'}">${it.val} / ${it.target}</b></div>`).join('')}</div><p class="muted small">${esc(t('tkAuto'))}</p></div>`; }
+      ch=`<div><div class="eyebrow">${esc(t('tkTitle',L2.name))}</div><p class="muted small">${esc(t('tkNeed',x.need,x.total))}</p>${tkRows(x,'miss')}<p class="muted small">${esc(t('tkAuto'))}</p></div>`; }
     return wrap(`<h3>${esc(t('missTitle'))}</h3><div><div class="eyebrow">${esc(t('missWays'))}</div>${ways.length?`<div class="visit-list">${ways.map(x=>`<div><span>${esc(x[0])}</span><b class="num">${esc(x[1])}</b></div>`).join('')}</div>`:`<p class="muted">${esc(t('missNone'))}</p>`}
       ${cfg.contact?`<p class="muted small">${esc(t('claim',cfg.contact))}</p>`:''}</div>${ch}${closeBtn}`);
   }
@@ -621,8 +662,10 @@ function sheetHtml(){
     const ts=taskState(G,rec.tk), gc=gcOf(rec), key=gc.level+1>=4?'super':'baddie', k=gc.level>=3?'super':'baddie', L2=G.levels[k==='baddie'?3:4];
     const x=ts[k];
     return wrap(`<h3>${esc(t('tkTitle',L2.name))}</h3><p class="muted small">${esc(t('tkNeed',x.need,x.total))}</p>
-      <div class="visit-list">${x.items.map(it=>`<div><span>${esc(TKN(it.id))}${it.req?` <span class="muted small">· ${esc(t('tkReq'))}</span>`:''}</span><b class="num ${it.ok?'pos':'muted'}">${it.val} / ${it.target}</b></div>`).join('')}</div>
+      ${tkRows(x,'tasks')}
       <p class="muted small">${esc(t('tkAuto'))}</p>${closeBtn}`);
+  }
+  if(sheet.type==='claim'){ return claimSheet(); 
   }
   if(sheet.type==='history'){
     const v=(rec.h||[]).filter(e=>e.kind==='visit'&&e.amount>0&&!e.reversed).sort((a,b)=>b.ts-a.ts);
@@ -637,7 +680,7 @@ function sheetHtml(){
 function render(){
   if(!configured){ app.innerHTML=`<div class="panel"><h2>${esc(t('setup'))}</h2><p class="muted">${esc(t('setupText'))}</p></div>`; return; }
   if(!cfg){ app.innerHTML=`<p class="muted">${esc(err||t('loading'))}</p>`; return; }
-  const mo0=document.querySelector('details.more'); if(mo0) window.__moreOpen=mo0.open;
+  const mo0=document.querySelector('details.more'); if(mo0&&window.__prevRec) window.__moreOpen=mo0.open; window.__prevRec=!!rec; if(!rec) window.__moreOpen=undefined;
   const sh0=document.querySelector('.sheet'), sTop=sh0?sh0.scrollTop:0, y0=document.body.classList.contains('lock')?lockY:window.scrollY;
   const g=glamOn(), G=cfg.glam;
   const act=cfg.actions.filter(a=>a.val>0).map(a=>`<div><span>${esc(actTitle(a))}</span><b>${rewardT(a)}</b></div>`).join('');
@@ -764,6 +807,9 @@ function bindRef(){
   const pr=document.getElementById('pfRef');
   if(pr){ let tm=null; pr.addEventListener('input',()=>{ sheet.refErr=''; sheet.refOk=''; clearTimeout(tm); const v=pr.value.trim(); if(!v){ setMsg('pfRefMsg',null); return; } tm=setTimeout(()=>refCheck(v,s=>setMsg('pfRefMsg',s)),350); });
     const go=()=>applyRef(pr.value); document.getElementById('pfRefBtn').onclick=go; pr.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); go(); } }); }
+  document.querySelectorAll('[data-tkgo]').forEach(b=>b.onclick=()=>{ const id=b.dataset.tkgo; if(id==='ref') { sheet={type:'profile',tab:'ref',msg:'',err:''}; render(); } else openClaim(id,b.dataset.tkfrom); });
+  document.querySelectorAll('[data-tkback]').forEach(b=>b.onclick=()=>{ const f=sheet&&sheet.from; sheet={type:f==='miss'?'miss':'tasks'}; render(); });
+  const cf=document.getElementById('claimForm'); if(cf){ cf.addEventListener('submit',e=>{ e.preventDefault(); submitClaim(); }); const cu=document.getElementById('claimUrl'); cu.addEventListener('input',()=>{ sheet.url=cu.value; }); }
   document.querySelectorAll('[data-pftab]').forEach(b=>b.onclick=()=>{ sheet={type:'profile',tab:b.dataset.pftab,msg:'',err:''}; render(); });
   document.querySelectorAll('[data-refcopy]').forEach(b=>b.onclick=async()=>{ const link=refLink(rec.ref.code); let ok=false; try{ await navigator.clipboard.writeText(link); ok=true; }catch(e){ try{ const ta=document.createElement('textarea'); ta.value=link; document.body.append(ta); ta.select(); ok=document.execCommand('copy'); ta.remove(); }catch(e2){} }
     const el=document.getElementById('refCopied'); if(el) el.textContent=ok?t('refCopied'):link; });
@@ -807,7 +853,7 @@ async function doRegister(login,name,pin,email,mkt,phone,ref){
   }catch(e){ authErr=tk('e_net'); }
   busy=false; render();
 }
-function logout(){ pushDropDevice(); pushSt={sub:false,prefs:null,devices:0,msg:'',busy:false,checked:false}; rec=null; cred=null; saveCred(); sheet=null; bk=null; authErr=''; authTab='login'; render(); }
+function logout(){ pushDropDevice(); pushSt={sub:false,prefs:null,devices:0,msg:'',busy:false,checked:false}; rec=null; cred=null; claimsCache=null; saveCred(); sheet=null; bk=null; authErr=''; authTab='login'; render(); }
 
 function bookingCta(){
   if(!bookingOn()) return '';

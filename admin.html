@@ -156,6 +156,7 @@ h1,.it{font-style:normal}
 .visit-list div{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--line)}
 .visit-list div:first-child{border-top:0}
 
+.claim{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 0;border-top:1px solid var(--line)}.claim:first-of-type{border-top:0}.claim>div:first-child{flex:1;min-width:220px}.claim-act{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.claim-act input{min-width:180px;flex:1}.mdir{flex:1;display:flex;gap:6px;align-items:center;justify-content:center;padding:6px;border-radius:9px}.mdir:has(input:checked){background:var(--surface)}
 .badge{display:inline-block;min-width:18px;padding:0 6px;margin-left:6px;border-radius:99px;background:var(--bad);color:#fff;font-size:11px;font-weight:700;line-height:18px}
 .bk{display:flex;flex-direction:column;gap:8px;padding:12px 0;border-top:1px solid var(--line)}
 .bk:first-child{border-top:0;padding-top:0}
@@ -396,7 +397,7 @@ function mergeRewards(r){ r=r||{}; const ms=(r.milestones&&r.milestones.length)?
   return {...RW_DEF,...r,coupons:(r.coupons&&r.coupons.length)?r.coupons:RW_DEF.coupons,milestones:ms.map(m=>{ if(m.gp==null&&m.eur>0){ const x={...m,gp:m.eur*rate}; delete x.eur; return x; } return m; })}; }
 const RWC=()=>S.cfg.rewards||RW_DEF;
 const RATE=()=>+RWC().gpRate||20;
-S.rw={}; S.rwBal={};
+S.rw={}; S.rwBal={}; S.rwLots={};
 async function loadRwBal(){
   try{ const {data}=await sb.from('rw_lots').select('client_id,remaining,expires_at').gt('remaining',0).gt('expires_at',new Date().toISOString());
     S.rwBal={}; (data||[]).forEach(x=>{ S.rwBal[x.client_id]=r2((S.rwBal[x.client_id]||0)+(+x.remaining)); }); S.rwReady=true; }catch(_){ S.rwReady=false; }
@@ -404,6 +405,7 @@ async function loadRwBal(){
 async function loadRw(id,quiet){
   const {data,error}=await sb.rpc('admin_client_rw',{p_client:id});
   if(error||!data||data.error||!data.rw){ S.rwErr=true; if(!quiet) render(); return; }
+  try{ const lr=await sb.from('rw_lots').select('id,remaining,expires_at,source').eq('client_id',id).gt('remaining',0).gt('expires_at',new Date().toISOString()).order('expires_at'); S.rwLots[id]=(lr.data||[]).map(x=>({id:x.id,a:+x.remaining,exp:new Date(x.expires_at).getTime(),src:x.source})); }catch(_){ S.rwLots[id]=[]; }
   S.rwErr=false; S.rw[id]=data; S.rwBal[id]=r2(data.rw.bal||0); if(!quiet&&view==='detail'&&openId===id) render();
 }
 async function reloadClient(id){
@@ -511,17 +513,7 @@ function detailView(c){
   ${glamPanel(c)}
   ${accessPanel(c)}
   ${referralPanel(c,d)}
-  <div class="panel"><h2>Специальные баллы</h2>
-    <form id="awardForm" class="grid">
-      <label>Действие<select id="aAct">${cfg.actions.filter(a=>a.type!=='pct').map(a=>`<option value="${esc(a.id)}">${esc(a.title)} (+${gp(a.val*RATE())})</option>`).join('')}</select></label>
-      <button style="align-self:end">Начислить</button>
-    </form>
-    <form id="adjForm" class="grid">
-      <label>Другая награда, GP<input id="mAmt" type="number" min="1" step="1" required inputmode="decimal"></label>
-      <label>Причина<input id="mNote" required autocomplete="off"></label>
-      <button style="align-self:end">Начислить</button>
-    </form>
-    <p class="muted small">Специальные награды идут в копилку, действуют ${R.saveMonths} мес. и учитываются отдельно от Rewards за визиты${R.settleSpecial?'':' (в взаиморасчётах мастеров не делятся)'}.</p></div>
+  ${manualPanel(c,d)}
   <div class="panel"><h2>Данные клиентки</h2>
     <form id="editForm" class="grid">
       <label>Имя<input id="eName" value="${esc(c.name)}" required></label>
@@ -650,13 +642,13 @@ function collectGlam(){
 function render(){
   const y=scrollY, ae=document.activeElement, fid=ae&&ae.id, pos=ae&&ae.selectionStart;
   const inList=view==='list';
-  $app.innerHTML=`<header><h1>Beauty Garage: админка</h1><button class="ghost" id="logout">Выйти</button>${inList?`<div class="tabs" style="width:100%;order:3"><button data-tab="clients" class="${tab==='clients'?'on':''}">Клиентки</button><button data-tab="bookings" class="${tab==='bookings'?'on':''}">Записи${pendingCount()?`<span class="badge">${pendingCount()}</span>`:''}</button><button data-tab="schedule" class="${tab==='schedule'?'on':''}">Расписание</button><button data-tab="push" class="${tab==='push'?'on':''}">Уведомления</button><button data-tab="wheel" class="${tab==='wheel'?'on':''}">Колесо</button><button data-tab="settings" class="${tab==='settings'?'on':''}">Условия</button><button data-tab="settle" class="${tab==='settle'?'on':''}">Взаиморасчёты</button><button data-tab="glam" class="${tab==='glam'?'on':''}">Glam Levels</button><button data-tab="texts" class="${tab==='texts'?'on':''}">Тексты</button><button data-tab="data" class="${tab==='data'?'on':''}">Данные</button></div>`:''}</header>`
-   + (view==='detail'&&cur() ? detailView(cur()) : tab==='bookings' ? bookingsView() : tab==='schedule' ? scheduleView() : tab==='push' ? pushView() : tab==='wheel' ? wheelView() : tab==='settings' ? settingsView() : tab==='glam' ? glamView() : tab==='settle' ? settleView() : tab==='texts' ? textsView() : tab==='data' ? dataView() : (view='list',listView()));
+  $app.innerHTML=`<header><h1>Beauty Garage: админка</h1><button class="ghost" id="logout">Выйти</button>${inList?`<div class="tabs" style="width:100%;order:3"><button data-tab="clients" class="${tab==='clients'?'on':''}">Клиентки</button><button data-tab="bookings" class="${tab==='bookings'?'on':''}">Записи${pendingCount()?`<span class="badge">${pendingCount()}</span>`:''}</button><button data-tab="schedule" class="${tab==='schedule'?'on':''}">Расписание</button><button data-tab="claims" class="${tab==='claims'?'on':''}">Задания${claimsPending()?`<span class="badge">${claimsPending()}</span>`:''}</button><button data-tab="push" class="${tab==='push'?'on':''}">Уведомления</button><button data-tab="wheel" class="${tab==='wheel'?'on':''}">Колесо</button><button data-tab="settings" class="${tab==='settings'?'on':''}">Условия</button><button data-tab="settle" class="${tab==='settle'?'on':''}">Взаиморасчёты</button><button data-tab="glam" class="${tab==='glam'?'on':''}">Glam Levels</button><button data-tab="texts" class="${tab==='texts'?'on':''}">Тексты</button><button data-tab="data" class="${tab==='data'?'on':''}">Данные</button></div>`:''}</header>`
+   + (view==='detail'&&cur() ? detailView(cur()) : tab==='bookings' ? bookingsView() : tab==='schedule' ? scheduleView() : tab==='push' ? pushView() : tab==='wheel' ? wheelView() : tab==='claims' ? claimsView() : tab==='settings' ? settingsView() : tab==='glam' ? glamView() : tab==='settle' ? settleView() : tab==='texts' ? textsView() : tab==='data' ? dataView() : (view='list',listView()));
   accordionize(); bind(); scrollTo(0,y);
   if(fid){ const e=document.getElementById(fid); if(e){ e.focus(); try{e.setSelectionRange(pos,pos)}catch(_){} } }
 }
 function bind(){
-  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab; if(tab!=='settings') draft=null; if(tab!=='glam') gdraft=null; if(tab!=='schedule') S.schedDraft=null; if(tab==='bookings'||tab==='schedule') view='list'; if(tab==='settle') loadSettle(); if(tab==='wheel') loadWheel(); render();});
+  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab; if(tab!=='settings') draft=null; if(tab!=='glam') gdraft=null; if(tab!=='schedule') S.schedDraft=null; if(tab==='bookings'||tab==='schedule') view='list'; if(tab==='settle') loadSettle(); if(tab==='wheel') loadWheel(); if(tab==='claims') loadClaims(); render();});
   document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{openId=b.dataset.open;view='detail';S.vIdem=null;render();scrollTo(0,0);loadRw(openId).then(()=>{ const c=cur(); if(c) checkLevelBonuses(c); });});
   document.querySelectorAll('[data-delact]').forEach(b=>b.onclick=()=>{collectCfg();draft.actions.splice(+b.dataset.delact,1);render();});
   on('#back','click',()=>{view='list';render();});
@@ -664,7 +656,7 @@ function bind(){
   on('#stMonth','change',e=>{ if(e.target.value){ S.settle.period=e.target.value; loadSettle(); render(); } }); on('#stDone','click',settleDone); on('#stUndo','click',settleUndo);
   on('#addForm','submit',addClient); on('#visitForm','submit',recordVisit);
   on('#vAmt','input',previewVisit); on('#vUse','input',previewVisit); on('#vCat','change',previewVisit);
-  on('#refForm','submit',setReferrer); on('#vWelcome','change',previewVisit); on('#awardForm','submit',award); on('#adjForm','submit',adjust); on('#editForm','submit',editClient);
+  on('#refForm','submit',setReferrer); on('#vWelcome','change',previewVisit); on('#awardForm','submit',award); on('#adjForm','submit',adjust); on('#adjForm','input',updateAdj); on('#adjForm','change',e=>{ if(e.target.id==='aAct'){ const a=cfgOf().actions.find(x=>x.id===e.target.value); if(a){ $('#mAmt').value=a.val*RATE(); $('#mNote').value=a.title; } } updateAdj(); }); updateAdj(); document.querySelectorAll('[data-cdec]').forEach(b=>b.onclick=()=>decideClaim(b.dataset.cdec,b.dataset.ok==='1')); on('#editForm','submit',editClient);
   on('#giftForm','submit',giveGift); on('#bdayBtn','click',giveBirthday); on('#tkForm','submit',saveTasks); on('#vCoupon','change',previewVisit); on('#vMaster','change',previewVisit);
   document.querySelectorAll('[data-revisit]').forEach(b=>b.onclick=()=>reverseVisit(b.dataset.revisit,b));
   document.querySelectorAll('[data-gift]').forEach(b=>b.onclick=()=>markGift(b.dataset.gift,b.dataset.issued==='1'));
@@ -762,9 +754,86 @@ async function award(e){
   const a=cfgOf().actions.find(x=>x.id===$('#aAct').value); if(!a) return;
   if(await grant(c,a.val*RATE(),a.title,'action:'+a.id)){ toast('Баллы начислены'); render(); }
 }
+function manualPanel(c,d){
+  const R=RWC(), cfg=cfgOf(), w=d&&d.rw, bal=w?w.bal:effBal(c);
+  const acts=cfg.actions.filter(a=>a.type!=='pct');
+  return `<div class="panel"><h2>Баллы вручную</h2>
+    <div class="muted small">Сейчас на балансе: <b>${gp(bal)}</b>. Все изменения попадают в историю баллов, клиентка видит причину.</div>
+    <form id="adjForm" class="grid">
+      <div class="tabs" style="grid-column:1/-1"><label class="mdir"><input type="radio" name="mDir" value="add" checked> Начислить</label><label class="mdir"><input type="radio" name="mDir" value="sub"> Списать</label></div>
+      <label>Быстрый выбор<select id="aAct"><option value="">— свой вариант —</option>${acts.map(a=>`<option value="${esc(a.id)}">${esc(a.title)} (+${gp(a.val*RATE())})</option>`).join('')}</select></label>
+      <label>Сумма, GP<input id="mAmt" type="number" min="1" step="1" required inputmode="decimal"></label>
+      <label style="grid-column:1/-1">Причина (её увидит клиентка)<input id="mNote" required minlength="2" maxlength="200" autocomplete="off" placeholder="например: подарок на день рождения студии"></label>
+      <label id="mMonthsL">Срок действия, мес.<input id="mMonths" type="number" min="1" max="60" step="1" placeholder="${R.saveMonths}"></label>
+      <label id="mLotL" style="display:none">Списать из партии<select id="mLot"><option value="">— из самых старых —</option>${(S.rwLots[c.id]||[]).map(x=>`<option value="${esc(x.id)}">${gp(x.a)} · сгорят ${fmtDate(x.exp)}${x.src==='special'?' · специальные':x.src==='milestone'?' · Milestone':''}</option>`).join('')}</select></label>
+      <div class="hint" id="mPrev" style="grid-column:1/-1">Введите сумму, чтобы увидеть результат.</div>
+      <button style="align-self:end" id="mGo">Начислить</button>
+    </form>
+    <p class="muted small">Начисленные баллы действуют ${R.saveMonths} мес. (или срок, который вы укажете), учитываются отдельно от наград за визиты${R.settleSpecial?'':' и в взаиморасчётах мастеров не делятся'}. Списание идёт с самых старых партий; можно выбрать конкретную партию. Уровень от баллов не зависит.</p></div>`;
+}
+function updateAdj(){
+  const f=$('#adjForm'); if(!f) return;
+  const c=cur(), d=c&&S.rw[c.id], bal=d?d.rw.bal:0, sub=f.querySelector('input[name=mDir]:checked').value==='sub';
+  const a=r2(parseFloat($('#mAmt').value)); const lot=$('#mLot').value;
+  $('#mMonthsL').style.display=sub?'none':''; $('#mLotL').style.display=sub?'':'none';
+  $('#mGo').textContent=sub?'Списать':'Начислить';
+  const lotBal=lot?(S.rwLots[c.id].find(x=>String(x.id)===lot)||{a:0}).a:bal;
+  const el=$('#mPrev'); el.className='hint';
+  if(!(a>0)){ el.textContent='Введите сумму, чтобы увидеть результат.'; return; }
+  if(sub&&a>lotBal){ el.className='hint warn'; el.textContent=lot?`В этой партии только ${gp(lotBal)}.`:`Нельзя списать больше, чем на балансе (${gp(bal)}).`; return; }
+  el.textContent=`Было ${gp(bal)} → станет ${gp(r2(bal+(sub?-a:a)))}`;
+}
+let adjBusy=false;
 async function adjust(e){
-  e.preventDefault(); const c=cur(), a=r2(parseFloat($('#mAmt').value)); if(!c||!(a>0)) return;
-  if(await grant(c,a,$('#mNote').value.trim(),'manual')){ toast('Баллы начислены'); render(); }
+  e.preventDefault(); const c=cur(); if(!c||adjBusy) return;
+  const sub=document.querySelector('#adjForm input[name=mDir]:checked').value==='sub', a=r2(parseFloat($('#mAmt').value)), note=$('#mNote').value.trim(), d=S.rw[c.id];
+  if(!(a>0)){ toast('Укажите сумму'); return; }
+  if(note.length<2){ toast('Напишите причину'); return; }
+  const lot=$('#mLot').value||null, months=parseInt($('#mMonths').value,10)||null;
+  if(sub){ const lb=lot?((S.rwLots[c.id]||[]).find(x=>String(x.id)===lot)||{a:0}).a:(d?d.rw.bal:0); if(a>lb){ toast('Нельзя списать больше, чем есть'); return; } if(!confirm(`Списать ${gp(a)} у клиентки ${c.name}?`)) return; }
+  adjBusy=true;
+  const {data,error}=await sb.rpc('admin_adjust_points',{p_client:c.id,p_delta:sub?-a:a,p_note:note,p_idem:`adj:${c.id}:${Date.now()}`,p_lot:sub?lot:null,p_months:sub?null:months});
+  adjBusy=false;
+  if(error||!data||data.error){ toast(rwMsg(error,data)); return; }
+  await loadRw(c.id,true); await loadRwBal(); toast(sub?'Баллы списаны':'Баллы начислены'); render();
+}
+/* ---------- Заявки на задания ---------- */
+S.claims=null; S.claimsErr=false;
+const CL_KIND={mark:'Отметка студии',reels:'Reels',repost:'Репост'};
+const claimsPending=()=>S.claims?S.claims.pending.length:0;
+async function loadClaims(quiet){
+  if(!sb) return;
+  const {data,error}=await sb.rpc('admin_task_claims');
+  if(error||!data||data.error||!Array.isArray(data.pending)){ S.claimsErr=true; if(!quiet&&tab==='claims') render(); return; }
+  const before=claimsPending(); S.claimsErr=false; S.claims=data;
+  if(tab==='claims'&&!quiet) render(); else if(claimsPending()!==before) render();
+}
+function claimRow(x,done){
+  const dt=new Date(x.created_at).getTime();
+  return `<div class="claim"><div><b>${esc(x.name)}</b> <span class="muted small">@${esc(x.login)}</span> · <span class="pill">${esc(CL_KIND[x.kind]||x.kind)}</span>
+      ${x.dup?' <span class="pill" style="background:var(--bad);color:#fff">такая ссылка уже есть</span>':''}
+      <div class="small"><a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer" style="word-break:break-all">${esc(x.url)}</a></div>
+      <div class="muted small">${fmtTs(dt)}${done?` · ${x.status==='approved'?'<b class="pos">засчитано</b>':'<b class="neg">отклонено</b>'}${x.note?': '+esc(x.note):''}`:''}</div></div>
+    <div class="claim-act">${done?'':`<input data-cnote="${esc(x.id)}" placeholder="Комментарий (по желанию)" maxlength="200" autocomplete="off">`}
+      ${done?`<button class="ghost" data-open="${esc(x.client_id)}">Клиентка</button>`+(x.status==='approved'?`<button class="ghost" data-cdec="${esc(x.id)}" data-ok="0">Отклонить</button>`:`<button class="ghost" data-cdec="${esc(x.id)}" data-ok="1">Засчитать</button>`)
+        :`<button data-cdec="${esc(x.id)}" data-ok="1">Засчитать</button><button class="ghost" data-cdec="${esc(x.id)}" data-ok="0">Отклонить</button><button class="ghost" data-open="${esc(x.client_id)}">Клиентка</button>`}</div></div>`;
+}
+function claimsView(){
+  if(S.claimsErr) return `<div class="panel"><h2>Задания</h2><p class="neg">Не удалось загрузить заявки.</p><p class="muted">Выполните в Supabase (SQL Editor) скрипт migration-tasks.sql и обновите страницу.</p></div>`;
+  if(!S.claims) return '<div class="panel"><h2>Задания</h2><p class="muted">Загрузка…</p></div>';
+  const P=S.claims.pending, D=S.claims.done;
+  return `<div class="panel"><h2>Заявки на проверку${P.length?` <span class="badge">${P.length}</span>`:''}</h2>
+    <p class="muted small">Клиентки присылают ссылки на отметки студии, Reels и репосты. Проверьте по ссылке и нажмите «Засчитать» или «Отклонить»: у клиентки счётчик задания изменится сам.</p>
+    ${P.length?P.map(x=>claimRow(x,false)).join(''):'<p class="muted">Новых заявок нет.</p>'}</div>
+    <div class="panel"><h2>Недавние решения</h2>${D.length?D.map(x=>claimRow(x,true)).join(''):'<p class="muted">Пока пусто.</p>'}
+    <p class="muted small">«Отклонить» у уже засчитанной заявки уберёт засчитанный балл задания, «Засчитать» у отклонённой вернёт.</p></div>`;
+}
+async function decideClaim(id,ok){
+  const note=(document.querySelector(`[data-cnote="${id}"]`)||{value:''}).value.trim();
+  const {data,error}=await sb.rpc('admin_decide_claim',{p_id:id,p_approve:ok,p_note:note});
+  if(error||!data||data.error){ toast(data&&data.error==='duplicate'?'Такая ссылка уже есть среди активных заявок':rwMsg(error,data)); return; }
+  await reloadClient(data.client_id); const c=S.clients.find(x=>x.id===data.client_id); if(c){ try{ await checkLevelBonuses(c); }catch(_){} }
+  await loadClaims(true); toast(ok?'Засчитано':'Отклонено'); render();
 }
 function editClient(e){
   e.preventDefault(); const c=cur(); const login=$('#eLogin').value.trim();
@@ -1497,7 +1566,7 @@ async function load(){
   S.pushReady=!(ps.error||pl.error); S.psubs=(ps.data)||[]; S.plog=(pl.data)||[]; S.pushKey=!!(pc.data&&pc.data.key);
   await loadRwBal(); S.clients=c.data.map(fromRow); S.clients.forEach(x=>snap.set(x.id,JSON.stringify(toRow(x))));
   persist(); render();
-  setInterval(refreshBookings,60000);
+  loadClaims(true); setInterval(refreshBookings,60000); setInterval(()=>{ const a=document.activeElement; if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)) return; loadClaims(true); },60000);
 }
 async function boot(){
   if(!sb){ showMsg('Нужна настройка','Откройте файл config.js и вставьте данные из Supabase.'); return; }
