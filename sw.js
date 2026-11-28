@@ -38,6 +38,7 @@ self.addEventListener('push', (e) => {
     icon: 'icons/icon-192.png',
     badge: 'icons/icon-192.png',
     tag: d.tag || 'glam',
+    renotify: true,
     data: { url: d.url || './' },
   }));
 });
