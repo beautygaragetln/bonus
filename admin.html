@@ -152,6 +152,8 @@ h1,.it{font-style:normal}
 .sheet.center .lv.big{margin-top:4px}
 .spark{position:relative;display:inline-flex}
 .sheet h3{font-style:italic}
+.crop{position:relative;overflow:hidden;border-radius:14px;background:#2a1f1d;touch-action:none;cursor:grab;outline:2px solid var(--accent,#B7A79F)}
+.crop img{position:absolute;left:0;top:0;max-width:none;transform-origin:0 0;user-select:none;-webkit-user-drag:none;pointer-events:none}
 .confetti{font-style:italic}
 .visit-list div{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--line)}
 .visit-list div:first-child{border-top:0}
@@ -549,7 +551,7 @@ function settingsView(){
     <div class="grid">${GIRL_NAMES.map((nm,i)=>{ const ph=(S.cfg.girls&&S.cfg.girls[i]&&S.cfg.girls[i].photo)||'';
       return `<div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start"><b>${nm}</b>
         <div style="width:84px;height:84px;border-radius:50%;overflow:hidden;background:var(--soft);border:2px solid var(--pink);display:grid;place-items:center">${ph?`<img src="${esc(ph)}" alt="" style="width:100%;height:100%;object-fit:cover">`:'<span class="muted small">нет фото</span>'}</div>
-        <input type="file" accept="image/*" data-gphoto="${i}" aria-label="Фото: ${nm}">
+        <input type="file" accept="image/*,.heic,.heif" data-gphoto="${i}" aria-label="Фото: ${nm}">
         ${ph?`<button type="button" class="ghost" data-gdel="${i}">Убрать фото</button>`:''}</div>`; }).join('')}</div>
     <p class="muted small">Фото обрезается по центру до квадрата и сжимается. Применяется сразу, кнопка «Сохранить» не нужна. Без фото клиентки видят аккуратную иконку.</p></div>
   <div class="panel"><h2>Услуги студии</h2>
@@ -878,10 +880,66 @@ function editClient(e){
 }
 function resizeImg(file,size){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onerror=rej; fr.onload=()=>{ const im=new Image(); im.onerror=rej; im.onload=()=>{ const c=document.createElement('canvas'); c.width=c.height=size; const x=c.getContext('2d'), s=Math.min(im.width,im.height), sx=(im.width-s)/2, sy=(im.height-s)/2; x.fillStyle='#F3EDE7'; x.fillRect(0,0,size,size); x.drawImage(im,sx,sy,s,s,0,0,size,size); res(c.toDataURL('image/jpeg',0.82)); }; im.src=fr.result; }; fr.readAsDataURL(file); }); }
 function saveGirls(g){ S.cfg={...S.cfg,girls:g}; if(draft) draft.girls=g; persist(); render(); }
+function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
+function loadImg(url){ return new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=rej; im.src=url; }); }
+// читает фото; HEIC/HEIF с iPhone, которые браузер не открывает сам, переводит в JPEG
+async function readPhoto(file){
+  const heic=/hei[cf]/i.test(file.type||'')||/\.hei[cf]$/i.test(file.name||'');
+  let url=URL.createObjectURL(file);
+  try{ return await loadImg(url); }
+  catch(e){
+    URL.revokeObjectURL(url);
+    if(!heic) throw e;
+    if(!window.heic2any) await loadScript('https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js');
+    let b=await window.heic2any({blob:file,toType:'image/jpeg',quality:.9}); if(Array.isArray(b)) b=b[0];
+    return await loadImg(URL.createObjectURL(b));
+  }
+}
+// окно обрезки: двигай фото пальцем или мышью, масштаб ползунком или колесом
+function cropPhoto(im,size){
+  return new Promise(resolve=>{
+    const V=Math.min(300,window.innerWidth-80), W=im.naturalWidth||im.width, H=im.naturalHeight||im.height;
+    const base=V/Math.min(W,H); let z=1, ox=0, oy=0;
+    const bg=document.createElement('div'); bg.className='sheet-bg'; bg.setAttribute('role','dialog'); bg.setAttribute('aria-modal','true');
+    bg.innerHTML=`<div class="sheet center"><h3>Выбери кусок фото</h3><p class="muted">Двигай фото и меняй масштаб</p>
+      <div class="crop" id="cpBox" style="width:${V}px;height:${V}px"><img id="cpImg" alt="" draggable="false"></div>
+      <input type="range" id="cpZoom" min="1" max="4" step="0.01" value="1" aria-label="Масштаб" style="width:${V}px">
+      <div style="display:flex;gap:10px;justify-content:center"><button type="button" class="ghost" id="cpNo">Отмена</button><button type="button" id="cpOk">Готово</button></div></div>`;
+    document.body.appendChild(bg);
+    const box=bg.querySelector('#cpBox'), img=bg.querySelector('#cpImg'); img.src=im.src;
+    const clamp=()=>{ const w=W*base*z, hh=H*base*z; ox=Math.min(0,Math.max(V-w,ox)); oy=Math.min(0,Math.max(V-hh,oy)); };
+    const draw=()=>{ clamp(); const s=base*z; img.style.width=W*s+'px'; img.style.height=H*s+'px'; img.style.transform=`translate(${ox}px,${oy}px)`; };
+    const setZ=(nz,cx,cy)=>{ nz=Math.min(4,Math.max(1,nz)); const k=nz/z; ox=cx-(cx-ox)*k; oy=cy-(cy-oy)*k; z=nz; bg.querySelector('#cpZoom').value=z; draw(); };
+    ox=(V-W*base)/2; oy=(V-H*base)/2; draw();
+    let drag=null; const pts=new Map(); let pd=0;
+    box.addEventListener('pointerdown',e=>{ box.setPointerCapture(e.pointerId); pts.set(e.pointerId,{x:e.clientX,y:e.clientY}); if(pts.size===1) drag={x:e.clientX,y:e.clientY,ox,oy}; if(pts.size===2){ const [a,b]=[...pts.values()]; pd=Math.hypot(a.x-b.x,a.y-b.y); } });
+    box.addEventListener('pointermove',e=>{ if(!pts.has(e.pointerId)) return; pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      if(pts.size===2){ const [a,b]=[...pts.values()], d=Math.hypot(a.x-b.x,a.y-b.y); if(pd) setZ(z*d/pd,V/2,V/2); pd=d; }
+      else if(drag){ ox=drag.ox+(e.clientX-drag.x); oy=drag.oy+(e.clientY-drag.y); draw(); } });
+    const up=e=>{ pts.delete(e.pointerId); pd=0; drag=null; if(pts.size===1){ const [a]=[...pts.values()]; drag={x:a.x,y:a.y,ox,oy}; } };
+    box.addEventListener('pointerup',up); box.addEventListener('pointercancel',up);
+    box.addEventListener('wheel',e=>{ e.preventDefault(); const r=box.getBoundingClientRect(); setZ(z*(e.deltaY<0?1.1:1/1.1),e.clientX-r.left,e.clientY-r.top); },{passive:false});
+    bg.querySelector('#cpZoom').oninput=e=>setZ(+e.target.value,V/2,V/2);
+    const done=v=>{ bg.remove(); document.removeEventListener('keydown',onKey); resolve(v); };
+    const onKey=e=>{ if(e.key==='Escape') done(null); };
+    document.addEventListener('keydown',onKey);
+    bg.querySelector('#cpNo').onclick=()=>done(null);
+    bg.addEventListener('mousedown',e=>{ if(e.target===bg) done(null); });
+    bg.querySelector('#cpOk').onclick=()=>{
+      const c=document.createElement('canvas'); c.width=c.height=size; const x=c.getContext('2d'), s=base*z;
+      x.fillStyle='#F3EDE7'; x.fillRect(0,0,size,size); x.imageSmoothingQuality='high';
+      x.drawImage(im,-ox/s,-oy/s,V/s,V/s,0,0,size,size);
+      done(c.toDataURL('image/jpeg',0.82));
+    };
+  });
+}
 async function setGirlPhoto(i,file){
-  if(!file) return; if(!/^image\//.test(file.type)){ toast('Нужен файл-изображение'); return; }
-  try{ const url=await resizeImg(file,320); const g=(S.cfg.girls||[]).map(x=>({...x})); while(g.length<2) g.push({photo:''}); g[i]={photo:url}; saveGirls(g); toast('Фото сохранено'); }
-  catch(e){ toast('Не удалось обработать фото'); }
+  if(!file) return;
+  const okType=/^image\//.test(file.type||'')||/\.(hei[cf]|jpe?g|png|webp)$/i.test(file.name||'');
+  if(!okType){ toast('Нужен файл-изображение'); return; }
+  let im; try{ toast('Открываю фото…'); im=await readPhoto(file); }catch(e){ toast('Не удалось открыть фото. Попробуй JPG или PNG'); return; }
+  const url=await cropPhoto(im,320); if(!url) return;
+  const g=(S.cfg.girls||[]).map(x=>({...x})); while(g.length<2) g.push({photo:''}); g[i]={photo:url}; saveGirls(g); toast('Фото сохранено');
 }
 function saveCfg(e){
   e.preventDefault(); collectCfg();
